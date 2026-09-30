@@ -1,0 +1,34 @@
+name: proofcode-test
+
+services:
+  agent-test:
+    image: golang:1.24-alpine
+    working_dir: /src
+    command: ["go", "test", "./..."]
+    environment:
+      CGO_ENABLED: "0"
+      GOPROXY: https://goproxy.cn,direct
+    volumes:
+      - ./agent-engine:/src
+      - go-cache:/go/pkg/mod
+
+  control-test:
+    image: maven:3.9-eclipse-temurin-17
+    working_dir: /src
+    command: ["mvn", "-q", "test"]
+    volumes:
+      - ./control-plane:/src
+      - maven-cache:/root/.m2
+
+  frontend-test:
+    image: node:24-alpine
+    working_dir: /src
+    command: ["sh", "-c", "npm ci --registry=https://registry.npmmirror.com && npm run build"]
+    volumes:
+      - ./frontend:/src
+      - node-cache:/root/.npm
+
+volumes:
+  go-cache:
+  maven-cache:
+  node-cache:

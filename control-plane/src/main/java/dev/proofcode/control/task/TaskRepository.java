@@ -1,0 +1,3 @@
+package dev.proofcode.control.task;
+import java.util.List;import java.util.Optional;import java.util.UUID;import jakarta.persistence.LockModeType;import org.springframework.data.jpa.repository.JpaRepository;import org.springframework.data.jpa.repository.Lock;import org.springframework.data.jpa.repository.Query;import org.springframework.data.repository.query.Param;
+public interface TaskRepository extends JpaRepository<TaskEntity,UUID>{List<TaskEntity> findByProjectIdOrderByCreatedAtDesc(UUID projectId);Optional<TaskEntity> findByProjectIdAndIdempotencyKey(UUID projectId,String idempotencyKey);@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select t from TaskEntity t where t.id = :id") Optional<TaskEntity> lockById(@Param("id") UUID id);}

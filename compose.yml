@@ -1,0 +1,103 @@
+name: proofcode
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-proofcode}
+      POSTGRES_USER: ${POSTGRES_USER:-proofcode}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-proofcode}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-proofcode} -d ${POSTGRES_DB:-proofcode}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  artemis:
+    image: apache/activemq-artemis:2.39.0
+    environment:
+      ARTEMIS_USER: proofcode
+      ARTEMIS_PASSWORD: proofcode
+      ANONYMOUS_LOGIN: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8161/console/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "61616:61616"
+      - "5672:5672"
+      - "8161:8161"
+
+  control-plane:
+    build:
+      context: ./control-plane
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-proofcode}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-proofcode}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-proofcode}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: proofcode
+      SPRING_ARTEMIS_PASSWORD: proofcode
+      PROOFCODE_AUTH_TOKEN: ${DEV_AUTH_TOKEN:-change-me}
+      PROOFCODE_RUNNER_TOKEN: ${RUNNER_TOKEN:-change-runner-token}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  runner:
+    build:
+      context: ./agent-engine
+    environment:
+      CONTROL_PLANE_URL: http://control-plane:8080
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-change-runner-token}
+      ARTEMIS_URL: amqp://proofcode:proofcode@artemis:5672
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-https://api.openai.com/v1}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+      MODEL_NAME: ${MODEL_NAME:-gpt-4.1-mini}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      RUNNER_ALLOW_WRITE: ${RUNNER_ALLOW_WRITE:-true}
+      RUNNER_ALLOW_EXEC: ${RUNNER_ALLOW_EXEC:-true}
+      WORKSPACE_ROOT: /workspaces
+    depends_on:
+      control-plane:
+        condition: service_started
+    volumes:
+      - proofcode-workspaces:/workspaces
+
+  web:
+    build:
+      context: ./frontend
+    depends_on:
+      - control-plane
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres-data:
+  redis-data:
+  proofcode-workspaces:
