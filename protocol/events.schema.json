@@ -3,17 +3,20 @@
   "$id": "https://proofcode.dev/schema/events-v1.json",
   "title": "ProofCode Task Event",
   "type": "object",
-  "required": ["version", "taskId", "sequence", "type", "timestamp", "payload"],
+  "required": ["version", "taskId", "runnerId", "attempt", "runId", "sequence", "type", "timestamp", "payload"],
   "properties": {
     "version": { "const": "v1" },
     "taskId": { "type": "string", "format": "uuid" },
+    "runnerId": { "type": "string", "format": "uuid" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "runId": { "type": "string", "minLength": 1 },
     "sequence": { "type": "integer", "minimum": 1 },
     "type": {
       "enum": [
         "task.started", "task.completed", "task.failed", "task.cancelled",
         "agent.message.delta", "agent.message.completed", "agent.delegated",
-        "tool.requested", "tool.approval_required", "tool.started", "tool.completed", "tool.failed",
-        "context.selected", "checkpoint.created", "verification.completed", "usage.updated"
+        "tool.requested", "tool.approval_required", "tool.started", "tool.completed", "tool.failed", "decision.tool_routed", "decision.tool_route_fallback",
+        "context.selected", "checkpoint.created", "recovery.created", "verification.completed", "usage.updated"
       ]
     },
     "timestamp": { "type": "string", "format": "date-time" },
@@ -21,4 +24,3 @@
   },
   "additionalProperties": false
 }
-

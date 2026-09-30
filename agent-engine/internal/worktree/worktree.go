@@ -72,6 +72,28 @@ func (m Manager) Checkpoint(ctx context.Context, handle Handle, message string) 
 	return strings.TrimSpace(hash), err
 }
 
+// Patch returns a portable patch from the base revision to the checkpoint.
+// It is captured before the ephemeral worktree is removed so the control plane
+// can expose the exact change set for review or export.
+func (m Manager) Patch(ctx context.Context, handle Handle, commit string) (string, error) {
+	base := strings.TrimSpace(handle.Base)
+	if base == "" || strings.TrimSpace(commit) == "" {
+		return "", errors.New("base and commit are required")
+	}
+	return gitOutput(ctx, handle.Path, "diff", "--binary", base, strings.TrimSpace(commit))
+}
+
+// WorkingPatch captures the current changes for recovery without committing.
+func (m Manager) WorkingPatch(ctx context.Context, handle Handle) (string, error) {
+	if strings.TrimSpace(handle.Base) == "" {
+		return "", errors.New("base revision is required")
+	}
+	if _, err := gitOutput(ctx, handle.Path, "add", "-A"); err != nil {
+		return "", err
+	}
+	return gitOutput(ctx, handle.Path, "diff", "--cached", "--binary", "--no-ext-diff", handle.Base)
+}
+
 func (m Manager) Remove(ctx context.Context, handle Handle) error {
 	repository, _ := filepath.Abs(m.Repository)
 	candidate, _ := filepath.Abs(handle.Path)

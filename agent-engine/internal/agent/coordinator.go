@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -19,10 +20,25 @@ type Coordinator struct {
 	Approval      Approval
 	Events        *event.SequencedSink
 	Model         string
+	Router        ToolRouter
+	Routing       ToolRoutingPolicy
 }
 type CoordinateRequest struct {
-	TaskID string
-	Prompt string
+	TaskID               string
+	Prompt               string
+	SuppressTaskComplete bool
+	InitialMessages      []model.Message
+	ResumeToolCall       *model.ToolCall
+	ResumeApproved       *bool
+	Resume               bool
+	InitialUsage         model.Usage
+	RemainingCalls       []model.ToolCall
+	Pause                func(RunResult, *ApprovalRequiredError) error
+	BeforeTool           func(RunResult, model.ToolCall) error
+	Checkpoint           func(RunResult) error
+	MainDone             func(RunResult) error
+	MainCompleted        bool
+	MainResult           RunResult
 }
 type CoordinateResult struct {
 	Main         RunResult
@@ -32,9 +48,13 @@ type CoordinateResult struct {
 
 func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (CoordinateResult, error) {
 	result := CoordinateResult{}
-	reports, err := c.scout(ctx, request)
-	if err != nil {
-		return result, err
+	var reports []string
+	var err error
+	if !request.Resume {
+		reports, err = c.scout(ctx, request)
+		if err != nil {
+			return result, err
+		}
 	}
 	result.ScoutReports = reports
 	augmented := request.Prompt
@@ -44,24 +64,47 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 			augmented += fmt.Sprintf("\nScout %d:\n%s\n", i+1, report)
 		}
 	}
-	_ = c.Events.Emit(ctx, request.TaskID, event.TaskStarted, map[string]any{"model": c.Model})
-	main := Agent{Provider: c.Provider, Tools: c.MainTools, Approval: c.Approval, Events: c.Events}
-	result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: 24, SuppressTaskLifecycle: true})
-	if err != nil {
-		_ = c.Events.Emit(context.Background(), request.TaskID, event.TaskFailed, map[string]any{"error": err.Error()})
+	if err := c.Events.Emit(ctx, request.TaskID, event.TaskStarted, map[string]any{"model": c.Model}); err != nil {
 		return result, err
+	}
+	if request.MainCompleted {
+		result.Main = request.MainResult
+	} else {
+		main := Agent{Provider: c.Provider, Tools: c.MainTools, Approval: c.Approval, Events: c.Events, Router: c.Router, Routing: c.Routing}
+		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: 24, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
+		if err != nil {
+			var approvalErr *ApprovalRequiredError
+			if !errors.As(err, &approvalErr) && !request.SuppressTaskComplete {
+				_ = c.Events.Emit(context.Background(), request.TaskID, event.TaskFailed, map[string]any{"error": err.Error()})
+			}
+			return result, err
+		}
+		if request.MainDone != nil {
+			if err := request.MainDone(result.Main); err != nil {
+				return result, err
+			}
+		}
 	}
 	if c.VerifierTools != nil {
 		verifier := Agent{Provider: c.Provider, Tools: c.VerifierTools, Approval: c.Approval, Events: c.Events}
-		verification, verifyErr := verifier.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: verifierPrompt, Prompt: "Independently inspect the current Git diff, run the smallest relevant tests, and report concrete defects or PASS. Do not modify files.", Model: c.Model, MaxSteps: 10, SuppressTaskLifecycle: true})
+		verification, verifyErr := verifier.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: verifierPrompt, Prompt: "Independently inspect the current Git diff and relevant source/tests. Report concrete defects or PASS. Do not modify files or run commands.", Model: c.Model, MaxSteps: 10, SuppressTaskLifecycle: true})
 		if verifyErr != nil {
-			_ = c.Events.Emit(context.Background(), request.TaskID, event.TaskFailed, map[string]any{"error": verifyErr.Error()})
+			var approvalErr *ApprovalRequiredError
+			if !errors.As(verifyErr, &approvalErr) && !request.SuppressTaskComplete {
+				_ = c.Events.Emit(context.Background(), request.TaskID, event.TaskFailed, map[string]any{"error": verifyErr.Error()})
+			}
 			return result, verifyErr
 		}
 		result.Verification = verification.Content
-		_ = c.Events.Emit(ctx, request.TaskID, event.VerificationDone, map[string]any{"report": result.Verification})
+		if err := c.Events.Emit(ctx, request.TaskID, event.VerificationDone, map[string]any{"report": result.Verification}); err != nil {
+			return result, err
+		}
 	}
-	_ = c.Events.Emit(ctx, request.TaskID, event.TaskCompleted, map[string]any{"result": result.Main.Content})
+	if !request.SuppressTaskComplete {
+		if err := c.Events.Emit(ctx, request.TaskID, event.TaskCompleted, map[string]any{"result": result.Main.Content}); err != nil {
+			return result, err
+		}
+	}
 	return result, nil
 }
 
@@ -77,7 +120,10 @@ func (c *Coordinator) scout(ctx context.Context, request CoordinateRequest) ([]s
 		wg.Add(1)
 		go func(index int, prompt string) {
 			defer wg.Done()
-			_ = c.Events.Emit(ctx, request.TaskID, event.AgentDelegated, map[string]any{"role": "scout", "index": index})
+			if err := c.Events.Emit(ctx, request.TaskID, event.AgentDelegated, map[string]any{"role": "scout", "index": index}); err != nil {
+				errorsByIndex[index] = err
+				return
+			}
 			scout := Agent{Provider: c.Provider, Tools: c.ScoutTools, Approval: AutomaticApproval{}, Events: c.Events}
 			value, err := scout.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: scoutPrompt, Prompt: prompt + "\n\nUser request:\n" + request.Prompt, Model: c.Model, MaxSteps: 8, SuppressTaskLifecycle: true})
 			reports[index] = value.Content
@@ -109,4 +155,4 @@ func needsScouts(prompt string) bool {
 
 const mainPrompt = `You are ProofCode Main Agent. Work in the provided Git worktree. Inspect before editing. Use exact structured patches, run focused verification, and finish with a concise summary of changed files, tests, and remaining risks. You are the only role allowed to modify files.`
 const scoutPrompt = `You are a read-only repository scout. Search and read evidence. Never claim to have edited files. Return concise findings with repository-relative paths and line numbers.`
-const verifierPrompt = `You are an independent verifier. You cannot modify files. Inspect the diff, run focused tests when safe, and return PASS or a prioritized defect list with evidence.`
+const verifierPrompt = `You are an independent read-only verifier. Inspect the diff and relevant source/tests, then return PASS or a prioritized defect list with evidence. Do not claim to have run tests.`

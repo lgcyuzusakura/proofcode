@@ -17,10 +17,11 @@ public class ProjectController {
     public ProjectController(ProjectRepository projects){this.projects=projects;}
 
     @PostMapping
-    ResponseEntity<ProjectEntity> create(@Valid @RequestBody CreateProject request){
+    public ResponseEntity<ProjectEntity> create(@Valid @RequestBody CreateProject request){
         URI uri=URI.create(request.repositoryUrl());
-        if (!("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))) {
-            throw new IllegalArgumentException("repositoryUrl must use http or https");
+        if (!("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
+            ||uri.getHost()==null||uri.getUserInfo()!=null||uri.getRawFragment()!=null) {
+            throw new IllegalArgumentException("repositoryUrl must be an http or https URL without embedded credentials or fragments");
         }
         ProjectEntity value=new ProjectEntity(UUID.randomUUID(),request.name(),request.repositoryUrl(),request.defaultBranch(),Instant.now());
         return ResponseEntity.status(201).body(projects.save(value));
@@ -30,7 +31,6 @@ public class ProjectController {
     List<ProjectEntity> list(){return projects.findAll();}
 
     public record CreateProject(@NotBlank @Size(max=120) String name,
-                                @NotBlank String repositoryUrl,
+                                @NotBlank @Size(max=2048) String repositoryUrl,
                                 @NotBlank @Size(max=200) String defaultBranch) {}
 }
-

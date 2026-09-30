@@ -5,9 +5,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
-type Workspace struct{ Root string }
+// Workspace is the filesystem boundary used by every tool invocation. The
+// write lock is intentionally owned here so tools cannot race a patch against
+// a verifier or another tool in the same worktree.
+type Workspace struct {
+	Root string
+	mu   sync.RWMutex
+}
 
 func Open(root string) (*Workspace, error) {
 	abs, err := filepath.Abs(root)
@@ -27,6 +34,13 @@ func Open(root string) (*Workspace, error) {
 	}
 	return &Workspace{Root: filepath.Clean(abs)}, nil
 }
+
+// RLock and RUnlock let read-only tools coordinate with a writer without
+// exposing the underlying mutex implementation to callers.
+func (w *Workspace) RLock()   { w.mu.RLock() }
+func (w *Workspace) RUnlock() { w.mu.RUnlock() }
+func (w *Workspace) Lock()    { w.mu.Lock() }
+func (w *Workspace) Unlock()  { w.mu.Unlock() }
 
 func (w *Workspace) Resolve(relative string) (string, error) {
 	if relative == "" {

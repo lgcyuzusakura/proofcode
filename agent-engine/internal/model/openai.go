@@ -7,16 +7,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/proofcode-dev/proofcode/agent-engine/internal/config"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
+	"time"
+
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/config"
 )
+
+const defaultRequestTimeout = 5 * time.Minute
 
 type OpenAICompatible struct {
 	BaseURL string
 	APIKey  string
 	Client  *http.Client
+	Timeout time.Duration
 }
 
 type openAIMessage struct {
@@ -37,8 +43,8 @@ type openAIToolCall struct {
 }
 
 func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta func(string)) (Response, error) {
-	if p.APIKey == "" {
-		return Response{}, errors.New("model API key is not configured")
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	messages := make([]openAIMessage, 0, len(request.Messages))
 	for _, message := range request.Messages {
@@ -65,6 +71,11 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 		toolData, _ := json.Marshal(message.ToolCalls)
 		inputEstimate += config.EstimateTokens(message.Content, string(toolData))
 	}
+	toolDefinitions, err := json.Marshal(tools)
+	if err != nil {
+		return Response{}, fmt.Errorf("encode tool definitions: %w", err)
+	}
+	inputEstimate += config.EstimateTokens(string(toolDefinitions))
 	if inputEstimate > config.MaxTotalTokens-config.DefaultMaxOutputTokens {
 		return Response{}, fmt.Errorf("当前请求预计需要 %d token，超过 %d token 总预算，请减少上下文或拆分任务。", inputEstimate, config.MaxTotalTokens)
 	}
@@ -85,11 +96,19 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 		return Response{}, err
 	}
 	base := strings.TrimRight(p.BaseURL, "/")
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/chat/completions", bytes.NewReader(body))
+	timeout := p.Timeout
+	if timeout <= 0 {
+		timeout = defaultRequestTimeout
+	}
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(callCtx, http.MethodPost, base+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return Response{}, err
 	}
-	req.Header.Set("Authorization", "Bearer "+p.APIKey)
+	if p.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+p.APIKey)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	client := p.Client
 	if client == nil {
@@ -107,6 +126,7 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 
 	var result Response
 	toolFragments := map[int]*openAIToolCall{}
+	sawChoice, sawFinish, sawDone := false, false, false
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 4096), 2<<20)
 	for scanner.Scan() {
@@ -116,25 +136,42 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 		}
 		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 		if data == "[DONE]" {
+			sawDone = true
 			break
 		}
 		var chunk struct {
 			Choices []struct {
-				Delta struct {
+				FinishReason *string `json:"finish_reason"`
+				Delta        struct {
 					Content   string           `json:"content"`
 					ToolCalls []openAIToolCall `json:"tool_calls"`
 				} `json:"delta"`
 			} `json:"choices"`
-			Usage struct {
+			Usage *struct {
 				PromptTokens     int `json:"prompt_tokens"`
 				CompletionTokens int `json:"completion_tokens"`
 			} `json:"usage"`
+			Error *struct {
+				Message string `json:"message"`
+			} `json:"error"`
 		}
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			return Response{}, fmt.Errorf("decode model stream: %w", err)
 		}
-		result.Usage = Usage{InputTokens: chunk.Usage.PromptTokens, OutputTokens: chunk.Usage.CompletionTokens}
+		if chunk.Error != nil {
+			return Response{}, fmt.Errorf("model stream error: %s", chunk.Error.Message)
+		}
+		if chunk.Usage != nil {
+			result.Usage = Usage{InputTokens: chunk.Usage.PromptTokens, OutputTokens: chunk.Usage.CompletionTokens}
+		}
 		for _, choice := range chunk.Choices {
+			sawChoice = true
+			if choice.FinishReason != nil {
+				sawFinish = true
+				if *choice.FinishReason == "length" || *choice.FinishReason == "content_filter" {
+					return Response{}, fmt.Errorf("model stream stopped with finish_reason %q", *choice.FinishReason)
+				}
+			}
 			if choice.Delta.Content != "" {
 				result.Content += choice.Delta.Content
 				if onDelta != nil {
@@ -142,6 +179,9 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 				}
 			}
 			for _, fragment := range choice.Delta.ToolCalls {
+				if fragment.Index < 0 {
+					return Response{}, errors.New("model stream returned a negative tool call index")
+				}
 				item := toolFragments[fragment.Index]
 				if item == nil {
 					item = &openAIToolCall{Index: fragment.Index}
@@ -160,10 +200,21 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 	if err := scanner.Err(); err != nil {
 		return Response{}, err
 	}
-	for index := 0; index < len(toolFragments); index++ {
+	if !sawChoice || (!sawFinish && !sawDone) {
+		return Response{}, errors.New("model stream ended before a complete response")
+	}
+	if result.Content == "" && len(toolFragments) == 0 {
+		return Response{}, errors.New("model stream returned no content or tool calls")
+	}
+	indices := make([]int, 0, len(toolFragments))
+	for index := range toolFragments {
+		indices = append(indices, index)
+	}
+	sort.Ints(indices)
+	for _, index := range indices {
 		item := toolFragments[index]
-		if item == nil {
-			continue
+		if item.ID == "" || item.Function.Name == "" {
+			return Response{}, fmt.Errorf("model returned incomplete tool call at index %d", index)
 		}
 		arguments := json.RawMessage(item.Function.Arguments)
 		if !json.Valid(arguments) {
