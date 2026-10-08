@@ -1,0 +1,10 @@
+{
+  "key": "mini_swe_agent",
+  "requestedUrl": "https://github.com/SWE-agent/mini-swe-agent",
+  "retrievedAt": "2026-10-08T04:06:28.241101+00:00",
+  "status": 200,
+  "finalUrl": "https://github.com/SWE-agent/mini-swe-agent",
+  "sha256": "c3519cce3c425d3e2a84e8507b805b35d5289d28bd80532eba85cd23d363a4e7",
+  "title": "GitHub - SWE-agent/mini-swe-agent: The 100 line AI agent that solves GitHub issues or helps you in your command line. Radically simple, no huge configs, no giant monorepo—but scores >74% on SWE-bench verified! · GitHub",
+  "metadata": {}
+}

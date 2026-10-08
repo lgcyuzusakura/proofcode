@@ -1,0 +1,10 @@
+{
+  "key": "codex",
+  "requestedUrl": "https://github.com/openai/codex",
+  "retrievedAt": "2026-10-08T03:39:37.810463+00:00",
+  "status": 200,
+  "finalUrl": "https://github.com/openai/codex",
+  "sha256": "0f5037ca7298e75a3760e7d90da90f11f1c0312579f61bfda094091d4dac7c6e",
+  "title": "GitHub - openai/codex: Lightweight coding agent that runs in your terminal · GitHub",
+  "metadata": {}
+}

@@ -1,0 +1,10 @@
+{
+  "key": "redis_transaction",
+  "requestedUrl": "https://redis.io/docs/latest/develop/interact/transactions/",
+  "retrievedAt": "2026-10-08T03:39:34.358521+00:00",
+  "status": 200,
+  "finalUrl": "https://redis.io/docs/latest/develop/interact/transactions/",
+  "sha256": "e7a866a75070c1e4f8dade127ae07f3fa9a6c40374c765fbb50fa5f674a56082",
+  "title": "https://redis.io/docs/latest/develop/using-commands/transactions/",
+  "metadata": {}
+}

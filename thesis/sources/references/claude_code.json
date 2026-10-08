@@ -1,0 +1,10 @@
+{
+  "key": "claude_code",
+  "requestedUrl": "https://github.com/anthropics/claude-code",
+  "retrievedAt": "2026-10-08T03:39:38.045450+00:00",
+  "status": 200,
+  "finalUrl": "https://github.com/anthropics/claude-code",
+  "sha256": "927abfc7702237ad92dcfb8f9c67868eec1f5be6d911a126806c24a4bca2dbe2",
+  "title": "GitHub - anthropics/claude-code: Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows - all through natural language commands. · GitHub",
+  "metadata": {}
+}

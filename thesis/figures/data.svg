@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="960" viewBox="0 0 1500 960"><rect width="100%" height="100%" fill="white"/>
+<rect x="35" y="30" width="470" height="125" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="270.0" y="102.4" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">项目资源与结构快照</text>
+<rect x="995" y="30" width="470" height="125" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="1230.0" y="102.4" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">模型或用户提出 IR</text>
+<rect x="35" y="245" width="470" height="125" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="270.0" y="297.15" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">验证与确定性编译</text>
+<text x="270.0" y="337.65" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">规范 IR  SQL  expectedRows</text>
+<rect x="995" y="245" width="470" height="125" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="1230.0" y="297.15" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">不可变计划与摘要</text>
+<text x="1230.0" y="337.65" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">绑定 task / attempt / schema</text>
+<rect x="995" y="485" width="470" height="125" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="1230.0" y="537.15" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">用户明确批准</text>
+<text x="1230.0" y="577.65" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">Runner 不能自批</text>
+<rect x="35" y="485" width="470" height="125" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="270.0" y="537.15" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">锁定任务与计划</text>
+<text x="270.0" y="577.65" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">消费一次性执行授权</text>
+<rect x="35" y="725" width="470" height="125" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="270.0" y="777.15" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">写执行开始账本</text>
+<text x="270.0" y="817.65" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">调用外部 PG 或 Redis</text>
+<rect x="995" y="725" width="470" height="125" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="1230.0" y="777.15" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">记录实际执行结果</text>
+<text x="1230.0" y="817.65" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">结果未知则禁止自动重放</text>
+<polyline points="505,92 995,92" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="995,92 979.3419631019509,98.62011181924706 979.3419631019509,85.37988818075294" fill="#333333"/>
+<polyline points="1230,155 1230,205 270,205 270,245" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="270,245 263.3798881807529,229.34196310195097 276.62011181924703,229.34196310195097" fill="#333333"/>
+<polyline points="505,307 995,307" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="995,307 979.3419631019509,313.6201118192471 979.3419631019509,300.3798881807529" fill="#333333"/>
+<polyline points="1230,370 1230,485" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1230,485 1223.379888180753,469.34196310195097 1236.620111819247,469.34196310195097" fill="#333333"/>
+<polyline points="995,547 505,547" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="505,547 520.6580368980491,540.3798881807529 520.6580368980491,553.6201118192471" fill="#333333"/>
+<polyline points="270,610 270,725" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="270,725 263.3798881807529,709.3419631019509 276.62011181924703,709.3419631019509" fill="#333333"/>
+<polyline points="505,787 995,787" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="995,787 979.3419631019509,793.6201118192471 979.3419631019509,780.3798881807529" fill="#333333"/>
+<text x="750" y="924.24" font-size="28" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">生成、批准、执行开始和结束均记录审计；Redis 补偿另建批准计划</text>
+</svg>

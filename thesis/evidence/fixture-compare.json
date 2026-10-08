@@ -1,0 +1,1590 @@
+{
+  "experiment": {
+    "id": "d3fe057d-77ac-437f-984f-d527ad3786b4",
+    "projectId": "2cff4bf5-57e3-4012-ab2c-8d98fcc1d5fd",
+    "workspaceId": "6533d265-7336-46a3-9192-0b4a0ab712c0",
+    "conversationId": "7f61142b-64d9-45ee-a469-51575f57f825",
+    "name": "fixture experiment profiles A-F",
+    "prompt": "PROOFCODE_EXPERIMENT_SMOKE: Fix Add(a,b) in add.go so it sums numbers; keep the tests meaningful.",
+    "model": "fixture-only",
+    "repositoryUrl": "http://fixture:8000/repo.git",
+    "sourceRevision": "0719074f2109bdd03b81a5235c9d446b36486682",
+    "maxSteps": 10,
+    "testCommand": "go test ./...",
+    "temperature": 0.1,
+    "repetitions": 1,
+    "profileVersion": "proofcode.experiment.v1",
+    "idempotencyKey": null,
+    "requestHash": "896f01baf721f38c1227c444349228cd76f5cf9f9cde30bb0025cdb97dfab3af",
+    "createdAt": "2026-10-08T03:19:05.126313Z"
+  },
+  "groups": [
+    {
+      "group": "A",
+      "profile": {
+        "version": "proofcode.experiment.v1",
+        "group": "A",
+        "toolsEnabled": false,
+        "mandatorySafety": true,
+        "deterministicSafety": false,
+        "jevRouting": false,
+        "jevRequired": false,
+        "ragEnabled": false,
+        "contextCompressionEnabled": false,
+        "feedbackRetrieval": false
+      },
+      "plannedRuns": 1,
+      "terminalRuns": 1,
+      "profileAppliedRuns": 1,
+      "validRuns": 1,
+      "succeededRuns": 1,
+      "failedRuns": 0,
+      "cancelledRuns": 0,
+      "configurationFailedRuns": 0,
+      "unknownResults": 0,
+      "taskStatusSuccessRate": 1.0,
+      "metrics": {
+        "durationMs": {
+          "mean": 228.0,
+          "p95": 228.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "inputTokens": {
+          "mean": 100.0,
+          "p95": 100.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "outputTokens": {
+          "mean": 20.0,
+          "p95": 20.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "totalTokens": {
+          "mean": 120.0,
+          "p95": 120.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolErrors": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "invalidToolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "highRiskBlocked": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "recallAtK": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "mrr": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "ndcg": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "fileHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "lineHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensBeforeCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensAfterCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "preApprovalExecutions": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "retrievalCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "retrievalCacheHits": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevDecisions": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevApplied": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "deduplicatedMessages": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        }
+      },
+      "booleanMetrics": {
+        "taskCompleted": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "testsPassed": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "recoverySucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "patchSucceeded": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "compressionError": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlIrAccurate": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlExecutedCorrectly": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "explainPassed": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "dangerousSqlBlocked": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "falsePositive": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "migrationRollbackSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "auditComplete": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        }
+      },
+      "results": [
+        {
+          "runId": "71470462-c084-4211-91c0-0e42ac2d7071",
+          "group": "A",
+          "repetition": 1,
+          "taskId": "9b02f9f5-dbcf-46d4-ba05-e9636deb489e",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "terminal": true,
+          "valid": true,
+          "profileApplied": true,
+          "configurationFailed": false,
+          "reason": null,
+          "observedResult": {
+            "durationMs": 228.0,
+            "inputTokens": 100.0,
+            "outputTokens": 20.0,
+            "totalTokens": 120.0,
+            "toolCalls": 0.0,
+            "toolErrors": 0.0,
+            "invalidToolCalls": 0.0,
+            "highRiskBlocked": 0.0,
+            "retrievalCalls": 0.0,
+            "retrievalCacheHits": 0.0,
+            "jevDecisions": 0.0,
+            "jevApplied": 0.0,
+            "taskCompleted": true,
+            "testsPassed": true,
+            "patchSucceeded": true,
+            "usageReported": true
+          }
+        }
+      ]
+    },
+    {
+      "group": "B",
+      "profile": {
+        "version": "proofcode.experiment.v1",
+        "group": "B",
+        "toolsEnabled": true,
+        "mandatorySafety": true,
+        "deterministicSafety": true,
+        "jevRouting": false,
+        "jevRequired": false,
+        "ragEnabled": false,
+        "contextCompressionEnabled": false,
+        "feedbackRetrieval": false
+      },
+      "plannedRuns": 1,
+      "terminalRuns": 1,
+      "profileAppliedRuns": 1,
+      "validRuns": 1,
+      "succeededRuns": 1,
+      "failedRuns": 0,
+      "cancelledRuns": 0,
+      "configurationFailedRuns": 0,
+      "unknownResults": 0,
+      "taskStatusSuccessRate": 1.0,
+      "metrics": {
+        "durationMs": {
+          "mean": 299.0,
+          "p95": 299.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "inputTokens": {
+          "mean": 400.0,
+          "p95": 400.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "outputTokens": {
+          "mean": 80.0,
+          "p95": 80.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "totalTokens": {
+          "mean": 480.0,
+          "p95": 480.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolCalls": {
+          "mean": 3.0,
+          "p95": 3.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolErrors": {
+          "mean": 1.0,
+          "p95": 1.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "invalidToolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "highRiskBlocked": {
+          "mean": 1.0,
+          "p95": 1.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "recallAtK": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "mrr": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "ndcg": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "fileHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "lineHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensBeforeCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensAfterCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "preApprovalExecutions": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "retrievalCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "retrievalCacheHits": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevDecisions": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevApplied": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "deduplicatedMessages": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        }
+      },
+      "booleanMetrics": {
+        "taskCompleted": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "testsPassed": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "recoverySucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "patchSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "compressionError": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlIrAccurate": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlExecutedCorrectly": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "explainPassed": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "dangerousSqlBlocked": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "falsePositive": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "migrationRollbackSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "auditComplete": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        }
+      },
+      "results": [
+        {
+          "runId": "f32b0802-b4be-4bd7-8454-09f2b077063d",
+          "group": "B",
+          "repetition": 1,
+          "taskId": "531b83d6-f189-4bcc-ba4d-08218dce48a3",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "terminal": true,
+          "valid": true,
+          "profileApplied": true,
+          "configurationFailed": false,
+          "reason": null,
+          "observedResult": {
+            "durationMs": 299.0,
+            "inputTokens": 400.0,
+            "outputTokens": 80.0,
+            "totalTokens": 480.0,
+            "toolCalls": 3.0,
+            "toolErrors": 1.0,
+            "invalidToolCalls": 0.0,
+            "highRiskBlocked": 1.0,
+            "retrievalCalls": 0.0,
+            "retrievalCacheHits": 0.0,
+            "jevDecisions": 0.0,
+            "jevApplied": 0.0,
+            "taskCompleted": true,
+            "testsPassed": true,
+            "usageReported": true
+          }
+        }
+      ]
+    },
+    {
+      "group": "C",
+      "profile": {
+        "version": "proofcode.experiment.v1",
+        "group": "C",
+        "toolsEnabled": true,
+        "mandatorySafety": true,
+        "deterministicSafety": false,
+        "jevRouting": true,
+        "jevRequired": true,
+        "ragEnabled": false,
+        "contextCompressionEnabled": false,
+        "feedbackRetrieval": false
+      },
+      "plannedRuns": 1,
+      "terminalRuns": 1,
+      "profileAppliedRuns": 1,
+      "validRuns": 1,
+      "succeededRuns": 1,
+      "failedRuns": 0,
+      "cancelledRuns": 0,
+      "configurationFailedRuns": 0,
+      "unknownResults": 0,
+      "taskStatusSuccessRate": 1.0,
+      "metrics": {
+        "durationMs": {
+          "mean": 325.0,
+          "p95": 325.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "inputTokens": {
+          "mean": 400.0,
+          "p95": 400.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "outputTokens": {
+          "mean": 80.0,
+          "p95": 80.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "totalTokens": {
+          "mean": 480.0,
+          "p95": 480.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolCalls": {
+          "mean": 3.0,
+          "p95": 3.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolErrors": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "invalidToolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "highRiskBlocked": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "recallAtK": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "mrr": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "ndcg": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "fileHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "lineHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensBeforeCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensAfterCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "preApprovalExecutions": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "retrievalCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "retrievalCacheHits": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevDecisions": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevApplied": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "deduplicatedMessages": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        }
+      },
+      "booleanMetrics": {
+        "taskCompleted": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "testsPassed": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "recoverySucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "patchSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "compressionError": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlIrAccurate": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlExecutedCorrectly": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "explainPassed": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "dangerousSqlBlocked": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "falsePositive": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "migrationRollbackSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "auditComplete": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        }
+      },
+      "results": [
+        {
+          "runId": "4fa1dee2-d42d-4943-8b9f-7196be7ad9ea",
+          "group": "C",
+          "repetition": 1,
+          "taskId": "e1737640-5084-4a09-b699-70dc5a030305",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "terminal": true,
+          "valid": true,
+          "profileApplied": true,
+          "configurationFailed": false,
+          "reason": null,
+          "observedResult": {
+            "durationMs": 325.0,
+            "inputTokens": 400.0,
+            "outputTokens": 80.0,
+            "totalTokens": 480.0,
+            "toolCalls": 3.0,
+            "toolErrors": 0.0,
+            "invalidToolCalls": 0.0,
+            "highRiskBlocked": 0.0,
+            "retrievalCalls": 0.0,
+            "retrievalCacheHits": 0.0,
+            "jevDecisions": 4.0,
+            "jevApplied": 4.0,
+            "taskCompleted": true,
+            "testsPassed": true,
+            "usageReported": true
+          }
+        }
+      ]
+    },
+    {
+      "group": "D",
+      "profile": {
+        "version": "proofcode.experiment.v1",
+        "group": "D",
+        "toolsEnabled": true,
+        "mandatorySafety": true,
+        "deterministicSafety": false,
+        "jevRouting": false,
+        "jevRequired": false,
+        "ragEnabled": true,
+        "contextCompressionEnabled": false,
+        "feedbackRetrieval": false
+      },
+      "plannedRuns": 1,
+      "terminalRuns": 1,
+      "profileAppliedRuns": 1,
+      "validRuns": 1,
+      "succeededRuns": 1,
+      "failedRuns": 0,
+      "cancelledRuns": 0,
+      "configurationFailedRuns": 0,
+      "unknownResults": 0,
+      "taskStatusSuccessRate": 1.0,
+      "metrics": {
+        "durationMs": {
+          "mean": 336.0,
+          "p95": 336.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "inputTokens": {
+          "mean": 400.0,
+          "p95": 400.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "outputTokens": {
+          "mean": 80.0,
+          "p95": 80.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "totalTokens": {
+          "mean": 480.0,
+          "p95": 480.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolCalls": {
+          "mean": 3.0,
+          "p95": 3.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolErrors": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "invalidToolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "highRiskBlocked": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "recallAtK": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "mrr": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "ndcg": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "fileHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "lineHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensBeforeCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensAfterCompression": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "preApprovalExecutions": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "retrievalCalls": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "retrievalCacheHits": {
+          "mean": 2.0,
+          "p95": 2.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevDecisions": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevApplied": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "deduplicatedMessages": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        }
+      },
+      "booleanMetrics": {
+        "taskCompleted": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "testsPassed": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "recoverySucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "patchSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "compressionError": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlIrAccurate": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlExecutedCorrectly": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "explainPassed": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "dangerousSqlBlocked": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "falsePositive": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "migrationRollbackSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "auditComplete": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        }
+      },
+      "results": [
+        {
+          "runId": "f7d94c84-b583-4b2b-9ecf-7f355c5595aa",
+          "group": "D",
+          "repetition": 1,
+          "taskId": "dfe64a08-d724-45b2-919d-5d34368ec6b5",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "terminal": true,
+          "valid": true,
+          "profileApplied": true,
+          "configurationFailed": false,
+          "reason": null,
+          "observedResult": {
+            "durationMs": 336.0,
+            "inputTokens": 400.0,
+            "outputTokens": 80.0,
+            "totalTokens": 480.0,
+            "toolCalls": 3.0,
+            "toolErrors": 0.0,
+            "invalidToolCalls": 0.0,
+            "highRiskBlocked": 0.0,
+            "retrievalCalls": 4.0,
+            "retrievalCacheHits": 2.0,
+            "jevDecisions": 0.0,
+            "jevApplied": 0.0,
+            "taskCompleted": true,
+            "testsPassed": true,
+            "usageReported": true,
+            "snapshotId": "9b373d00b52568da79e00d2a2a0d77c884b053cb4635ed965fdd4442f676bcee"
+          }
+        }
+      ]
+    },
+    {
+      "group": "E",
+      "profile": {
+        "version": "proofcode.experiment.v1",
+        "group": "E",
+        "toolsEnabled": true,
+        "mandatorySafety": true,
+        "deterministicSafety": false,
+        "jevRouting": false,
+        "jevRequired": false,
+        "ragEnabled": true,
+        "contextCompressionEnabled": true,
+        "feedbackRetrieval": false
+      },
+      "plannedRuns": 1,
+      "terminalRuns": 1,
+      "profileAppliedRuns": 1,
+      "validRuns": 1,
+      "succeededRuns": 1,
+      "failedRuns": 0,
+      "cancelledRuns": 0,
+      "configurationFailedRuns": 0,
+      "unknownResults": 0,
+      "taskStatusSuccessRate": 1.0,
+      "metrics": {
+        "durationMs": {
+          "mean": 370.0,
+          "p95": 370.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "inputTokens": {
+          "mean": 400.0,
+          "p95": 400.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "outputTokens": {
+          "mean": 80.0,
+          "p95": 80.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "totalTokens": {
+          "mean": 480.0,
+          "p95": 480.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolCalls": {
+          "mean": 3.0,
+          "p95": 3.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolErrors": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "invalidToolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "highRiskBlocked": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "recallAtK": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "mrr": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "ndcg": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "fileHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "lineHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensBeforeCompression": {
+          "mean": 1157.0,
+          "p95": 1157.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "tokensAfterCompression": {
+          "mean": 1157.0,
+          "p95": 1157.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "preApprovalExecutions": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "retrievalCalls": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "retrievalCacheHits": {
+          "mean": 2.0,
+          "p95": 2.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevDecisions": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevApplied": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "deduplicatedMessages": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        }
+      },
+      "booleanMetrics": {
+        "taskCompleted": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "testsPassed": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "recoverySucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "patchSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "compressionError": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlIrAccurate": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlExecutedCorrectly": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "explainPassed": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "dangerousSqlBlocked": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "falsePositive": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "migrationRollbackSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "auditComplete": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        }
+      },
+      "results": [
+        {
+          "runId": "b9f78f2b-03b7-4094-8659-d3264669b2fb",
+          "group": "E",
+          "repetition": 1,
+          "taskId": "fbf1907a-c8b7-4ed4-be9b-a613cf551575",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "terminal": true,
+          "valid": true,
+          "profileApplied": true,
+          "configurationFailed": false,
+          "reason": null,
+          "observedResult": {
+            "durationMs": 370.0,
+            "inputTokens": 400.0,
+            "outputTokens": 80.0,
+            "totalTokens": 480.0,
+            "toolCalls": 3.0,
+            "toolErrors": 0.0,
+            "invalidToolCalls": 0.0,
+            "highRiskBlocked": 0.0,
+            "tokensBeforeCompression": 1157.0,
+            "tokensAfterCompression": 1157.0,
+            "retrievalCalls": 4.0,
+            "retrievalCacheHits": 2.0,
+            "jevDecisions": 0.0,
+            "jevApplied": 0.0,
+            "deduplicatedMessages": 0.0,
+            "taskCompleted": true,
+            "testsPassed": true,
+            "compressionTokenBasis": "estimated",
+            "usageReported": true,
+            "snapshotId": "43e8df8f5e342e6dac17c84f1031f80b06fbb220087a5d3fd804427d3b2fd317"
+          }
+        }
+      ]
+    },
+    {
+      "group": "F",
+      "profile": {
+        "version": "proofcode.experiment.v1",
+        "group": "F",
+        "toolsEnabled": true,
+        "mandatorySafety": true,
+        "deterministicSafety": true,
+        "jevRouting": true,
+        "jevRequired": true,
+        "ragEnabled": true,
+        "contextCompressionEnabled": true,
+        "feedbackRetrieval": true
+      },
+      "plannedRuns": 1,
+      "terminalRuns": 1,
+      "profileAppliedRuns": 1,
+      "validRuns": 1,
+      "succeededRuns": 1,
+      "failedRuns": 0,
+      "cancelledRuns": 0,
+      "configurationFailedRuns": 0,
+      "unknownResults": 0,
+      "taskStatusSuccessRate": 1.0,
+      "metrics": {
+        "durationMs": {
+          "mean": 375.0,
+          "p95": 375.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "inputTokens": {
+          "mean": 400.0,
+          "p95": 400.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "outputTokens": {
+          "mean": 80.0,
+          "p95": 80.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "totalTokens": {
+          "mean": 480.0,
+          "p95": 480.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolCalls": {
+          "mean": 3.0,
+          "p95": 3.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "toolErrors": {
+          "mean": 1.0,
+          "p95": 1.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "invalidToolCalls": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "highRiskBlocked": {
+          "mean": 1.0,
+          "p95": 1.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "recallAtK": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "mrr": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "ndcg": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "fileHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "lineHitRate": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "tokensBeforeCompression": {
+          "mean": 1199.0,
+          "p95": 1199.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "tokensAfterCompression": {
+          "mean": 1199.0,
+          "p95": 1199.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "preApprovalExecutions": {
+          "mean": null,
+          "p95": null,
+          "sampleCount": 0,
+          "missingCount": 1
+        },
+        "retrievalCalls": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "retrievalCacheHits": {
+          "mean": 1.0,
+          "p95": 1.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevDecisions": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "jevApplied": {
+          "mean": 4.0,
+          "p95": 4.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        },
+        "deduplicatedMessages": {
+          "mean": 0.0,
+          "p95": 0.0,
+          "sampleCount": 1,
+          "missingCount": 0
+        }
+      },
+      "booleanMetrics": {
+        "taskCompleted": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "testsPassed": {
+          "trueCount": 1,
+          "falseCount": 0,
+          "unknownCount": 0,
+          "rate": 1.0
+        },
+        "recoverySucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "patchSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "compressionError": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlIrAccurate": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "sqlExecutedCorrectly": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "explainPassed": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "dangerousSqlBlocked": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "falsePositive": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "migrationRollbackSucceeded": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        },
+        "auditComplete": {
+          "trueCount": 0,
+          "falseCount": 0,
+          "unknownCount": 1,
+          "rate": null
+        }
+      },
+      "results": [
+        {
+          "runId": "490bd1fb-1cee-43a6-9f89-0b7da429f890",
+          "group": "F",
+          "repetition": 1,
+          "taskId": "9cd2c8a5-7baf-4d7f-9f9b-9f450aca9f79",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "terminal": true,
+          "valid": true,
+          "profileApplied": true,
+          "configurationFailed": false,
+          "reason": null,
+          "observedResult": {
+            "durationMs": 375.0,
+            "inputTokens": 400.0,
+            "outputTokens": 80.0,
+            "totalTokens": 480.0,
+            "toolCalls": 3.0,
+            "toolErrors": 1.0,
+            "invalidToolCalls": 0.0,
+            "highRiskBlocked": 1.0,
+            "tokensBeforeCompression": 1199.0,
+            "tokensAfterCompression": 1199.0,
+            "retrievalCalls": 4.0,
+            "retrievalCacheHits": 1.0,
+            "jevDecisions": 4.0,
+            "jevApplied": 4.0,
+            "deduplicatedMessages": 0.0,
+            "taskCompleted": true,
+            "testsPassed": true,
+            "compressionTokenBasis": "estimated",
+            "usageReported": true,
+            "snapshotId": "5dc0f7273ee37367999ed10490d1985a2dd6a2cdd4bd82cdfe91459feb862072"
+          }
+        }
+      ]
+    }
+  ],
+  "runCount": 6
+}

@@ -1,0 +1,39 @@
+{
+  "key": "llmlingua",
+  "requestedUrl": "https://aclanthology.org/2023.emnlp-main.825/",
+  "retrievedAt": "2026-10-08T03:39:33.067986+00:00",
+  "status": 200,
+  "finalUrl": "https://aclanthology.org/2023.emnlp-main.825/",
+  "sha256": "c9079904e0b4d04c6f9115964efdb4654aa1ebf84c543f1bfd132ea5f45aacb2",
+  "title": "LLMLingua: Compressing Prompts for Accelerated Inference of Large Language Models - ACL Anthology",
+  "metadata": {
+    "citation_title": [
+      "LLMLingua: Compressing Prompts for Accelerated Inference of Large Language Models"
+    ],
+    "citation_author": [
+      "Huiqiang Jiang",
+      "Qianhui Wu",
+      "Chin-Yew Lin",
+      "Yuqing Yang",
+      "Lili Qiu"
+    ],
+    "citation_conference_title": [
+      "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing"
+    ],
+    "citation_publication_date": [
+      "2023/12"
+    ],
+    "citation_pdf_url": [
+      "https://aclanthology.org/2023.emnlp-main.825.pdf"
+    ],
+    "citation_firstpage": [
+      "13358"
+    ],
+    "citation_lastpage": [
+      "13376"
+    ],
+    "citation_doi": [
+      "10.18653/v1/2023.emnlp-main.825"
+    ]
+  }
+}

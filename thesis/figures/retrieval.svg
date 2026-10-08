@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="800" viewBox="0 0 1500 800"><rect width="100%" height="100%" fill="white"/>
+<rect x="25" y="30" width="450" height="110" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="250.0" y="74.305" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">受限源码扫描</text>
+<text x="250.0" y="116.155" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">HEAD 与双 manifest</text>
+<rect x="525" y="30" width="450" height="110" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="750.0" y="74.305" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">原文行块</text>
+<text x="750.0" y="116.155" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">字节与哈希</text>
+<rect x="1025" y="30" width="450" height="110" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="1250.0" y="74.305" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">任务查询</text>
+<text x="1250.0" y="116.155" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">可选失败反馈</text>
+<polyline points="475,85 525,85" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="525,85 509.34196310195097,91.62011181924706 509.34196310195097,78.37988818075294" fill="#333333"/>
+<rect x="35" y="250" width="320" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="195.0" y="296.46" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">lexical</text>
+<text x="195.0" y="339.66" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">词项线索</text>
+<polyline points="750,140 750,200 195,200 195,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="195,250 188.37988818075294,234.34196310195097 201.62011181924706,234.34196310195097" fill="#333333"/>
+<rect x="405" y="250" width="320" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="565.0" y="296.46" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">symbol</text>
+<text x="565.0" y="339.66" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">声明名称</text>
+<polyline points="750,140 750,200 565,200 565,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="565,250 558.3798881807529,234.34196310195097 571.6201118192471,234.34196310195097" fill="#333333"/>
+<rect x="775" y="250" width="320" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="935.0" y="296.46" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">dependency</text>
+<text x="935.0" y="339.66" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">文本引用</text>
+<polyline points="750,140 750,200 935,200 935,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="935,250 928.3798881807529,234.34196310195097 941.6201118192471,234.34196310195097" fill="#333333"/>
+<rect x="1145" y="250" width="320" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="1305.0" y="296.46" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">test</text>
+<text x="1305.0" y="339.66" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">测试线索</text>
+<polyline points="750,140 750,200 1305,200 1305,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1305,250 1298.379888180753,234.34196310195097 1311.620111819247,234.34196310195097" fill="#333333"/>
+<polyline points="1250,140 1250,200 750,200" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,200 765.6580368980491,193.37988818075294 765.6580368980491,206.62011181924706" fill="#333333"/>
+<rect x="380" y="470" width="740" height="110" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="750.0" y="513.9599999999999" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">作用域过滤与 RRF 融合</text>
+<text x="750.0" y="557.16" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">固定次序   整块预算筛选</text>
+<polyline points="195,365 195,420 750,420 750,470" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,470 743.3798881807529,454.34196310195097 756.6201118192471,454.34196310195097" fill="#333333"/>
+<polyline points="565,365 565,420 750,420 750,470" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,470 743.3798881807529,454.34196310195097 756.6201118192471,454.34196310195097" fill="#333333"/>
+<polyline points="935,365 935,420 750,420 750,470" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,470 743.3798881807529,454.34196310195097 756.6201118192471,454.34196310195097" fill="#333333"/>
+<polyline points="1305,365 1305,420 750,420 750,470" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,470 743.3798881807529,454.34196310195097 756.6201118192471,454.34196310195097" fill="#333333"/>
+<rect x="230" y="660" width="1040" height="105" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="750.0" y="702.495" font-size="29" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">当前原文证据 → 主 Agent 模型视图</text>
+<text x="750.0" y="741.6450000000001" font-size="29" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">project  workspace  snapshot  path  line  byte  hash</text>
+<polyline points="750,580 750,660" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,660 743.3798881807529,644.3419631019509 756.6201118192471,644.3419631019509" fill="#333333"/>
+</svg>

@@ -1,0 +1,14 @@
+{
+  "key": "amqp",
+  "requestedUrl": "https://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-overview-v1.0-os.html",
+  "retrievedAt": "2026-10-08T04:37:29.518675+00:00",
+  "status": 200,
+  "finalUrl": "https://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-overview-v1.0-os.html",
+  "sha256": "245cc0b958c7155b751b9c99a6bef7d05abaa0a3869c724b828496db03f64fa7",
+  "title": "OASIS Advanced Message Queuing Protocol (AMQP) Version 1.0, Part 0: Overview",
+  "metadata": {
+    "documentDate": "2012-10-29",
+    "documentDateText": "29 October 2012",
+    "dateEvidence": "OASIS Standard / 29 October 2012; Revision History: OASIS Standard : 2012-10-29"
+  }
+}

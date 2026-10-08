@@ -1,0 +1,10 @@
+{
+  "key": "spring_boot",
+  "requestedUrl": "https://docs.spring.io/spring-boot/3.4/index.html",
+  "retrievedAt": "2026-10-08T03:39:36.361431+00:00",
+  "status": 200,
+  "finalUrl": "https://docs.spring.io/spring-boot/3.4/index.html",
+  "sha256": "9eeac9104f6ad422a62e4eb55be9eb5375fe9386207c92f4b25e3deb8daef616",
+  "title": "Spring Boot :: Spring Boot",
+  "metadata": {}
+}

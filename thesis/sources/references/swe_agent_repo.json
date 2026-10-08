@@ -1,0 +1,10 @@
+{
+  "key": "swe_agent_repo",
+  "requestedUrl": "https://github.com/SWE-agent/SWE-agent",
+  "retrievedAt": "2026-10-08T03:39:40.080389+00:00",
+  "status": 200,
+  "finalUrl": "https://github.com/SWE-agent/SWE-agent",
+  "sha256": "398669b59f285e0b04a258a0c5066d2c29998a6b67ef8bc86c0ad7bfaf7392d3",
+  "title": "GitHub - SWE-agent/SWE-agent: SWE-agent takes a GitHub issue and tries to automatically fix it, using your LM of choice. It can also be employed for offensive cybersecurity or competitive coding challenges. [NeurIPS 2024] · GitHub",
+  "metadata": {}
+}

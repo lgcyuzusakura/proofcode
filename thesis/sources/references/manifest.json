@@ -1,0 +1,706 @@
+[
+  {
+    "key": "rrf",
+    "requestedUrl": "https://api.crossref.org/works/10.1145/1571941.1572114",
+    "retrievedAt": "2026-10-08T03:39:33.065902+00:00",
+    "status": 200,
+    "finalUrl": "https://api.crossref.org/works/10.1145/1571941.1572114",
+    "sha256": "510bbc42be466af623861f184dd2e80e9a66c429ddfe88e62ecd522b1f6f6f24",
+    "metadata": {
+      "title": [
+        "Reciprocal rank fusion outperforms condorcet and individual rank learning methods"
+      ],
+      "author": [
+        {
+          "given": "Gordon V.",
+          "family": "Cormack",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "University of Waterloo, Waterloo, ON, Canada"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Charles L A",
+          "family": "Clarke",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "University of Waterloo, Waterloo, ON, Canada"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Stefan",
+          "family": "Buettcher",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Google, Mountain View, CA, USA"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2009,
+            7,
+            19
+          ]
+        ]
+      },
+      "DOI": "10.1145/1571941.1572114",
+      "page": "758-759",
+      "container-title": [
+        "Proceedings of the 32nd international ACM SIGIR conference on Research and development in information retrieval"
+      ],
+      "URL": "https://doi.org/10.1145/1571941.1572114"
+    }
+  },
+  {
+    "key": "rag",
+    "requestedUrl": "https://arxiv.org/abs/2005.11401",
+    "retrievedAt": "2026-10-08T03:39:33.066947+00:00",
+    "status": 200,
+    "finalUrl": "https://arxiv.org/abs/2005.11401",
+    "sha256": "8fe67b6e6cba908511e7a7bb688a6306cd15309ae9096b4e57970469dce23e55",
+    "title": "[2005.11401] Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "metadata": {
+      "citation_title": [
+        "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"
+      ],
+      "citation_author": [
+        "Lewis, Patrick",
+        "Perez, Ethan",
+        "Piktus, Aleksandra",
+        "Petroni, Fabio",
+        "Karpukhin, Vladimir",
+        "Goyal, Naman",
+        "KÃ¼ttler, Heinrich",
+        "Lewis, Mike",
+        "Yih, Wen-tau",
+        "RocktÃ¤schel, Tim",
+        "Riedel, Sebastian",
+        "Kiela, Douwe"
+      ],
+      "citation_date": [
+        "2020/05/22"
+      ],
+      "citation_online_date": [
+        "2021/04/12"
+      ],
+      "citation_pdf_url": [
+        "https://arxiv.org/pdf/2005.11401"
+      ],
+      "citation_arxiv_id": [
+        "2005.11401"
+      ],
+      "citation_abstract": [
+        "Large pre-trained language models have been shown to store factual knowledge in their parameters, and achieve state-of-the-art results when fine-tuned on downstream NLP tasks. However, their ability to access and precisely manipulate knowledge is still limited, and hence on knowledge-intensive tasks, their performance lags behind task-specific architectures. Additionally, providing provenance for their decisions and updating their world knowledge remain open research problems. Pre-trained models with a differentiable access mechanism to explicit non-parametric memory can overcome this issue, but have so far been only investigated for extractive downstream tasks. We explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG) -- models which combine pre-trained parametric and non-parametric memory for language generation. We introduce RAG models where the parametric memory is a pre-trained seq2seq model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever. We compare two RAG formulations, one which conditions on the same retrieved passages across the whole generated sequence, the other can use different passages per token. We fine-tune and evaluate our models on a wide range of knowledge-intensive NLP tasks and set the state-of-the-art on three open domain QA tasks, outperforming parametric seq2seq models and task-specific retrieve-and-extract architectures. For language generation tasks, we find that RAG models generate more specific, diverse and factual language than a state-of-the-art parametric-only seq2seq baseline."
+      ]
+    }
+  },
+  {
+    "key": "react",
+    "requestedUrl": "https://arxiv.org/abs/2210.03629",
+    "retrievedAt": "2026-10-08T03:39:33.066947+00:00",
+    "status": 200,
+    "finalUrl": "https://arxiv.org/abs/2210.03629",
+    "sha256": "66a324b6bf6075b6534db3df10867474023791818c05099d5d6e7e776a624d87",
+    "title": "[2210.03629] ReAct: Synergizing Reasoning and Acting in Language Models",
+    "metadata": {
+      "citation_title": [
+        "ReAct: Synergizing Reasoning and Acting in Language Models"
+      ],
+      "citation_author": [
+        "Yao, Shunyu",
+        "Zhao, Jeffrey",
+        "Yu, Dian",
+        "Du, Nan",
+        "Shafran, Izhak",
+        "Narasimhan, Karthik",
+        "Cao, Yuan"
+      ],
+      "citation_date": [
+        "2022/10/06"
+      ],
+      "citation_online_date": [
+        "2023/03/10"
+      ],
+      "citation_pdf_url": [
+        "https://arxiv.org/pdf/2210.03629"
+      ],
+      "citation_arxiv_id": [
+        "2210.03629"
+      ],
+      "citation_abstract": [
+        "While large language models (LLMs) have demonstrated impressive capabilities across tasks in language understanding and interactive decision making, their abilities for reasoning (e.g. chain-of-thought prompting) and acting (e.g. action plan generation) have primarily been studied as separate topics. In this paper, we explore the use of LLMs to generate both reasoning traces and task-specific actions in an interleaved manner, allowing for greater synergy between the two: reasoning traces help the model induce, track, and update action plans as well as handle exceptions, while actions allow it to interface with external sources, such as knowledge bases or environments, to gather additional information. We apply our approach, named ReAct, to a diverse set of language and decision making tasks and demonstrate its effectiveness over state-of-the-art baselines, as well as improved human interpretability and trustworthiness over methods without reasoning or acting components. Concretely, on question answering (HotpotQA) and fact verification (Fever), ReAct overcomes issues of hallucination and error propagation prevalent in chain-of-thought reasoning by interacting with a simple Wikipedia API, and generates human-like task-solving trajectories that are more interpretable than baselines without reasoning traces. On two interactive decision making benchmarks (ALFWorld and WebShop), ReAct outperforms imitation and reinforcement learning methods by an absolute success rate of 34% and 10% respectively, while being prompted with only one or two in-context examples. Project site with code: https://react-lm.github.io"
+      ]
+    }
+  },
+  {
+    "key": "repocoder",
+    "requestedUrl": "https://aclanthology.org/2023.emnlp-main.151/",
+    "retrievedAt": "2026-10-08T03:39:33.067458+00:00",
+    "status": 200,
+    "finalUrl": "https://aclanthology.org/2023.emnlp-main.151/",
+    "sha256": "6cfb5c2ebeb5379eae97ae4825e17944f92c25e2980dfdf2eb4e475097399442",
+    "title": "RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation - ACL Anthology",
+    "metadata": {
+      "citation_title": [
+        "RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation"
+      ],
+      "citation_author": [
+        "Fengji Zhang",
+        "Bei Chen",
+        "Yue Zhang",
+        "Jacky Keung",
+        "Jin Liu",
+        "Daoguang Zan",
+        "Yi Mao",
+        "Jian-Guang Lou",
+        "Weizhu Chen"
+      ],
+      "citation_conference_title": [
+        "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing"
+      ],
+      "citation_publication_date": [
+        "2023/12"
+      ],
+      "citation_pdf_url": [
+        "https://aclanthology.org/2023.emnlp-main.151.pdf"
+      ],
+      "citation_firstpage": [
+        "2471"
+      ],
+      "citation_lastpage": [
+        "2484"
+      ],
+      "citation_doi": [
+        "10.18653/v1/2023.emnlp-main.151"
+      ]
+    }
+  },
+  {
+    "key": "llmlingua",
+    "requestedUrl": "https://aclanthology.org/2023.emnlp-main.825/",
+    "retrievedAt": "2026-10-08T03:39:33.067986+00:00",
+    "status": 200,
+    "finalUrl": "https://aclanthology.org/2023.emnlp-main.825/",
+    "sha256": "c9079904e0b4d04c6f9115964efdb4654aa1ebf84c543f1bfd132ea5f45aacb2",
+    "title": "LLMLingua: Compressing Prompts for Accelerated Inference of Large Language Models - ACL Anthology",
+    "metadata": {
+      "citation_title": [
+        "LLMLingua: Compressing Prompts for Accelerated Inference of Large Language Models"
+      ],
+      "citation_author": [
+        "Huiqiang Jiang",
+        "Qianhui Wu",
+        "Chin-Yew Lin",
+        "Yuqing Yang",
+        "Lili Qiu"
+      ],
+      "citation_conference_title": [
+        "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing"
+      ],
+      "citation_publication_date": [
+        "2023/12"
+      ],
+      "citation_pdf_url": [
+        "https://aclanthology.org/2023.emnlp-main.825.pdf"
+      ],
+      "citation_firstpage": [
+        "13358"
+      ],
+      "citation_lastpage": [
+        "13376"
+      ],
+      "citation_doi": [
+        "10.18653/v1/2023.emnlp-main.825"
+      ]
+    }
+  },
+  {
+    "key": "llmlingua2",
+    "requestedUrl": "https://arxiv.org/abs/2403.12968",
+    "retrievedAt": "2026-10-08T03:39:33.068498+00:00",
+    "status": 200,
+    "finalUrl": "https://arxiv.org/abs/2403.12968",
+    "sha256": "deb1dc1d155f4e7027f4b3773addebb6a646456a3b1fa6171c1c56dd9fad3749",
+    "title": "[2403.12968] LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression",
+    "metadata": {
+      "citation_title": [
+        "LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression"
+      ],
+      "citation_author": [
+        "Pan, Zhuoshi",
+        "Wu, Qianhui",
+        "Jiang, Huiqiang",
+        "Xia, Menglin",
+        "Luo, Xufang",
+        "Zhang, Jue",
+        "Lin, Qingwei",
+        "RÃ¼hle, Victor",
+        "Yang, Yuqing",
+        "Lin, Chin-Yew",
+        "Zhao, H. Vicky",
+        "Qiu, Lili",
+        "Zhang, Dongmei"
+      ],
+      "citation_date": [
+        "2024/03/19"
+      ],
+      "citation_online_date": [
+        "2024/08/12"
+      ],
+      "citation_pdf_url": [
+        "https://arxiv.org/pdf/2403.12968"
+      ],
+      "citation_arxiv_id": [
+        "2403.12968"
+      ],
+      "citation_abstract": [
+        "This paper focuses on task-agnostic prompt compression for better generalizability and efficiency. Considering the redundancy in natural language, existing approaches compress prompts by removing tokens or lexical units according to their information entropy obtained from a causal language model such as LLaMa-7B. The challenge is that information entropy may be a suboptimal compression metric: (i) it only leverages unidirectional context and may fail to capture all essential information needed for prompt compression; (ii) it is not aligned with the prompt compression objective. To address these issues, we propose a data distillation procedure to derive knowledge from an LLM to compress prompts without losing crucial information, and meantime, introduce an extractive text compression dataset. We formulate prompt compression as a token classification problem to guarantee the faithfulness of the compressed prompt to the original one, and use a Transformer encoder as the base architecture to capture all essential information for prompt compression from the full bidirectional context. Our approach leads to lower latency by explicitly learning the compression objective with smaller models such as XLM-RoBERTa-large and mBERT. We evaluate our method on both in-domain and out-of-domain datasets, including MeetingBank, LongBench, ZeroScrolls, GSM8K, and BBH. Despite its small size, our model shows significant performance gains over strong baselines and demonstrates robust generalization ability across different LLMs. Additionally, our model is 3x-6x faster than existing prompt compression methods, while accelerating the end-to-end latency by 1.6x-2.9x with compression ratios of 2x-5x. Our code is available at https://aka.ms/LLMLingua-2."
+      ]
+    }
+  },
+  {
+    "key": "lost_middle",
+    "requestedUrl": "https://arxiv.org/abs/2307.03172",
+    "retrievedAt": "2026-10-08T03:39:34.070619+00:00",
+    "status": 200,
+    "finalUrl": "https://arxiv.org/abs/2307.03172",
+    "sha256": "af63ac4b31d2d47748f3ad62081349ff820ca488c577888c8b0289545915c275",
+    "title": "[2307.03172] Lost in the Middle: How Language Models Use Long Contexts",
+    "metadata": {
+      "citation_title": [
+        "Lost in the Middle: How Language Models Use Long Contexts"
+      ],
+      "citation_author": [
+        "Liu, Nelson F.",
+        "Lin, Kevin",
+        "Hewitt, John",
+        "Paranjape, Ashwin",
+        "Bevilacqua, Michele",
+        "Petroni, Fabio",
+        "Liang, Percy"
+      ],
+      "citation_date": [
+        "2023/07/06"
+      ],
+      "citation_online_date": [
+        "2023/11/20"
+      ],
+      "citation_pdf_url": [
+        "https://arxiv.org/pdf/2307.03172"
+      ],
+      "citation_arxiv_id": [
+        "2307.03172"
+      ],
+      "citation_abstract": [
+        "While recent language models have the ability to take long contexts as input, relatively little is known about how well they use longer context. We analyze the performance of language models on two tasks that require identifying relevant information in their input contexts: multi-document question answering and key-value retrieval. We find that performance can degrade significantly when changing the position of relevant information, indicating that current language models do not robustly make use of information in long input contexts. In particular, we observe that performance is often highest when relevant information occurs at the beginning or end of the input context, and significantly degrades when models must access relevant information in the middle of long contexts, even for explicitly long-context models. Our analysis provides a better understanding of how language models use their input context and provides new evaluation protocols for future long-context language models."
+      ]
+    }
+  },
+  {
+    "key": "swebench",
+    "requestedUrl": "https://arxiv.org/abs/2310.06770",
+    "retrievedAt": "2026-10-08T03:39:34.070619+00:00",
+    "status": 200,
+    "finalUrl": "https://arxiv.org/abs/2310.06770",
+    "sha256": "cd170cab3a56f891ee94070d5748d923685f2a84a91201d6336a221436fd0f9f",
+    "title": "[2310.06770] SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+    "metadata": {
+      "citation_title": [
+        "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?"
+      ],
+      "citation_author": [
+        "Jimenez, Carlos E.",
+        "Yang, John",
+        "Wettig, Alexander",
+        "Yao, Shunyu",
+        "Pei, Kexin",
+        "Press, Ofir",
+        "Narasimhan, Karthik"
+      ],
+      "citation_date": [
+        "2023/10/10"
+      ],
+      "citation_online_date": [
+        "2024/11/11"
+      ],
+      "citation_pdf_url": [
+        "https://arxiv.org/pdf/2310.06770"
+      ],
+      "citation_arxiv_id": [
+        "2310.06770"
+      ],
+      "citation_abstract": [
+        "Language models have outpaced our ability to evaluate them effectively, but for their future development it is essential to study the frontier of their capabilities. We find real-world software engineering to be a rich, sustainable, and challenging testbed for evaluating the next generation of language models. To this end, we introduce SWE-bench, an evaluation framework consisting of $2,294$ software engineering problems drawn from real GitHub issues and corresponding pull requests across $12$ popular Python repositories. Given a codebase along with a description of an issue to be resolved, a language model is tasked with editing the codebase to address the issue. Resolving issues in SWE-bench frequently requires understanding and coordinating changes across multiple functions, classes, and even files simultaneously, calling for models to interact with execution environments, process extremely long contexts and perform complex reasoning that goes far beyond traditional code generation tasks. Our evaluations show that both state-of-the-art proprietary models and our fine-tuned model SWE-Llama can resolve only the simplest issues. The best-performing model, Claude 2, is able to solve a mere $1.96$% of the issues. Advances on SWE-bench represent steps towards LMs that are more practical, intelligent, and autonomous."
+      ]
+    }
+  },
+  {
+    "key": "sweagent",
+    "requestedUrl": "https://arxiv.org/abs/2405.15793",
+    "retrievedAt": "2026-10-08T04:37:30.457368+00:00",
+    "status": 200,
+    "finalUrl": "https://arxiv.org/abs/2405.15793",
+    "sha256": "1589f706b0380d637196a65970b23cb89037465fe6d883af1007e34a41d8bdbf",
+    "title": "[2405.15793] SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering",
+    "metadata": {
+      "citation_title": [
+        "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering"
+      ],
+      "citation_author": [
+        "Yang, John",
+        "Jimenez, Carlos E.",
+        "Wettig, Alexander",
+        "Lieret, Kilian",
+        "Yao, Shunyu",
+        "Narasimhan, Karthik",
+        "Press, Ofir"
+      ],
+      "citation_date": [
+        "2024/05/06"
+      ],
+      "citation_online_date": [
+        "2024/11/11"
+      ],
+      "citation_pdf_url": [
+        "https://arxiv.org/pdf/2405.15793"
+      ],
+      "citation_arxiv_id": [
+        "2405.15793"
+      ],
+      "citation_abstract": [
+        "Language model (LM) agents are increasingly being used to automate complicated tasks in digital environments. Just as humans benefit from powerful software applications, such as integrated development environments, for complex tasks like software engineering, we posit that LM agents represent a new category of end users with their own needs and abilities, and would benefit from specially-built interfaces to the software they use. We investigate how interface design affects the performance of language model agents. As a result of this exploration, we introduce SWE-agent: a system that facilitates LM agents to autonomously use computers to solve software engineering tasks. SWE-agent's custom agent-computer interface (ACI) significantly enhances an agent's ability to create and edit code files, navigate entire repositories, and execute tests and other programs. We evaluate SWE-agent on SWE-bench and HumanEvalFix, achieving state-of-the-art performance on both with a pass@1 rate of 12.5% and 87.7%, respectively, far exceeding the previous state-of-the-art achieved with non-interactive LMs. Finally, we provide insight on how the design of the ACI can impact agents' behavior and performance."
+      ]
+    },
+    "submissionEvidence": "[Submitted on 6 May 2024 ( v1 ), last revised 11 Nov 2024 (this version, v3)]"
+  },
+  {
+    "key": "postgres_transaction",
+    "requestedUrl": "https://www.postgresql.org/docs/16/tutorial-transactions.html",
+    "retrievedAt": "2026-10-08T03:39:34.332734+00:00",
+    "status": 200,
+    "finalUrl": "https://www.postgresql.org/docs/16/tutorial-transactions.html",
+    "sha256": "7d9c4bdb2a71f79873a0c7f41b37e46efbd49ad2dde1f246ba46837eb93e0cf8",
+    "title": "PostgreSQL: Documentation: 16: 3.4. Transactions",
+    "metadata": {}
+  },
+  {
+    "key": "postgres_explain",
+    "requestedUrl": "https://www.postgresql.org/docs/16/using-explain.html",
+    "retrievedAt": "2026-10-08T03:39:34.333742+00:00",
+    "status": 200,
+    "finalUrl": "https://www.postgresql.org/docs/16/using-explain.html",
+    "sha256": "36477db3a84d99c0b912f8ff9ead093f69a0b464af964e880f019d2bffe26ac7",
+    "title": "PostgreSQL: Documentation: 16: 14.1. Using EXPLAIN",
+    "metadata": {}
+  },
+  {
+    "key": "redis_transaction",
+    "requestedUrl": "https://redis.io/docs/latest/develop/interact/transactions/",
+    "retrievedAt": "2026-10-08T03:39:34.358521+00:00",
+    "status": 200,
+    "finalUrl": "https://redis.io/docs/latest/develop/interact/transactions/",
+    "sha256": "e7a866a75070c1e4f8dade127ae07f3fa9a6c40374c765fbb50fa5f674a56082",
+    "title": "https://redis.io/docs/latest/develop/using-commands/transactions/",
+    "metadata": {}
+  },
+  {
+    "key": "git_worktree",
+    "requestedUrl": "https://git-scm.com/docs/git-worktree",
+    "retrievedAt": "2026-10-08T03:39:35.567279+00:00",
+    "status": 200,
+    "finalUrl": "https://git-scm.com/docs/git-worktree",
+    "sha256": "18932f40a55a177631c7dfc90215b7932ad822f28f015c2d312f0e8b5b79095e",
+    "title": "Git - git-worktree Documentation",
+    "metadata": {}
+  },
+  {
+    "key": "spring_boot",
+    "requestedUrl": "https://docs.spring.io/spring-boot/3.4/index.html",
+    "retrievedAt": "2026-10-08T03:39:36.361431+00:00",
+    "status": 200,
+    "finalUrl": "https://docs.spring.io/spring-boot/3.4/index.html",
+    "sha256": "9eeac9104f6ad422a62e4eb55be9eb5375fe9386207c92f4b25e3deb8daef616",
+    "title": "Spring Boot :: Spring Boot",
+    "metadata": {}
+  },
+  {
+    "key": "amqp",
+    "requestedUrl": "https://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-overview-v1.0-os.html",
+    "retrievedAt": "2026-10-08T04:37:29.518675+00:00",
+    "status": 200,
+    "finalUrl": "https://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-overview-v1.0-os.html",
+    "sha256": "245cc0b958c7155b751b9c99a6bef7d05abaa0a3869c724b828496db03f64fa7",
+    "title": "OASIS Advanced Message Queuing Protocol (AMQP) Version 1.0, Part 0: Overview",
+    "metadata": {
+      "documentDate": "2012-10-29",
+      "documentDateText": "29 October 2012",
+      "dateEvidence": "OASIS Standard / 29 October 2012; Revision History: OASIS Standard : 2012-10-29"
+    }
+  },
+  {
+    "key": "outbox",
+    "requestedUrl": "https://microservices.io/patterns/data/transactional-outbox.html",
+    "retrievedAt": "2026-10-08T03:39:37.189161+00:00",
+    "status": 200,
+    "finalUrl": "https://microservices.io/patterns/data/transactional-outbox.html",
+    "sha256": "7b9d9b224d9b985bf03d581dcdef5c94a21f49a93f3ac1e74c6bc2104a48b3eb",
+    "title": "Pattern: Transactional outbox",
+    "metadata": {}
+  },
+  {
+    "key": "prompt_injection",
+    "requestedUrl": "https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html",
+    "retrievedAt": "2026-10-08T03:39:37.391671+00:00",
+    "status": 200,
+    "finalUrl": "https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html",
+    "sha256": "d98f86104c060cda10db3d21f66fd62b8340a9a4054852c7a229ef39b084a296",
+    "title": "LLM Prompt Injection Prevention - OWASP Cheat Sheet Series",
+    "metadata": {}
+  },
+  {
+    "key": "sql_injection",
+    "requestedUrl": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+    "retrievedAt": "2026-10-08T04:12:05.341760+00:00",
+    "status": 200,
+    "finalUrl": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+    "sha256": "396db195affc3f0be5f6b0becdb233b3f5dc26d0047f9d720160299685888428",
+    "title": "SQL Injection Prevention - OWASP Cheat Sheet Series",
+    "metadata": {}
+  },
+  {
+    "key": "aider_repomap",
+    "requestedUrl": "https://aider.chat/docs/repomap.html",
+    "retrievedAt": "2026-10-08T03:39:37.641205+00:00",
+    "status": 200,
+    "finalUrl": "https://aider.chat/docs/repomap.html",
+    "sha256": "77708d7004b0755018668f7db831cb09b7cb5883da4e46d90bd65fe5683b07f0",
+    "title": "Repository map | aider Link Menu Expand (external link) Document Search Copy Copied",
+    "metadata": {}
+  },
+  {
+    "key": "codex",
+    "requestedUrl": "https://github.com/openai/codex",
+    "retrievedAt": "2026-10-08T03:39:37.810463+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/openai/codex",
+    "sha256": "0f5037ca7298e75a3760e7d90da90f11f1c0312579f61bfda094091d4dac7c6e",
+    "title": "GitHub - openai/codex: Lightweight coding agent that runs in your terminal · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "claude_code",
+    "requestedUrl": "https://github.com/anthropics/claude-code",
+    "retrievedAt": "2026-10-08T03:39:38.045450+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/anthropics/claude-code",
+    "sha256": "927abfc7702237ad92dcfb8f9c67868eec1f5be6d911a126806c24a4bca2dbe2",
+    "title": "GitHub - anthropics/claude-code: Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows - all through natural language commands. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "opencode",
+    "requestedUrl": "https://github.com/anomalyco/opencode",
+    "retrievedAt": "2026-10-08T03:40:46.910860+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/anomalyco/opencode",
+    "sha256": "7178c8810475f35e47a58a7d95a7166dfd15dd33ef726dc2812fbf9cc4f566f0",
+    "title": "GitHub - anomalyco/opencode: The open source coding agent. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "cline",
+    "requestedUrl": "https://github.com/cline/cline",
+    "retrievedAt": "2026-10-08T03:39:38.307302+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/cline/cline",
+    "sha256": "c869a9f77a2921fae48e1300b038999d8ff02692c61da5d906aefed034d49ca4",
+    "title": "GitHub - cline/cline: Autonomous coding agent as an SDK, IDE extension, or CLI assistant. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "roo_code",
+    "requestedUrl": "https://github.com/RooCodeInc/Roo-Code",
+    "retrievedAt": "2026-10-08T03:39:39.202276+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/RooCodeInc/Roo-Code",
+    "sha256": "12b1c2979a4b34a9890624dbcd1a8e5e00ef3aa225aac36ab4d3771c03dc6f3f",
+    "title": "GitHub - RooCodeInc/Roo-Code: Roo Code gives you a whole dev team of AI agents in your code editor. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "aider",
+    "requestedUrl": "https://github.com/Aider-AI/aider",
+    "retrievedAt": "2026-10-08T03:39:39.277311+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/Aider-AI/aider",
+    "sha256": "40f69c8412b70cd84396dd5aa40133b13334d585ea379db804df2296cc5ff0fe",
+    "title": "GitHub - Aider-AI/aider: aider is AI pair programming in your terminal · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "openhands",
+    "requestedUrl": "https://github.com/All-Hands-AI/OpenHands",
+    "retrievedAt": "2026-10-08T03:39:39.400550+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/OpenHands/OpenHands",
+    "sha256": "6385447effd6e9a6eddf1e0a0ec4c69fc2b03ecb0520f3011f4fed166c7fc326",
+    "title": "GitHub - OpenHands/OpenHands: 🙌 OpenHands: AI-Driven Development · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "swe_agent_repo",
+    "requestedUrl": "https://github.com/SWE-agent/SWE-agent",
+    "retrievedAt": "2026-10-08T03:39:40.080389+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/SWE-agent/SWE-agent",
+    "sha256": "398669b59f285e0b04a258a0c5066d2c29998a6b67ef8bc86c0ad7bfaf7392d3",
+    "title": "GitHub - SWE-agent/SWE-agent: SWE-agent takes a GitHub issue and tries to automatically fix it, using your LM of choice. It can also be employed for offensive cybersecurity or competitive coding challenges. [NeurIPS 2024] · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "continue",
+    "requestedUrl": "https://github.com/continuedev/continue",
+    "retrievedAt": "2026-10-08T03:39:40.305452+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/continuedev/continue",
+    "sha256": "041af0802ab7c651e8dd02e475caa3f5e5cf55e339d7d83b84807aead5a488cf",
+    "title": "GitHub - continuedev/continue: open-source coding agent · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "bytebase",
+    "requestedUrl": "https://github.com/bytebase/bytebase",
+    "retrievedAt": "2026-10-08T03:39:41.720683+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/bytebase/bytebase",
+    "sha256": "e7647ca3ce5255183c4e50ef7d781aa7e3ad6cb80c3adb5a85e951b91d871246",
+    "title": "GitHub - bytebase/bytebase: Database governance built for humans and agents — controlling changes and access across every major database. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "chartdb",
+    "requestedUrl": "https://github.com/chartdb/chartdb",
+    "retrievedAt": "2026-10-08T03:39:42.231933+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/chartdb/chartdb",
+    "sha256": "949160c9195f71c015351a3af9b70fcde379424ecb1e86c013cc82e105bb309e",
+    "title": "GitHub - chartdb/chartdb: Database diagrams editor that allows you to visualize and design your DB with a single query. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "drawdb",
+    "requestedUrl": "https://github.com/drawdb-io/drawdb",
+    "retrievedAt": "2026-10-08T03:39:42.944430+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/drawdb-io/drawdb",
+    "sha256": "410c53edf9b4b8773b02e7ff04c1dfff42a9df5f7ef592bf8d028a094fea12ba",
+    "title": "GitHub - drawdb-io/drawdb: Free, simple, and intuitive online database diagram editor and SQL generator. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "dbeaver",
+    "requestedUrl": "https://github.com/dbeaver/dbeaver",
+    "retrievedAt": "2026-10-08T03:39:43.528933+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/dbeaver/dbeaver",
+    "sha256": "46a1783fb6cd3664f486fd3581815f1e6913ba8f19da909a08a6e648faba9d2f",
+    "title": "GitHub - dbeaver/dbeaver: Free universal database tool and SQL client · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "react_flow",
+    "requestedUrl": "https://github.com/xyflow/xyflow",
+    "retrievedAt": "2026-10-08T03:40:46.911860+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/xyflow/xyflow",
+    "sha256": "9f91a4bf6bb74d585d0146e51079544f09fccee21801b08a94c9d0a77c89148d",
+    "title": "GitHub - xyflow/xyflow: React Flow | Svelte Flow - Powerful open source libraries for building node-based UIs with React (https://reactflow.dev) or Svelte (https://svelteflow.dev). Ready out-of-the-box and infinitely customizable. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "llmlingua_repo",
+    "requestedUrl": "https://github.com/microsoft/LLMLingua",
+    "retrievedAt": "2026-10-08T03:39:44.156662+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/microsoft/LLMLingua",
+    "sha256": "79d42b2ec5fa2459127e99e4359e90ab1a452adf422ed5829e95054a63222b33",
+    "title": "GitHub - microsoft/LLMLingua: [EMNLP'23, ACL'24] To speed up LLMs' inference and enhance LLM's perceive of key information, compress the prompt and KV-Cache, which achieves up to 20x compression with minimal performance loss. · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "mini_swe_agent",
+    "requestedUrl": "https://github.com/SWE-agent/mini-swe-agent",
+    "retrievedAt": "2026-10-08T04:06:28.241101+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/SWE-agent/mini-swe-agent",
+    "sha256": "c3519cce3c425d3e2a84e8507b805b35d5289d28bd80532eba85cd23d363a4e7",
+    "title": "GitHub - SWE-agent/mini-swe-agent: The 100 line AI agent that solves GitHub issues or helps you in your command line. Radically simple, no huge configs, no giant monorepo—but scores >74% on SWE-bench verified! · GitHub",
+    "metadata": {}
+  },
+  {
+    "key": "pi_mono",
+    "requestedUrl": "https://github.com/badlogic/pi-mono",
+    "retrievedAt": "2026-10-08T04:12:05.343762+00:00",
+    "status": 200,
+    "finalUrl": "https://github.com/earendil-works/pi",
+    "sha256": "988eb8775b792394fe1cea93b1a8663ba36327b9dc1dd697911abe6a8319a24f",
+    "title": "GitHub - earendil-works/pi: AI agent toolkit: unified LLM API, agent loop, TUI, coding agent CLI · GitHub",
+    "metadata": {
+      "canonicalRepository": "earendil-works/pi",
+      "historicalRepository": "badlogic/pi-mono",
+      "redirectObservedAt": "2026-10-08T04:12:05.343762+00:00",
+      "migrationDate": "unknown; no move date inferred from redirect"
+    }
+  },
+  {
+    "key": "crush",
+    "requestedUrl": "https://github.com/charmbracelet/crush",
+    "retrievedAt": "2026-10-08T04:12:05.343762+00:00",
+    "error": "<urlopen error timed out>"
+  },
+  {
+    "key": "crush_readme",
+    "requestedUrl": "https://raw.githubusercontent.com/charmbracelet/crush/main/README.md",
+    "retrievedAt": "2026-10-08T04:37:30.037389+00:00",
+    "status": 200,
+    "finalUrl": "https://raw.githubusercontent.com/charmbracelet/crush/main/README.md",
+    "sha256": "4a72550d9d6d9b8274f1639ef4fbef3ee14c917b9dec0fad71ca7c3bb5d2cfc6",
+    "title": "Crush",
+    "metadata": {
+      "sourceRole": "alternate official raw README; the canonical GitHub page remains recorded as a timeout in manifest.json",
+      "featuresVerified": [
+        "multi-model OpenAI- and Anthropic-compatible APIs",
+        "session-based work sessions",
+        "LSP-enhanced context",
+        "MCP http/stdio/sse support",
+        "Windows PowerShell and WSL support"
+      ]
+    }
+  }
+]

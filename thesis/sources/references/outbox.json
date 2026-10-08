@@ -1,0 +1,10 @@
+{
+  "key": "outbox",
+  "requestedUrl": "https://microservices.io/patterns/data/transactional-outbox.html",
+  "retrievedAt": "2026-10-08T03:39:37.189161+00:00",
+  "status": 200,
+  "finalUrl": "https://microservices.io/patterns/data/transactional-outbox.html",
+  "sha256": "7b9d9b224d9b985bf03d581dcdef5c94a21f49a93f3ac1e74c6bc2104a48b3eb",
+  "title": "Pattern: Transactional outbox",
+  "metadata": {}
+}

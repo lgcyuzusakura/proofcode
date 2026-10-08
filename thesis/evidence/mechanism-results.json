@@ -1,0 +1,448 @@
+{
+  "compression": [
+    {
+      "case": "successful_log",
+      "copies": 1,
+      "beforeEstimatedTokens": 1954,
+      "afterEstimatedTokens": 1954,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "successful_log",
+      "copies": 2,
+      "beforeEstimatedTokens": 3892,
+      "afterEstimatedTokens": 2029,
+      "deduplicatedMessages": 1,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0.4786742034943474
+    },
+    {
+      "case": "successful_log",
+      "copies": 4,
+      "beforeEstimatedTokens": 7768,
+      "afterEstimatedTokens": 2179,
+      "deduplicatedMessages": 3,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0.7194902162718846
+    },
+    {
+      "case": "successful_log",
+      "copies": 8,
+      "beforeEstimatedTokens": 15520,
+      "afterEstimatedTokens": 2479,
+      "deduplicatedMessages": 7,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0.840270618556701
+    },
+    {
+      "case": "failed_log",
+      "copies": 1,
+      "beforeEstimatedTokens": 1960,
+      "afterEstimatedTokens": 1960,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "failed_log",
+      "copies": 2,
+      "beforeEstimatedTokens": 3904,
+      "afterEstimatedTokens": 3904,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "failed_log",
+      "copies": 4,
+      "beforeEstimatedTokens": 7792,
+      "afterEstimatedTokens": 7792,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "failed_log",
+      "copies": 8,
+      "beforeEstimatedTokens": 15568,
+      "afterEstimatedTokens": 15568,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "source_code",
+      "copies": 1,
+      "beforeEstimatedTokens": 2104,
+      "afterEstimatedTokens": 2104,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "source_code",
+      "copies": 2,
+      "beforeEstimatedTokens": 4192,
+      "afterEstimatedTokens": 4192,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "source_code",
+      "copies": 4,
+      "beforeEstimatedTokens": 8368,
+      "afterEstimatedTokens": 8368,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    },
+    {
+      "case": "source_code",
+      "copies": 8,
+      "beforeEstimatedTokens": 16720,
+      "afterEstimatedTokens": 16720,
+      "deduplicatedMessages": 0,
+      "originalUnchanged": true,
+      "latestExact": true,
+      "estimatedReduction": 0
+    }
+  ],
+  "createdAt": "2026-10-08T03:46:54Z",
+  "kind": "controlled synthetic mechanism verification",
+  "modelQualityClaim": false,
+  "realModelCalls": 0,
+  "retrieval": {
+    "assertions": {
+      "changedEvidenceMatchesExactBytes": true,
+      "crossProjectIsolated": true,
+      "deletedFileAbsent": true,
+      "editChangesSnapshot": true,
+      "headChangesSnapshot": true,
+      "hotEvidenceUnchanged": true,
+      "hotQueryCacheHit": true
+    },
+    "changed": {
+      "content": "\n--- evidence=d2af9579264e4e9232adbafc31a56f74e227d36dc08dbde16e2ad8d0373c3bed snapshot=8cb8e3f6b7ad46bb9ba010fe5d8faa4846b0d69d0f32a88a9cd96d6af2aa2bc4 blob=09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124 calc_test.go:1-3 bytes=0:52 routes=dependency,lexical,symbol,test ---\npackage synthetic\n\nfunc TestSum() { _ = Sum(2, 3) }\n\n\n--- evidence=47072725520c80a241268f12219432fa64d3230180b0460102d1430242241025 snapshot=8cb8e3f6b7ad46bb9ba010fe5d8faa4846b0d69d0f32a88a9cd96d6af2aa2bc4 blob=91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098 calc.go:1-3 bytes=0:59 routes=lexical,symbol ---\npackage synthetic\n\nfunc Sum(a, b int) int { return a + b }\n\n",
+      "snapshotId": "8cb8e3f6b7ad46bb9ba010fe5d8faa4846b0d69d0f32a88a9cd96d6af2aa2bc4",
+      "baseCommit": "86a5a4b65046d039c7fd77e587a4d0d70cbe31d9",
+      "evidence": [
+        {
+          "id": "d2af9579264e4e9232adbafc31a56f74e227d36dc08dbde16e2ad8d0373c3bed",
+          "snapshotId": "8cb8e3f6b7ad46bb9ba010fe5d8faa4846b0d69d0f32a88a9cd96d6af2aa2bc4",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc_test.go",
+          "symbol": "TestSum",
+          "blobHash": "09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124",
+          "sourceHash": "09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124",
+          "startByte": 0,
+          "endByte": 52,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc TestSum() { _ = Sum(2, 3) }\n",
+          "score": 0.06504494976203068,
+          "reasons": [
+            "dependency",
+            "lexical",
+            "symbol",
+            "test"
+          ]
+        },
+        {
+          "id": "47072725520c80a241268f12219432fa64d3230180b0460102d1430242241025",
+          "snapshotId": "8cb8e3f6b7ad46bb9ba010fe5d8faa4846b0d69d0f32a88a9cd96d6af2aa2bc4",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc.go",
+          "symbol": "Sum",
+          "blobHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "sourceHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "startByte": 0,
+          "endByte": 59,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc Sum(a, b int) int { return a + b }\n",
+          "score": 0.03278688524590164,
+          "reasons": [
+            "lexical",
+            "symbol"
+          ]
+        }
+      ],
+      "cacheHit": false,
+      "filesScanned": 4,
+      "filesReused": 3,
+      "filesParsed": 1,
+      "estimatedTokens": 170,
+      "retrievalRoutes": [
+        "lexical",
+        "symbol",
+        "dependency",
+        "test"
+      ],
+      "embeddingConfigured": false,
+      "omittedByBudget": 0
+    },
+    "crossProject": {
+      "content": "\n--- evidence=829b3680fd644a20c26405ddfca46b8c2c6942046ecd9c74463c9d5d46a9c28e snapshot=e2bfb7ef8d99d002c98deae72381750a22cd70443fb8c6d287e22fab77c21f84 blob=91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098 calc.go:1-3 bytes=0:59 routes=lexical,symbol ---\npackage synthetic\n\nfunc Sum(a, b int) int { return a + b }\n\n",
+      "snapshotId": "e2bfb7ef8d99d002c98deae72381750a22cd70443fb8c6d287e22fab77c21f84",
+      "baseCommit": "86a5a4b65046d039c7fd77e587a4d0d70cbe31d9",
+      "evidence": [
+        {
+          "id": "829b3680fd644a20c26405ddfca46b8c2c6942046ecd9c74463c9d5d46a9c28e",
+          "snapshotId": "e2bfb7ef8d99d002c98deae72381750a22cd70443fb8c6d287e22fab77c21f84",
+          "projectId": "project-b",
+          "workspaceId": "workspace-a",
+          "path": "calc.go",
+          "symbol": "Sum",
+          "blobHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "sourceHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "startByte": 0,
+          "endByte": 59,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc Sum(a, b int) int { return a + b }\n",
+          "score": 0.03278688524590164,
+          "reasons": [
+            "lexical",
+            "symbol"
+          ]
+        }
+      ],
+      "cacheHit": false,
+      "filesScanned": 3,
+      "filesReused": 0,
+      "filesParsed": 3,
+      "estimatedTokens": 83,
+      "retrievalRoutes": [
+        "lexical",
+        "symbol",
+        "dependency",
+        "test"
+      ],
+      "embeddingConfigured": false,
+      "omittedByBudget": 0
+    },
+    "deleted": {
+      "content": "\n--- evidence=e159c0257821306a1ac0de2eb59b1916b3236135dced3a5ee84e602556184838 snapshot=75579e4e7e4c1660035c26cfa285f5b8c3bbbdd2c0694e149759c41f93d67db3 blob=91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098 calc.go:1-3 bytes=0:59 routes=lexical,symbol ---\npackage synthetic\n\nfunc Sum(a, b int) int { return a + b }\n\n",
+      "snapshotId": "75579e4e7e4c1660035c26cfa285f5b8c3bbbdd2c0694e149759c41f93d67db3",
+      "baseCommit": "86a5a4b65046d039c7fd77e587a4d0d70cbe31d9",
+      "evidence": [
+        {
+          "id": "e159c0257821306a1ac0de2eb59b1916b3236135dced3a5ee84e602556184838",
+          "snapshotId": "75579e4e7e4c1660035c26cfa285f5b8c3bbbdd2c0694e149759c41f93d67db3",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc.go",
+          "symbol": "Sum",
+          "blobHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "sourceHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "startByte": 0,
+          "endByte": 59,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc Sum(a, b int) int { return a + b }\n",
+          "score": 0.03278688524590164,
+          "reasons": [
+            "lexical",
+            "symbol"
+          ]
+        }
+      ],
+      "cacheHit": false,
+      "filesScanned": 3,
+      "filesReused": 3,
+      "filesParsed": 0,
+      "estimatedTokens": 83,
+      "retrievalRoutes": [
+        "lexical",
+        "symbol",
+        "dependency",
+        "test"
+      ],
+      "embeddingConfigured": false,
+      "omittedByBudget": 0
+    },
+    "deletedFileEvidenceCount": 0,
+    "hot": {
+      "content": "\n--- evidence=c2967ee2fea84192768c6d4a8a269679538f211154220f570bb573e8e33db482 snapshot=1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7 blob=09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124 calc_test.go:1-3 bytes=0:52 routes=dependency,lexical,symbol,test ---\npackage synthetic\n\nfunc TestSum() { _ = Sum(2, 3) }\n\n\n--- evidence=a1affd3c68643b4f8b3afe10cf34a787036d37a57f3198e635dab4331a74faac snapshot=1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7 blob=bf2a027e2c08e97e811fc657f5c49e248ed67ff8d62b1760f46309aa7d07c278 calc.go:1-3 bytes=0:59 routes=lexical,symbol ---\npackage synthetic\n\nfunc Sum(a, b int) int { return a - b }\n\n",
+      "snapshotId": "1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7",
+      "baseCommit": "86a5a4b65046d039c7fd77e587a4d0d70cbe31d9",
+      "evidence": [
+        {
+          "id": "c2967ee2fea84192768c6d4a8a269679538f211154220f570bb573e8e33db482",
+          "snapshotId": "1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc_test.go",
+          "symbol": "TestSum",
+          "blobHash": "09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124",
+          "sourceHash": "09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124",
+          "startByte": 0,
+          "endByte": 52,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc TestSum() { _ = Sum(2, 3) }\n",
+          "score": 0.06504494976203068,
+          "reasons": [
+            "dependency",
+            "lexical",
+            "symbol",
+            "test"
+          ]
+        },
+        {
+          "id": "a1affd3c68643b4f8b3afe10cf34a787036d37a57f3198e635dab4331a74faac",
+          "snapshotId": "1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc.go",
+          "symbol": "Sum",
+          "blobHash": "bf2a027e2c08e97e811fc657f5c49e248ed67ff8d62b1760f46309aa7d07c278",
+          "sourceHash": "bf2a027e2c08e97e811fc657f5c49e248ed67ff8d62b1760f46309aa7d07c278",
+          "startByte": 0,
+          "endByte": 59,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc Sum(a, b int) int { return a - b }\n",
+          "score": 0.03278688524590164,
+          "reasons": [
+            "lexical",
+            "symbol"
+          ]
+        }
+      ],
+      "cacheHit": true,
+      "filesScanned": 4,
+      "filesReused": 4,
+      "filesParsed": 0,
+      "estimatedTokens": 170,
+      "retrievalRoutes": [
+        "lexical",
+        "symbol",
+        "dependency",
+        "test"
+      ],
+      "embeddingConfigured": false,
+      "omittedByBudget": 0
+    },
+    "initial": {
+      "content": "\n--- evidence=c2967ee2fea84192768c6d4a8a269679538f211154220f570bb573e8e33db482 snapshot=1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7 blob=09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124 calc_test.go:1-3 bytes=0:52 routes=dependency,lexical,symbol,test ---\npackage synthetic\n\nfunc TestSum() { _ = Sum(2, 3) }\n\n\n--- evidence=a1affd3c68643b4f8b3afe10cf34a787036d37a57f3198e635dab4331a74faac snapshot=1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7 blob=bf2a027e2c08e97e811fc657f5c49e248ed67ff8d62b1760f46309aa7d07c278 calc.go:1-3 bytes=0:59 routes=lexical,symbol ---\npackage synthetic\n\nfunc Sum(a, b int) int { return a - b }\n\n",
+      "snapshotId": "1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7",
+      "baseCommit": "86a5a4b65046d039c7fd77e587a4d0d70cbe31d9",
+      "evidence": [
+        {
+          "id": "c2967ee2fea84192768c6d4a8a269679538f211154220f570bb573e8e33db482",
+          "snapshotId": "1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc_test.go",
+          "symbol": "TestSum",
+          "blobHash": "09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124",
+          "sourceHash": "09f8eb87fa886fae958352405faac2266ec8f4aeea2a35b3bad1ed4f382b7124",
+          "startByte": 0,
+          "endByte": 52,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc TestSum() { _ = Sum(2, 3) }\n",
+          "score": 0.06504494976203068,
+          "reasons": [
+            "dependency",
+            "lexical",
+            "symbol",
+            "test"
+          ]
+        },
+        {
+          "id": "a1affd3c68643b4f8b3afe10cf34a787036d37a57f3198e635dab4331a74faac",
+          "snapshotId": "1f35334662e2ec6b57b5be3d6914f3d52bda280bdf96e47ce344353c6a9ad7d7",
+          "projectId": "project-a",
+          "workspaceId": "workspace-a",
+          "path": "calc.go",
+          "symbol": "Sum",
+          "blobHash": "bf2a027e2c08e97e811fc657f5c49e248ed67ff8d62b1760f46309aa7d07c278",
+          "sourceHash": "bf2a027e2c08e97e811fc657f5c49e248ed67ff8d62b1760f46309aa7d07c278",
+          "startByte": 0,
+          "endByte": 59,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc Sum(a, b int) int { return a - b }\n",
+          "score": 0.03278688524590164,
+          "reasons": [
+            "lexical",
+            "symbol"
+          ]
+        }
+      ],
+      "cacheHit": false,
+      "filesScanned": 4,
+      "filesReused": 0,
+      "filesParsed": 4,
+      "estimatedTokens": 170,
+      "retrievalRoutes": [
+        "lexical",
+        "symbol",
+        "dependency",
+        "test"
+      ],
+      "embeddingConfigured": false,
+      "omittedByBudget": 0
+    },
+    "newHead": {
+      "content": "\n--- evidence=f9eb9f5cbdee6e0215250768ecc83c8cadcbfc5e7c2228c9bda34676c1a695fa snapshot=6f0b03f920e98d1d8404c2f7f3e715766e7565c41b5011e1145b963c3b618185 blob=91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098 calc.go:1-3 bytes=0:59 routes=lexical,symbol ---\npackage synthetic\n\nfunc Sum(a, b int) int { return a + b }\n\n",
+      "snapshotId": "6f0b03f920e98d1d8404c2f7f3e715766e7565c41b5011e1145b963c3b618185",
+      "baseCommit": "3f5d86774ec2ad37b02535f74f2db280a9707fb9",
+      "evidence": [
+        {
+          "id": "f9eb9f5cbdee6e0215250768ecc83c8cadcbfc5e7c2228c9bda34676c1a695fa",
+          "snapshotId": "6f0b03f920e98d1d8404c2f7f3e715766e7565c41b5011e1145b963c3b618185",
+          "projectId": "project-b",
+          "workspaceId": "workspace-a",
+          "path": "calc.go",
+          "symbol": "Sum",
+          "blobHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "sourceHash": "91cd5d54770172173b6981651cc64366e53dba693d0f66bbc6d4c7dbc45fb098",
+          "startByte": 0,
+          "endByte": 59,
+          "startLine": 1,
+          "endLine": 3,
+          "content": "package synthetic\n\nfunc Sum(a, b int) int { return a + b }\n",
+          "score": 0.03278688524590164,
+          "reasons": [
+            "lexical",
+            "symbol"
+          ]
+        }
+      ],
+      "cacheHit": false,
+      "filesScanned": 3,
+      "filesReused": 0,
+      "filesParsed": 3,
+      "estimatedTokens": 83,
+      "retrievalRoutes": [
+        "lexical",
+        "symbol",
+        "dependency",
+        "test"
+      ],
+      "embeddingConfigured": false,
+      "omittedByBudget": 0
+    },
+    "staleVersionEvidenceCount": 0,
+    "wrongProjectEvidenceCount": 0
+  }
+}

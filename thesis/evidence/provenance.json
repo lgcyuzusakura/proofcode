@@ -1,0 +1,49 @@
+{
+  "archivedAt": "2026-10-08T04:14:04.711164+00:00",
+  "backendCommit": "69b70f53aad3c117f2b79288cb82c43080eda68c",
+  "fixtureSourceCommit": "0719074f2109bdd03b81a5235c9d446b36486682",
+  "fixtureKind": "fixture-only end-to-end plumbing validation",
+  "originalAuditRowsArchived": false,
+  "realModelResearchPerformed": false,
+  "sourceFiles": [
+    {
+      "source": ".tools/experiment-e2e/summary.json",
+      "archive": "thesis/evidence/fixture-summary.json",
+      "sha256": "3039f4f53c5a43896435509f023d671d43aaab974b2b4222fc953fe8733e7555"
+    },
+    {
+      "source": ".tools/experiment-e2e/compare.csv",
+      "archive": "thesis/evidence/fixture-compare.csv",
+      "sha256": "fde7f7a2c783e7964ef0520c816fc650ef111542e7cccf205d0355a9cdab2976"
+    },
+    {
+      "source": ".tools/experiment-e2e/compare.json",
+      "archive": "thesis/evidence/fixture-compare.json",
+      "sha256": "dcde451933914f192cd33e5afa18c37f205f8d5c7cd99e4955228219ebda246c"
+    }
+  ],
+  "otherEvidence": [
+    {
+      "path": "thesis/evidence/mechanism-results.json",
+      "sha256": "0f940335b6919ae013d4cb5a24315289813e9adb94c3e1208d1e50d101f56244"
+    },
+    {
+      "path": "thesis/evidence/test-report-summary.json",
+      "sha256": "7d02e3eb13fd1897306f26205ccc309506676f2cc315f6fce58cb256daf348e5"
+    },
+    {
+      "path": "thesis/tools/mechanism_bench.go",
+      "sha256": "4c576e9641113728a51735d96ce0085714baa5ac4bb5b087e2344116afe5cdd0"
+    },
+    {
+      "path": "smoke/experiments/verify.py",
+      "sha256": "a78913d65d06eb4d576b56240f0eb258b07068ab41301e4d936a16a7b13d5a09"
+    }
+  ],
+  "limitations": [
+    "Fixture model/Jev responses are predetermined.",
+    "Surefire live PostgreSQL/Redis adapter tests are skipped in this report.",
+    "The fixture uses real PostgreSQL for approval mutation verification.",
+    "Source report XML is summarized without credentials or process environments."
+  ]
+}

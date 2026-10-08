@@ -1,0 +1,43 @@
+{
+  "key": "repocoder",
+  "requestedUrl": "https://aclanthology.org/2023.emnlp-main.151/",
+  "retrievedAt": "2026-10-08T03:39:33.067458+00:00",
+  "status": 200,
+  "finalUrl": "https://aclanthology.org/2023.emnlp-main.151/",
+  "sha256": "6cfb5c2ebeb5379eae97ae4825e17944f92c25e2980dfdf2eb4e475097399442",
+  "title": "RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation - ACL Anthology",
+  "metadata": {
+    "citation_title": [
+      "RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation"
+    ],
+    "citation_author": [
+      "Fengji Zhang",
+      "Bei Chen",
+      "Yue Zhang",
+      "Jacky Keung",
+      "Jin Liu",
+      "Daoguang Zan",
+      "Yi Mao",
+      "Jian-Guang Lou",
+      "Weizhu Chen"
+    ],
+    "citation_conference_title": [
+      "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing"
+    ],
+    "citation_publication_date": [
+      "2023/12"
+    ],
+    "citation_pdf_url": [
+      "https://aclanthology.org/2023.emnlp-main.151.pdf"
+    ],
+    "citation_firstpage": [
+      "2471"
+    ],
+    "citation_lastpage": [
+      "2484"
+    ],
+    "citation_doi": [
+      "10.18653/v1/2023.emnlp-main.151"
+    ]
+  }
+}

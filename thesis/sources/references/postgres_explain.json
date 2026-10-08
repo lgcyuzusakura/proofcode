@@ -1,0 +1,10 @@
+{
+  "key": "postgres_explain",
+  "requestedUrl": "https://www.postgresql.org/docs/16/using-explain.html",
+  "retrievedAt": "2026-10-08T03:39:34.333742+00:00",
+  "status": 200,
+  "finalUrl": "https://www.postgresql.org/docs/16/using-explain.html",
+  "sha256": "36477db3a84d99c0b912f8ff9ead093f69a0b464af964e880f019d2bffe26ac7",
+  "title": "PostgreSQL: Documentation: 16: 14.1. Using EXPLAIN",
+  "metadata": {}
+}

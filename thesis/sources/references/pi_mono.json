@@ -1,0 +1,15 @@
+{
+  "key": "pi_mono",
+  "requestedUrl": "https://github.com/badlogic/pi-mono",
+  "retrievedAt": "2026-10-08T04:12:05.343762+00:00",
+  "status": 200,
+  "finalUrl": "https://github.com/earendil-works/pi",
+  "sha256": "988eb8775b792394fe1cea93b1a8663ba36327b9dc1dd697911abe6a8319a24f",
+  "title": "GitHub - earendil-works/pi: AI agent toolkit: unified LLM API, agent loop, TUI, coding agent CLI · GitHub",
+  "metadata": {
+    "canonicalRepository": "earendil-works/pi",
+    "historicalRepository": "badlogic/pi-mono",
+    "redirectObservedAt": "2026-10-08T04:12:05.343762+00:00",
+    "migrationDate": "unknown; no move date inferred from redirect"
+  }
+}

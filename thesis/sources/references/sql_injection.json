@@ -1,0 +1,10 @@
+{
+  "key": "sql_injection",
+  "requestedUrl": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+  "retrievedAt": "2026-10-08T04:12:05.341760+00:00",
+  "status": 200,
+  "finalUrl": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+  "sha256": "396db195affc3f0be5f6b0becdb233b3f5dc26d0047f9d720160299685888428",
+  "title": "SQL Injection Prevention - OWASP Cheat Sheet Series",
+  "metadata": {}
+}

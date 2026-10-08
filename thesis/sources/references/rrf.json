@@ -1,0 +1,78 @@
+{
+  "key": "rrf",
+  "requestedUrl": "https://api.crossref.org/works/10.1145/1571941.1572114",
+  "retrievedAt": "2026-10-08T03:39:33.065902+00:00",
+  "status": 200,
+  "finalUrl": "https://api.crossref.org/works/10.1145/1571941.1572114",
+  "sha256": "510bbc42be466af623861f184dd2e80e9a66c429ddfe88e62ecd522b1f6f6f24",
+  "metadata": {
+    "title": [
+      "Reciprocal rank fusion outperforms condorcet and individual rank learning methods"
+    ],
+    "author": [
+      {
+        "given": "Gordon V.",
+        "family": "Cormack",
+        "sequence": "first",
+        "affiliation": [
+          {
+            "name": "University of Waterloo, Waterloo, ON, Canada"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Charles L A",
+        "family": "Clarke",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "University of Waterloo, Waterloo, ON, Canada"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Stefan",
+        "family": "Buettcher",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Google, Mountain View, CA, USA"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      }
+    ],
+    "published": {
+      "date-parts": [
+        [
+          2009,
+          7,
+          19
+        ]
+      ]
+    },
+    "DOI": "10.1145/1571941.1572114",
+    "page": "758-759",
+    "container-title": [
+      "Proceedings of the 32nd international ACM SIGIR conference on Research and development in information retrieval"
+    ],
+    "URL": "https://doi.org/10.1145/1571941.1572114"
+  }
+}

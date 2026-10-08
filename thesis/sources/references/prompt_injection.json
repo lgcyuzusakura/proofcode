@@ -1,0 +1,10 @@
+{
+  "key": "prompt_injection",
+  "requestedUrl": "https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html",
+  "retrievedAt": "2026-10-08T03:39:37.391671+00:00",
+  "status": 200,
+  "finalUrl": "https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html",
+  "sha256": "d98f86104c060cda10db3d21f66fd62b8340a9a4054852c7a229ef39b084a296",
+  "title": "LLM Prompt Injection Prevention - OWASP Cheat Sheet Series",
+  "metadata": {}
+}

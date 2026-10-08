@@ -1,0 +1,10 @@
+rendered/
+sources/university/2024-attachments/
+sources/university/2024-official/
+__pycache__/
+research/
+sources/university/*.html
+sources/university/*.htm
+sources/university/*.zip
+sources/university/archived-official/
+output/~$*

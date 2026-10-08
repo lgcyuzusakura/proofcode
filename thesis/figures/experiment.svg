@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="780" viewBox="0 0 1500 780"><rect width="100%" height="100%" fill="white"/>
+<rect x="140" y="25" width="1220" height="115" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="750.0" y="71.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">固定问题、模型、commit、temperature 与验收命令</text>
+<text x="750.0" y="113.655" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">事务内创建 Experiment、六组 Run、Task 与 Outbox</text>
+<rect x="20" y="250" width="220" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="130.0" y="296.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">A</text>
+<text x="130.0" y="338.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">纯文本</text>
+<polyline points="750,140 750,200 130,200 130,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="130,250 123.37988818075294,234.34196310195097 136.62011181924706,234.34196310195097" fill="#333333"/>
+<polyline points="130,365 130,420 750,420 750,480" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,480 743.3798881807529,464.34196310195097 756.6201118192471,464.34196310195097" fill="#333333"/>
+<rect x="268" y="250" width="220" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="378.0" y="296.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">B</text>
+<text x="378.0" y="338.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">工具策略</text>
+<polyline points="750,140 750,200 378,200 378,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="378,250 371.3798881807529,234.34196310195097 384.62011181924703,234.34196310195097" fill="#333333"/>
+<polyline points="378,365 378,420 750,420 750,480" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,480 743.3798881807529,464.34196310195097 756.6201118192471,464.34196310195097" fill="#333333"/>
+<rect x="516" y="250" width="220" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="626.0" y="296.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">C</text>
+<text x="626.0" y="338.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">Jev</text>
+<polyline points="750,140 750,200 626,200 626,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="626,250 619.3798881807529,234.34196310195097 632.6201118192471,234.34196310195097" fill="#333333"/>
+<polyline points="626,365 626,420 750,420 750,480" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,480 743.3798881807529,464.34196310195097 756.6201118192471,464.34196310195097" fill="#333333"/>
+<rect x="764" y="250" width="220" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="874.0" y="296.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">D</text>
+<text x="874.0" y="338.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">检索</text>
+<polyline points="750,140 750,200 874,200 874,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="874,250 867.3798881807529,234.34196310195097 880.6201118192471,234.34196310195097" fill="#333333"/>
+<polyline points="874,365 874,420 750,420 750,480" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,480 743.3798881807529,464.34196310195097 756.6201118192471,464.34196310195097" fill="#333333"/>
+<rect x="1012" y="250" width="220" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="1122.0" y="296.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">E</text>
+<text x="1122.0" y="338.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">检索去重</text>
+<polyline points="750,140 750,200 1122,200 1122,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1122,250 1115.379888180753,234.34196310195097 1128.620111819247,234.34196310195097" fill="#333333"/>
+<polyline points="1122,365 1122,420 750,420 750,480" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,480 743.3798881807529,464.34196310195097 756.6201118192471,464.34196310195097" fill="#333333"/>
+<rect x="1260" y="250" width="220" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="1370.0" y="296.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">F</text>
+<text x="1370.0" y="338.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">组合</text>
+<polyline points="750,140 750,200 1370,200 1370,250" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1370,250 1363.379888180753,234.34196310195097 1376.620111819247,234.34196310195097" fill="#333333"/>
+<polyline points="1370,365 1370,420 750,420 750,480" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,480 743.3798881807529,464.34196310195097 756.6201118192471,464.34196310195097" fill="#333333"/>
+<rect x="165" y="480" width="1170" height="110" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="750.0" y="524.3050000000001" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">各组独立工作树与统一实际测试</text>
+<text x="750.0" y="566.155" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">终结事件绑定配置版本、组别、commit 和当前 attempt</text>
+<polyline points="750,590 750,660" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="750,660 743.3798881807529,644.3419631019509 756.6201118192471,644.3419631019509" fill="#333333"/>
+<rect x="165" y="660" width="1170" height="90" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="750.0" y="714.9" font-size="30" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">逐 Run 证据与 JSON / CSV 比较   缺失指标保持 unknown</text>
+</svg>

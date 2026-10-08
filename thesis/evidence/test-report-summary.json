@@ -1,0 +1,259 @@
+{
+  "kind": "archived Maven Surefire summary, not model task scores",
+  "totals": {
+    "tests": 37,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2,
+    "executed": 35
+  },
+  "suites": [
+    {
+      "suite": "dev.proofcode.control.config.SecurityErrorDispatchIntegrationTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.config.SecurityErrorDispatchIntegrationTest.xml",
+      "sha256": "8ad127cc5517d6d8f290439e6aa0c4dde984f7cb74b7cc57e9dbbd7e9ae8f571",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "authenticatedErrorsKeepTheirStatusAcrossErrorDispatch",
+          "skipped": false
+        },
+        {
+          "name": "errorDispatchPermitDoesNotAuthorizeRequestsToInternalEndpointsOrErrorPath",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.ContextLoadTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.ContextLoadTest.xml",
+      "sha256": "3300c6009e0295a53d1f1aae7be7fd03103f277c81a930588d213274bf3da54b",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "contextLoads",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.data.DataOperationIntegrationTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.data.DataOperationIntegrationTest.xml",
+      "sha256": "e8e791cfbd2a3a756d86a95a47450accc41b06f91341d1d459aff9986949367f",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "planningIsIdempotentButCannotChangeApprovedIr",
+          "skipped": false
+        },
+        {
+          "name": "compensationUsesSeparateApprovalAndAdapter",
+          "skipped": false
+        },
+        {
+          "name": "executesOnceAfterApprovalAndReturnsOnlySummaryOnReplay",
+          "skipped": false
+        },
+        {
+          "name": "capabilityCannotBeGuessedAndExpires",
+          "skipped": false
+        },
+        {
+          "name": "rejectsDigestTamperOldAttemptAndTerminalTask",
+          "skipped": false
+        },
+        {
+          "name": "schemaDriftIsRecordedBeforeAnyMutation",
+          "skipped": false
+        },
+        {
+          "name": "runnerCannotApproveAndUserCannotCallInternalEndpoint",
+          "skipped": false
+        },
+        {
+          "name": "planInspectionAndExplainRequireTheExplicitCurrentAttempt",
+          "skipped": false
+        },
+        {
+          "name": "pendingAndDeniedNeverExecuteEvenWithAutomaticRunnerFlags",
+          "skipped": false
+        },
+        {
+          "name": "unknownResultIsDurableAndCannotReplay",
+          "skipped": false
+        },
+        {
+          "name": "normalTaskApprovalAtomicallyApprovesPlanAndResumesTask",
+          "skipped": false
+        },
+        {
+          "name": "rejectsOtherProjectAndTask",
+          "skipped": false
+        },
+        {
+          "name": "sensitiveResultIsReturnedButNeverStoredInAuditOrPublicLedger",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.data.LiveDataAdapterTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.data.LiveDataAdapterTest.xml",
+      "sha256": "1b10abf56bde2b0d56ceeaad23283fc63f2528d7dfdffdf07da785a81181f596",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2,
+      "testNames": [
+        {
+          "name": "postgresSchemaParameterizedCommitExplainAndRollback",
+          "skipped": true
+        },
+        {
+          "name": "redisEncryptedSnapshotScanCasAndCompensation",
+          "skipped": true
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.data.PostgresDataAdapterTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.data.PostgresDataAdapterTest.xml",
+      "sha256": "1709ae30fa23a6c741d2472e1e301ca64d89a4ea812da59177131e8769ce0a26",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "validParameterizedWriteCommitsAndNullValueBinds",
+          "skipped": false
+        },
+        {
+          "name": "preventsRawSqlUnknownColumnsAndUnfilteredDelete",
+          "skipped": false
+        },
+        {
+          "name": "expectedRowsMismatchRollsBackActualSqlTransaction",
+          "skipped": false
+        },
+        {
+          "name": "injectedPredicateIsBoundAsLiteralAndQueryIsLimited",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.experiment.ExperimentComparisonSnapshotTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.experiment.ExperimentComparisonSnapshotTest.xml",
+      "sha256": "756616879346cb7fbdbbbcc4b344f2d27003c31730d63b2229b5f6dc6348042b",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "terminalEvidenceOverridesStaleTaskSnapshotsWithoutPromotingMissingOrOlderAttempts",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.experiment.ExperimentWorkflowIntegrationTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.experiment.ExperimentWorkflowIntegrationTest.xml",
+      "sha256": "e5c280be9f738f5e9d55eadf7920f229644faf2fa9844d41b755246f3a7b9f0a",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "createsRealFixedRevisionTasksForEveryGroupAndReplaysIdempotently",
+          "skipped": false
+        },
+        {
+          "name": "comparesActualTerminalEvidenceAndKeepsMissingAndConfigurationFailuresVisible",
+          "skipped": false
+        },
+        {
+          "name": "newerAttemptCannotReuseOlderTerminalEvidenceAndCrossProjectScopeIsRejected",
+          "skipped": false
+        },
+        {
+          "name": "legacyTaskApiGetsStableDefaultConversationAndInvalidControlsQueueNothing",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.task.TaskEntityLeaseTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.task.TaskEntityLeaseTest.xml",
+      "sha256": "e237c425b71d25a7a7ef83c437ba786134eac624e01d0955e010832ea8e244ba",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "verifyingLeaseCanBeRenewedAndReclaimedAfterExpiry",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "suite": "dev.proofcode.control.task.TaskWorkflowIntegrationTest",
+      "source": "control-plane/target/surefire-reports/TEST-dev.proofcode.control.task.TaskWorkflowIntegrationTest.xml",
+      "sha256": "a1225c65bfcb8cc05103578d192c71e7e0c8d25e51aa5056876d73733cdfae1d",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testNames": [
+        {
+          "name": "rejectsEventsFromRunnerWhoseLeaseWasTakenOver",
+          "skipped": false
+        },
+        {
+          "name": "taskCreateIdempotencyPreservesOriginalRequest",
+          "skipped": false
+        },
+        {
+          "name": "retryKeepsHistoryButRejectsStaleRunnerAndApproval",
+          "skipped": false
+        },
+        {
+          "name": "projectRejectsMalformedAndCredentialBearingRepositoryUrls",
+          "skipped": false
+        },
+        {
+          "name": "broadcastsOnlyAfterCommitAndNeverAfterRollback",
+          "skipped": false
+        },
+        {
+          "name": "storesRecoveryPatchOutsideEventStream",
+          "skipped": false
+        },
+        {
+          "name": "preservesLargePatchArgumentsForApprovalReview",
+          "skipped": false
+        },
+        {
+          "name": "persistsApprovalResumeAndArtifactsWithGlobalEventOrdering",
+          "skipped": false
+        },
+        {
+          "name": "invalidApprovalEventDoesNotStrandTask",
+          "skipped": false
+        }
+      ]
+    }
+  ]
+}

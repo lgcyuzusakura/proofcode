@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="700" viewBox="0 0 1500 700"><rect width="100%" height="100%" fill="white"/>
+<rect x="40" y="40" width="300" height="115" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="190.0" y="108.06" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">创建任务</text>
+<rect x="410" y="40" width="300" height="115" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="560.0" y="108.06" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">事务 Outbox</text>
+<rect x="790" y="40" width="300" height="115" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="940.0" y="86.46000000000001" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">QUEUED</text>
+<text x="940.0" y="129.66" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">消息派发</text>
+<rect x="1160" y="40" width="300" height="115" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="1310.0" y="86.46000000000001" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">RUNNING</text>
+<text x="1310.0" y="129.66" font-size="32" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">租约和 attempt</text>
+<polyline points="340,98 410,98" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="410,98 394.34196310195097,104.62011181924706 394.34196310195097,91.37988818075294" fill="#333333"/>
+<polyline points="710,98 790,98" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="790,98 774.3419631019509,104.62011181924706 774.3419631019509,91.37988818075294" fill="#333333"/>
+<polyline points="1090,98 1160,98" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1160,98 1144.341963101951,104.62011181924706 1144.341963101951,91.37988818075294" fill="#333333"/>
+<rect x="1090" y="270" width="390" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="1285.0" y="316.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">WAITING_APPROVAL</text>
+<text x="1285.0" y="358.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">保存上下文和计划</text>
+<polyline points="1310,155 1310,270" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1310,270 1303.379888180753,254.34196310195097 1316.620111819247,254.34196310195097" fill="#333333"/>
+<rect x="570" y="270" width="410" height="115" rx="12" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+<text x="775.0" y="316.805" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">用户批准或拒绝</text>
+<text x="775.0" y="358.65500000000003" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">恢复时校验配置</text>
+<polyline points="1090,328 980,328" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="980,328 995.6580368980491,321.3798881807529 995.6580368980491,334.62011181924703" fill="#333333"/>
+<polyline points="775,270 775,205 1110,205 1110,155" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="1110,155 1116.620111819247,170.65803689804903 1103.379888180753,170.65803689804903" fill="#333333"/>
+<text x="897" y="230.25" font-size="25" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">继续当前任务</text>
+<rect x="75" y="470" width="505" height="130" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="327.5" y="524.3050000000001" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">实际验收与变更产物</text>
+<text x="327.5" y="566.155" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">测试结果  Patch  Checkpoint</text>
+<polyline points="1190,155 1190,430 330,430 330,470" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="330,470 323.3798881807529,454.34196310195097 336.62011181924703,454.34196310195097" fill="#333333"/>
+<rect x="760" y="470" width="640" height="130" rx="12" fill="#eeeeee" stroke="#333333" stroke-width="3"/>
+<text x="1080.0" y="524.3050000000001" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">终结事件</text>
+<text x="1080.0" y="566.155" font-size="31" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">SUCCEEDED / FAILED / CANCELLED</text>
+<polyline points="580,535 760,535" fill="none" stroke="#333333" stroke-width="3"/>
+<polygon points="760,535 744.3419631019509,541.6201118192471 744.3419631019509,528.3798881807529" fill="#333333"/>
+<text x="750" y="673.24" font-size="28" font-family="Microsoft YaHei, sans-serif" text-anchor="middle" fill="#171717">中断工具结果未知时保留状态；旧 attempt 不覆盖当前终结证据</text>
+</svg>

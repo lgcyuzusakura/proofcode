@@ -1,0 +1,19 @@
+{
+  "key": "crush_readme",
+  "requestedUrl": "https://raw.githubusercontent.com/charmbracelet/crush/main/README.md",
+  "retrievedAt": "2026-10-08T04:37:30.037389+00:00",
+  "status": 200,
+  "finalUrl": "https://raw.githubusercontent.com/charmbracelet/crush/main/README.md",
+  "sha256": "4a72550d9d6d9b8274f1639ef4fbef3ee14c917b9dec0fad71ca7c3bb5d2cfc6",
+  "title": "Crush",
+  "metadata": {
+    "sourceRole": "alternate official raw README; the canonical GitHub page remains recorded as a timeout in manifest.json",
+    "featuresVerified": [
+      "multi-model OpenAI- and Anthropic-compatible APIs",
+      "session-based work sessions",
+      "LSP-enhanced context",
+      "MCP http/stdio/sse support",
+      "Windows PowerShell and WSL support"
+    ]
+  }
+}

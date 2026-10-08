@@ -1,0 +1,10 @@
+{
+  "key": "llmlingua_repo",
+  "requestedUrl": "https://github.com/microsoft/LLMLingua",
+  "retrievedAt": "2026-10-08T03:39:44.156662+00:00",
+  "status": 200,
+  "finalUrl": "https://github.com/microsoft/LLMLingua",
+  "sha256": "79d42b2ec5fa2459127e99e4359e90ab1a452adf422ed5829e95054a63222b33",
+  "title": "GitHub - microsoft/LLMLingua: [EMNLP'23, ACL'24] To speed up LLMs' inference and enhance LLM's perceive of key information, compress the prompt and KV-Cache, which achieves up to 20x compression with minimal performance loss. · GitHub",
+  "metadata": {}
+}
