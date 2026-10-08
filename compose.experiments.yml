@@ -1,0 +1,141 @@
+name: proofcode-experiments
+
+# Disposable full-chain verification with deterministic fixtures, not model scores.
+# Uses its own network/volumes and publishes no host ports.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: proofcode
+      POSTGRES_USER: proofcode
+      POSTGRES_PASSWORD: experiment-fixture
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U proofcode -d proofcode"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - control-data:/var/lib/postgresql/data
+
+  data-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fixture
+      POSTGRES_USER: fixture
+      POSTGRES_PASSWORD: experiment-fixture
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fixture -d fixture"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  artemis:
+    image: apache/activemq-artemis:2.39.0
+    environment:
+      ARTEMIS_USER: proofcode
+      ARTEMIS_PASSWORD: experiment-fixture
+      ANONYMOUS_LOGIN: "false"
+      EXTRA_ARGS: "--queues agent.task.requested:anycast"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8161/console/ >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    volumes:
+      - broker-data:/var/lib/artemis-instance
+
+  fixture:
+    build:
+      context: ./smoke/experiments
+    environment:
+      PGPASSWORD: experiment-fixture
+    depends_on:
+      data-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz',timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  control-plane:
+    build:
+      context: ./control-plane
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/proofcode
+      SPRING_DATASOURCE_USERNAME: proofcode
+      SPRING_DATASOURCE_PASSWORD: experiment-fixture
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: proofcode
+      SPRING_ARTEMIS_PASSWORD: experiment-fixture
+      PROOFCODE_AUTH_TOKEN: experiment-smoke-user
+      PROOFCODE_RUNNER_TOKEN: experiment-smoke-runner
+      DATA_SECRET_SMOKE_DB: '{"url":"jdbc:postgresql://data-postgres:5432/fixture","user":"fixture","password":"experiment-fixture"}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  runner:
+    build:
+      context: ./agent-engine
+    environment:
+      CONTROL_PLANE_URL: http://control-plane:8080
+      RUNNER_TOKEN: experiment-smoke-runner
+      ARTEMIS_URL: amqp://proofcode:experiment-fixture@artemis:5672
+      MODEL_BASE_URL: http://fixture:8000/v1
+      MODEL_API_KEY: fixture-only
+      MODEL_NAME: fixture-only
+      RUNNER_ALLOW_WRITE: "true"
+      RUNNER_ALLOW_EXEC: "true"
+      JEV_MODE: "off"
+      JEV_BASE_URL: http://fixture:8000
+      JEV_MODEL: fixture-jev
+      JEV_MIN_CONFIDENCE: "0.85"
+      WORKSPACE_ROOT: /workspaces
+    depends_on:
+      control-plane:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+      fixture:
+        condition: service_healthy
+    volumes:
+      - workspaces:/workspaces
+
+  verify:
+    build:
+      context: ./smoke/experiments
+    command: ["python", "/app/verify.py"]
+    environment:
+      CONTROL_PLANE_URL: http://control-plane:8080
+      FIXTURE_URL: http://fixture:8000
+      PROOFCODE_AUTH_TOKEN: experiment-smoke-user
+      PROOFCODE_RUNNER_TOKEN: experiment-smoke-runner
+    depends_on:
+      runner:
+        condition: service_started
+    volumes:
+      - ./.tools/experiment-e2e:/results
+
+volumes:
+  control-data:
+  broker-data:
+  workspaces:

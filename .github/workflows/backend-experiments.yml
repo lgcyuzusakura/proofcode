@@ -1,0 +1,50 @@
+name: Backend comparison workflow
+
+on:
+  push:
+    paths:
+      - 'agent-engine/**'
+      - 'control-plane/**'
+      - 'smoke/experiments/**'
+      - 'compose.experiments.yml'
+      - '.github/workflows/backend-experiments.yml'
+  pull_request:
+    paths:
+      - 'agent-engine/**'
+      - 'control-plane/**'
+      - 'smoke/experiments/**'
+      - 'compose.experiments.yml'
+      - '.github/workflows/backend-experiments.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-comparison-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start isolated backend and fixtures
+        run: docker compose -f compose.experiments.yml up --build -d runner
+      - name: Run actual six-group and database approval workflow
+        run: docker compose -f compose.experiments.yml run --build --rm verify
+      - name: Capture service diagnostics
+        if: always()
+        run: |
+          mkdir -p .tools/experiment-e2e
+          docker compose -f compose.experiments.yml logs --no-color > .tools/experiment-e2e/services.log
+      - name: Upload fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comparison-workflow-fixture-evidence
+          path: .tools/experiment-e2e/
+          if-no-files-found: warn
+      - name: Clean up disposable services
+        if: always()
+        run: docker compose -f compose.experiments.yml down --volumes --remove-orphans

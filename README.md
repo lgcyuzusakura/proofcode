@@ -9,7 +9,10 @@ ProofCode is a local-first AI coding agent focused on verifiable, reversible cha
 - Bounded agent loop with cancellation, budgets, tool audit events, and deterministic mock provider
 - Safe workspace tools for file reads, repository search, structured patches, commands, and Git diffs
 - Git worktree isolation and checkpoints
-- Hybrid context retrieval contracts for lexical, symbol, and vector results (not yet wired into runner tasks)
+- Runner-connected lexical/symbol/dependency/test retrieval with commit, working-tree hashes, project/task scope, and snapshot caching; embeddings are not configured by this backend
+- Context compression of repeated successful logs with full durable transcripts and explicitly estimated token counts
+- Fixed A–F experiment profiles that create independent tasks from the same immutable commit, apply generated patches, execute a shared test command, and export comparison JSON/CSV
+- Project/workspace/conversation scope and project-isolated PostgreSQL/Redis plans, explicit user approvals, execution audit, PostgreSQL failure rollback, and Redis CAS compensation
 - Conditional Main, Scout, and Verifier coordination with one-writer enforcement
 - Browser validation library through Chrome DevTools Protocol (not yet wired into runner tasks)
 - MCP stdio extension configuration and JSON-RPC client (not yet wired into runner tasks)
@@ -39,6 +42,22 @@ The bundled runner image includes Go 1.24, Node.js/npm/npx, Python 3/pytest, Git
 Run a local TypeSafe-compatible Kev/Jev service and set `JEV_BASE_URL` for the runner. `JEV_MODE=observe` records a Choice decision for every main-agent turn while exposing the complete tool set to the language model. `JEV_MODE=route` exposes only the selected tool when confidence is at least `JEV_MIN_CONFIDENCE`; otherwise the complete tool set is restored. The default Compose profile keeps this feature off unless explicitly configured.
 
 Jev receives the user request and recent tool context plus fixed tool names and descriptions. It cannot invent tools or argument JSON. Deterministic command policy, workspace checks, write/exec approval, and cancellation remain authoritative. The live decision response is stored as `decision.tool_routed` event evidence.
+
+Controlled experiment groups C and F require successful Jev routing and fail explicitly if the service is missing, unavailable, or uncertain. They cannot fall back and become another group. The [experiment API](docs/backend-experiments.md), [context implementation](docs/backend-context.md), and [project data gateway](docs/backend-data.md) document configuration and current limits.
+
+### Reproducible A–F workflow
+
+The standalone backend fixture uses a separate Compose project, no host ports, and a disposable test repository and database. It sends real tasks through the control plane, Outbox, Artemis, and Runner, then checks each profile, the fixed revision, real patches/tests, comparison exports, and database approval/resume:
+
+```powershell
+docker compose -f compose.experiments.yml up --build -d runner
+docker compose -f compose.experiments.yml run --build --rm verify
+docker compose -f compose.experiments.yml down --volumes --remove-orphans
+```
+
+Evidence is written to `.tools/experiment-e2e/`. The model and Jev responses in this check are deterministic fixtures; these results verify execution and comparison plumbing, not real model quality or thesis performance. Formal experiments use `POST /api/experiments` with a configured model and Jev service. Six planned groups remain visible even if some runs fail, and missing measurements stay unknown.
+
+Database/cache execution requires explicit user approval even when runner automatic write/exec flags are enabled. Resource credentials stay in the control plane. Add server-side `DATA_SECRET_<REF>` configuration for each resource; the Compose examples expose `PG_DEV`, `REDIS_DEV`, and an optional Redis snapshot encryption key. The visual database/cache UI and automatic desktop scratch folders are subsequent client work.
 
 ### Applying a reviewed artifact
 
@@ -71,10 +90,12 @@ thesis/         Thesis sources and generation scripts
 ## Development checks
 
 ```powershell
-docker compose -f compose.test.yml up --build --abort-on-container-exit
+docker compose -f compose.test.yml run --rm agent-test
+docker compose -f compose.test.yml run --rm control-test
+docker compose -f compose.test.yml run --rm frontend-test
 ```
 
-No model key is required for unit and contract tests.
+These commands run each suite independently so a fast suite cannot stop the other containers. No model key is required for unit and contract tests. The same three checks run in GitHub Actions for every push and pull request.
 
 ## End-to-end smoke test
 
