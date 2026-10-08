@@ -2,7 +2,7 @@
 
 # ProofCode
 
-ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存庫、產生修補檔、執行經過核准的工具、執行測試，並交付可以審閱與復原的修改產物。專案使用 Go Agent 引擎、Spring Boot 控制平面、React Web 介面與 Windows Wails 桌面外殼，服務於日常開發工作流程與資訊工程相關科系的學士畢業專題研究。
+ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存庫、產生修補檔、執行經過核准的工具、執行測試，並交付可以審閱與復原的修改產物。專案使用 Go Agent 引擎、Spring Boot 控制平面、React Web 介面與 Windows Wails 桌面原型，服務於日常開發工作流程與資訊工程相關科系的學士畢業專題研究。
 
 核心流程是：**提交目標 → 隔離工作樹 → 工具與核准 → 程式碼修補 → 測試驗證 → 審閱產物 → 套用至原儲存庫**。
 
@@ -12,7 +12,7 @@ ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存�
 
 | 分支 | 已發布內容 |
 | --- | --- |
-| [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | 程式設計 Agent 主迴圈、工具核准、Git worktree、任務復原、修改產物、可選 Jev 路由與 Web／桌面入口 |
+| [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | 程式設計 Agent 主迴圈、工具核准、Git worktree、任務復原、修改產物、可選 Jev 路由、Web 入口與桌面介面原型 |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | 專案／工作區／對話作用域、四路程式碼檢索、重複日誌壓縮、PostgreSQL／Redis 資料閘道、可執行 A–F 對照與 CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | 附有來源與工程證據的學士畢業專題論文初稿、Word／PDF、參考文獻與重現材料 |
 | [`codex/project-data-context-plan-20261008`](https://github.com/lgcyuzusakura/proofcode/blob/codex/project-data-context-plan-20261008/docs/plans/2026-10-08-project-data-context-plan.md) | 自動桌面工程、視覺化資料庫／快取、多版本 RAG 與可回取上下文的後續實作方案 |
@@ -28,7 +28,7 @@ ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存�
 - 可選 Kev／Jev 固定候選工具路由；它負責選擇工具，工具參數仍由生成模型提供。
 - Spring Boot 任務 API、資料庫租約、取消／恢復、WebSocket 事件與 PostgreSQL 交易式 Outbox。
 - Go Runner 透過 Artemis AMQP 1.0 領取任務，執行儲存庫準備、工具與檢查點回呼。
-- React Web 專案／任務入口、即時事件、核准與取消、任務產物時間軸；Windows Wails 桌面入口。
+- React Web 專案／任務入口、即時事件、核准與取消、任務產物時間軸；Windows Wails 桌面介面原型與已遮蔽敏感資訊的設定展示。
 - `proofcode-apply` 在審閱後驗證基線 revision 與乾淨工作區，再套用修補檔。
 - 瀏覽器驗證函式庫與 MCP stdio 用戶端已存在，尚未接入 Runner 任務主迴圈。
 
@@ -47,6 +47,8 @@ Copy-Item .env.example .env
 ```powershell
 docker compose up --build
 ```
+
+目前 Runner 使用任務的 `model` 欄位，Web 表單只能選擇 `gpt-4.1-mini`、`gpt-4o` 或 `deepseek-chat`。介面選擇必須與服務提供者支援的模型 ID 一致；僅修改 `.env` 的 `MODEL_NAME` 不會覆寫任務模型。其他模型 ID 暫時需要透過 `POST /api/tasks` 的 `model` 欄位提交。
 
 開啟 [http://localhost:3000](http://localhost:3000)。Compose 會等待 PostgreSQL、Redis、Artemis 與控制平面通過健康檢查後，再啟動相依服務。
 
@@ -77,7 +79,7 @@ location.reload();
 .\desktop\stop-desktop.ps1
 ```
 
-桌面外殼與共用介面仍依賴控制平面與 Runner 執行任務；靜態預覽僅用於檢查介面。詳細說明請參閱[桌面入口](desktop/README.md)與[原生應用程式](desktop/native/README.md)。
+靜態預覽與原生桌面目前用於介面示範；原生版還包含示範任務與已遮蔽敏感資訊的設定展示，尚未完成控制平面 HTTP／WebSocket 適配。真實任務請使用 Compose Web 入口連接控制平面與 Runner。詳細說明請參閱[桌面入口](desktop/README.md)與[原生應用程式](desktop/native/README.md)。
 
 ### 工具核准與執行環境
 
@@ -126,7 +128,7 @@ PostgreSQL／Redis 資料執行必須取得明確使用者核准，即使 Runner
 
 ```mermaid
 flowchart LR
-    UI["React / Wails"] --> CP["Spring Boot 控制平面"]
+    UI["React Web"] --> CP["Spring Boot 控制平面"]
     CP --> MQ["Artemis"]
     MQ --> RUN["Go Runner"]
     RUN --> WS["隔離 Git worktree"]
@@ -140,7 +142,7 @@ flowchart LR
 | `agent-engine/` | Go Agent、Runner、工具、工作樹、瀏覽器與 MCP |
 | `control-plane/` | Java 控制平面、任務狀態、核准與可靠派發 |
 | `frontend/` | 共用 React 介面與 Web 應用程式 |
-| `desktop/` | Windows 預覽啟動器與 Wails 桌面外殼 |
+| `desktop/` | Windows 預覽啟動器與 Wails 桌面介面原型 |
 | `protocol/` | 版本化訊息與事件契約 |
 | `compose*.yml` | 容器啟動、測試與聯調設定 |
 | `docs/` | 架構、安全、驗收與各分支專項文件 |

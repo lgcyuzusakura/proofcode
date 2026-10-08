@@ -2,7 +2,7 @@
 
 # ProofCode
 
-ProofCode は、検証可能なコード変更を行うプログラミング Agent です。リポジトリを読み取り、パッチを生成し、承認されたツールとテストを実行して、レビューと復旧が可能な変更成果物を提供します。Go の Agent エンジン、Spring Boot のコントロールプレーン、React の Web インターフェース、Windows 向け Wails デスクトップシェルを組み合わせ、日常の開発ワークフローと計算機科学分野の学部卒業研究に利用します。
+ProofCode は、検証可能なコード変更を行うプログラミング Agent です。リポジトリを読み取り、パッチを生成し、承認されたツールとテストを実行して、レビューと復旧が可能な変更成果物を提供します。Go の Agent エンジン、Spring Boot のコントロールプレーン、React の Web インターフェース、Windows 向け Wails デスクトップ UI のプロトタイプを組み合わせ、日常の開発ワークフローと計算機科学分野の学部卒業研究に利用します。
 
 基本の流れは、**目標の送信 → 分離された作業ツリー → ツールと承認 → コードパッチ → テストによる検証 → 成果物のレビュー → 元のリポジトリへの適用**です。
 
@@ -12,7 +12,7 @@ ProofCode は、検証可能なコード変更を行うプログラミング Age
 
 | ブランチ | 公開されている内容 |
 | --- | --- |
-| [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent のメインループ、ツール承認、Git worktree、タスクの復旧、変更成果物、任意の Jev ルーティング、Web・デスクトップの入口 |
+| [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent のメインループ、ツール承認、Git worktree、タスクの復旧、変更成果物、任意の Jev ルーティング、Web 入口とデスクトップ UI のプロトタイプ |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | プロジェクト・ワークスペース・会話のスコープ、4 系統のコード検索、重複ログの圧縮、PostgreSQL/Redis データゲートウェイ、実行可能な A–F 比較、CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | 出典と実装の証拠に基づく学部卒業論文の初稿、Word/PDF、参考文献、再現用資料 |
 | [`codex/project-data-context-plan-20261008`](https://github.com/lgcyuzusakura/proofcode/blob/codex/project-data-context-plan-20261008/docs/plans/2026-10-08-project-data-context-plan.md) | デスクトップ上でのプロジェクト自動作成、データベース・キャッシュの可視化管理、過去の複数バージョンを扱う RAG、再取得可能なコンテキストの実装計画 |
@@ -28,7 +28,7 @@ ProofCode は、検証可能なコード変更を行うプログラミング Age
 - 固定された候補集合からツールを選ぶ、任意の Kev/Jev ルーティング。ツールの引数は引き続き生成モデルが提供します。
 - Spring Boot のタスク API、データベース上のリース管理、キャンセル・再開、WebSocket イベント、PostgreSQL のトランザクション Outbox。
 - Go Runner が Artemis AMQP 1.0 経由でタスクを受け取り、リポジトリの準備、ツール実行、チェックポイントのコールバックを行います。
-- React Web のプロジェクト・タスク入口、リアルタイムイベント、承認・キャンセル、タスク成果物のタイムライン、Windows 向け Wails デスクトップ入口。
+- React Web のプロジェクト・タスク入口、リアルタイムイベント、承認・キャンセル、タスク成果物のタイムライン。Windows 向け Wails デスクトップ UI のプロトタイプと、機密情報を伏せた設定表示。
 - `proofcode-apply` はレビュー後にベース revision とクリーンな作業ディレクトリを確認してから、パッチを適用します。
 - ブラウザー検証ライブラリと MCP stdio クライアントは存在しますが、Runner のタスクメインループにはまだ接続されていません。
 
@@ -47,6 +47,8 @@ Copy-Item .env.example .env
 ```powershell
 docker compose up --build
 ```
+
+現在の Runner はタスクの `model` フィールドを使用し、Web フォームで選択できるのは `gpt-4.1-mini`、`gpt-4o`、`deepseek-chat` です。画面で選択したモデル ID は、サービス提供者がサポートする ID と一致している必要があります。`.env` の `MODEL_NAME` を変更するだけでは、タスクのモデルは上書きされません。それ以外のモデル ID は、現時点では `POST /api/tasks` の `model` フィールドで指定して送信する必要があります。
 
 [http://localhost:3000](http://localhost:3000) を開きます。Compose は PostgreSQL、Redis、Artemis、コントロールプレーンが正常になるのを待ってから、依存サービスを起動します。
 
@@ -77,7 +79,7 @@ location.reload();
 .\desktop\stop-desktop.ps1
 ```
 
-デスクトップシェルと共有インターフェースによるタスク実行には、引き続きコントロールプレーンと Runner が必要です。静的プレビューは UI の確認に使用します。詳細は[デスクトップ入口](desktop/README.md)と[ネイティブアプリケーション](desktop/native/README.md)を参照してください。
+静的プレビューとネイティブデスクトップは、現在はインターフェースのデモに使用します。ネイティブ版にはデモ用タスクと機密情報を伏せた設定表示もありますが、コントロールプレーンの HTTP/WebSocket 連携はまだ実装されていません。実際のタスクには、Compose の Web 入口からコントロールプレーンと Runner に接続してください。詳細は[デスクトップ入口](desktop/README.md)と[ネイティブアプリケーション](desktop/native/README.md)を参照してください。
 
 ### ツール承認と実行環境
 
@@ -126,7 +128,7 @@ PostgreSQL/Redis のデータ操作には、Runner の自動書き込み・実�
 
 ```mermaid
 flowchart LR
-    UI["React / Wails"] --> CP["Spring Boot コントロールプレーン"]
+    UI["React Web"] --> CP["Spring Boot コントロールプレーン"]
     CP --> MQ["Artemis"]
     MQ --> RUN["Go Runner"]
     RUN --> WS["分離された Git worktree"]
@@ -140,7 +142,7 @@ flowchart LR
 | `agent-engine/` | Go Agent、Runner、ツール、作業ツリー、ブラウザー、MCP |
 | `control-plane/` | Java コントロールプレーン、タスク状態、承認、信頼性のあるディスパッチ |
 | `frontend/` | 共有 React インターフェースと Web アプリケーション |
-| `desktop/` | Windows プレビューランチャーと Wails デスクトップシェル |
+| `desktop/` | Windows プレビューランチャーと Wails デスクトップ UI のプロトタイプ |
 | `protocol/` | バージョン管理されたメッセージとイベントの契約 |
 | `compose*.yml` | コンテナ起動、テスト、結合検証の設定 |
 | `docs/` | アーキテクチャ、セキュリティ、受け入れ基準、各ブランチの専用ドキュメント |

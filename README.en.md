@@ -2,7 +2,7 @@
 
 # ProofCode
 
-ProofCode is a coding agent for verifiable changes: it reads repositories, generates patches, runs approved tools and tests, and produces changes that can be reviewed and recovered. It combines a Go agent engine, a Spring Boot control plane, a React web interface, and a Windows Wails desktop shell for everyday development workflows and undergraduate Computer Science research.
+ProofCode is a coding agent for verifiable changes: it reads repositories, generates patches, runs approved tools and tests, and produces changes that can be reviewed and recovered. It combines a Go agent engine, a Spring Boot control plane, a React web interface, and a Windows Wails desktop prototype for everyday development workflows and undergraduate Computer Science research.
 
 The workflow is **submit a goal → isolated worktree → tools and approval → patch → tests → artifact review → apply to the original checkout**.
 
@@ -12,7 +12,7 @@ The repository homepage follows `main`. Additional capabilities are published on
 
 | Branch | Published contents |
 | --- | --- |
-| [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent loop, tool approval, Git worktrees, recovery, artifacts, optional Jev routing, and web/desktop entry points |
+| [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent loop, tool approval, Git worktrees, recovery, artifacts, optional Jev routing, a web entry point, and a desktop UI prototype |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | Project/workspace/conversation scope, four-route code retrieval, repeated-log compression, PostgreSQL/Redis gateway, executable A–F comparisons, and CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | Evidence-backed undergraduate thesis draft, Word/PDF, bibliography, and reproduction materials |
 | [`codex/project-data-context-plan-20261008`](https://github.com/lgcyuzusakura/proofcode/blob/codex/project-data-context-plan-20261008/docs/plans/2026-10-08-project-data-context-plan.md) | Implementation plan for automatic desktop projects, visual database/cache management, historical RAG, and retrievable context |
@@ -28,7 +28,7 @@ Visual database/cache management, creating a desktop project when starting a cha
 - Optional Kev/Jev routing over a fixed tool candidate set; the generative model still supplies arguments.
 - Spring Boot task APIs, database leases, cancellation/resume, WebSocket events, and a transactional PostgreSQL Outbox.
 - A Go Runner consuming Artemis AMQP 1.0 tasks and reporting repository preparation, tool execution, and checkpoints.
-- React project/task entry points, live events, approval/cancellation, an artifact timeline, and a Windows Wails desktop entry point.
+- React project/task entry points, live events, approval/cancellation, an artifact timeline, and a Windows Wails desktop UI prototype with redacted configuration display.
 - `proofcode-apply` checks the base revision and a clean checkout before applying a reviewed patch.
 - Browser validation and MCP stdio libraries exist but are not connected to the Runner task loop.
 
@@ -47,6 +47,8 @@ Set `MODEL_BASE_URL`, `MODEL_NAME`, and `MODEL_API_KEY` in `.env`, along with yo
 ```powershell
 docker compose up --build
 ```
+
+The current Runner uses the task's `model` field. Web forms only offer `gpt-4.1-mini`, `gpt-4o`, or `deepseek-chat`, and the selection must match a model ID supported by your provider. Changing `MODEL_NAME` in `.env` does not override task models. Submit other model IDs through the `model` field of `POST /api/tasks` for now.
 
 Open [http://localhost:3000](http://localhost:3000). Compose waits for PostgreSQL, Redis, Artemis, and the control plane to become healthy before starting dependent services.
 
@@ -77,7 +79,7 @@ The static preview requires Node.js/npm, Python 3, and Edge/Chrome. Native build
 .\desktop\stop-desktop.ps1
 ```
 
-The desktop shell and shared interface still rely on the control plane and Runner for task execution; the static preview is for inspecting the interface. See the [desktop entry point](desktop/README.md) and [native application](desktop/native/README.md).
+The static preview and native desktop currently demonstrate the interface. The native version also contains demo tasks and redacted configuration display; its control plane HTTP/WebSocket adapter is not implemented. Use the Compose web entry point with the control plane and Runner for real tasks. See the [desktop entry point](desktop/README.md) and [native application](desktop/native/README.md).
 
 ### Tool approval and runtime
 
@@ -126,7 +128,7 @@ Details: [experiments and sessions](https://github.com/lgcyuzusakura/proofcode/b
 
 ```mermaid
 flowchart LR
-    UI["React / Wails"] --> CP["Spring Boot control plane"]
+    UI["React Web"] --> CP["Spring Boot control plane"]
     CP --> MQ["Artemis"]
     MQ --> RUN["Go Runner"]
     RUN --> WS["Isolated Git worktree"]
@@ -140,7 +142,7 @@ flowchart LR
 | `agent-engine/` | Go agent, Runner, tools, worktrees, browser, and MCP |
 | `control-plane/` | Java control plane, task state, approvals, and reliable dispatch |
 | `frontend/` | Shared React UI and web application |
-| `desktop/` | Windows preview launcher and Wails desktop shell |
+| `desktop/` | Windows preview launcher and Wails desktop UI prototype |
 | `protocol/` | Versioned message and event contracts |
 | `compose*.yml` | Container startup, test, and integration configurations |
 | `docs/` | Architecture, security, acceptance, and branch-specific documentation |
