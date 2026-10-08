@@ -3,6 +3,7 @@ package dev.proofcode.control.task;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
+import dev.proofcode.control.experiment.ExperimentProfile;
 
 @Entity
 @Table(name="tasks")
@@ -21,9 +22,22 @@ public class TaskEntity {
     @Column(name="lease_until") private Instant leaseUntil;
     @Column(name="idempotency_key") private String idempotencyKey;
     @Column(nullable=false) private int attempt;
+    @Column(name="workspace_id") private UUID workspaceId;
+    @Column(name="conversation_id") private UUID conversationId;
+    @Column(name="source_revision",length=64) private String sourceRevision;
+    @Column(name="experiment_id") private UUID experimentId;
+    @Column(name="experiment_run_id") private UUID experimentRunId;
+    @Enumerated(EnumType.STRING) @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR) @Column(name="experiment_group",length=1) private ExperimentProfile.Group experimentGroup;
+    @Column(name="profile_version",length=80) private String profileVersion;
+    @Column(name="max_steps") private Integer maxSteps;
+    @Column(name="test_command",columnDefinition="text") private String testCommand;
+    @Column private Double temperature;
     protected TaskEntity(){}
     public TaskEntity(UUID id,UUID projectId,String prompt,String model,String idempotencyKey,Instant now){this.id=id;this.projectId=projectId;this.prompt=prompt;this.model=model;this.idempotencyKey=idempotencyKey;this.status=TaskStatus.CREATED;this.attempt=1;this.createdAt=now;this.updatedAt=now;}
     public TaskEntity(UUID id,UUID projectId,String prompt,String model,Instant now){this(id,projectId,prompt,model,null,now);}
+    public void bindScope(UUID workspaceId,UUID conversationId){this.workspaceId=workspaceId;this.conversationId=conversationId;}
+    public void configureExecution(String sourceRevision,Integer maxSteps,String testCommand,Double temperature){this.sourceRevision=sourceRevision;this.maxSteps=maxSteps;this.testCommand=testCommand;this.temperature=temperature;}
+    public void bindExperiment(UUID experimentId,UUID experimentRunId,ExperimentProfile.Group group){this.experimentId=experimentId;this.experimentRunId=experimentRunId;this.experimentGroup=group;this.profileVersion=ExperimentProfile.VERSION;}
     public void transition(TaskStatus next){if(status==next)return;if(!canTransition(next))throw new IllegalStateException("invalid task transition: "+status+" -> "+next);this.status=next;this.updatedAt=Instant.now();}
     private boolean canTransition(TaskStatus next){return switch(status){case CREATED -> next==TaskStatus.QUEUED||next==TaskStatus.CANCELLED;case QUEUED -> next==TaskStatus.RUNNING||next==TaskStatus.CANCELLED;case RUNNING -> next==TaskStatus.WAITING_APPROVAL||next==TaskStatus.VERIFYING||next==TaskStatus.SUCCEEDED||next==TaskStatus.FAILED||next==TaskStatus.CANCELLED;case WAITING_APPROVAL -> next==TaskStatus.RUNNING||next==TaskStatus.QUEUED||next==TaskStatus.FAILED||next==TaskStatus.CANCELLED;case VERIFYING -> next==TaskStatus.RUNNING||next==TaskStatus.SUCCEEDED||next==TaskStatus.FAILED||next==TaskStatus.CANCELLED;case SUCCEEDED -> false;case FAILED,CANCELLED -> next==TaskStatus.QUEUED;};}
     public void complete(String result){if(status==TaskStatus.SUCCEEDED)return;this.result=result;this.error=null;transition(TaskStatus.SUCCEEDED);} public void fail(String error){if(status==TaskStatus.FAILED)return;this.error=error;transition(TaskStatus.FAILED);}
@@ -38,4 +52,7 @@ public class TaskEntity {
     }
     public UUID getId(){return id;} public UUID getProjectId(){return projectId;} public String getPrompt(){return prompt;} public String getModel(){return model;} public TaskStatus getStatus(){return status;} public String getResult(){return result;} public String getError(){return error;} public Instant getCreatedAt(){return createdAt;} public Instant getUpdatedAt(){return updatedAt;} public long getVersion(){return version;}
     public UUID getRunnerId(){return runnerId;} public Instant getLeaseUntil(){return leaseUntil;} public String getIdempotencyKey(){return idempotencyKey;} public int getAttempt(){return attempt;}
+    public UUID getWorkspaceId(){return workspaceId;} public UUID getConversationId(){return conversationId;} public String getSourceRevision(){return sourceRevision;}
+    public UUID getExperimentId(){return experimentId;} public UUID getExperimentRunId(){return experimentRunId;} public ExperimentProfile.Group getExperimentGroup(){return experimentGroup;} public String getProfileVersion(){return profileVersion;}
+    public Integer getMaxSteps(){return maxSteps;} public String getTestCommand(){return testCommand;} public Double getTemperature(){return temperature;}
 }

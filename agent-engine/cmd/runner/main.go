@@ -20,8 +20,8 @@ import (
 
 	amqp "github.com/Azure/go-amqp"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/agent"
-	"github.com/proofcode-dev/proofcode/agent-engine/internal/decision"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/event"
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/experiment"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/model"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/tool"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/workspace"
@@ -29,32 +29,47 @@ import (
 )
 
 type taskMessage struct {
-	Version    string `json:"version"`
-	TaskID     string `json:"taskId"`
-	Attempt    int    `json:"attempt"`
-	ProjectID  string `json:"projectId"`
-	Repository string `json:"repositoryUrl"`
-	Branch     string `json:"branch"`
-	Prompt     string `json:"prompt"`
-	Model      string `json:"model"`
-	Resume     bool   `json:"resume"`
-	ApprovalID string `json:"approvalId"`
-	Decision   string `json:"approvalDecision"`
+	Version           string              `json:"version"`
+	TaskID            string              `json:"taskId"`
+	Attempt           int                 `json:"attempt"`
+	ProjectID         string              `json:"projectId"`
+	Repository        string              `json:"repositoryUrl"`
+	Branch            string              `json:"branch"`
+	Prompt            string              `json:"prompt"`
+	Model             string              `json:"model"`
+	Resume            bool                `json:"resume"`
+	ApprovalID        string              `json:"approvalId"`
+	Decision          string              `json:"approvalDecision"`
+	WorkspaceID       string              `json:"workspaceId"`
+	ConversationID    string              `json:"conversationId"`
+	SourceRevision    string              `json:"sourceRevision"`
+	ExperimentID      string              `json:"experimentId"`
+	ExperimentRunID   string              `json:"experimentRunId"`
+	ExperimentGroup   string              `json:"experimentGroup"`
+	ProfileVersion    string              `json:"profileVersion"`
+	ExperimentProfile *experiment.Profile `json:"experimentProfile"`
+	MaxSteps          int                 `json:"maxSteps"`
+	Temperature       *float64            `json:"temperature"`
+	TestCommand       string              `json:"testCommand"`
 }
 
 type workspaceMetadata struct {
-	Repository     string           `json:"repository"`
-	Attempt        int              `json:"attempt"`
-	Handle         worktree.Handle  `json:"handle"`
-	Messages       []model.Message  `json:"messages,omitempty"`
-	Usage          model.Usage      `json:"usage"`
-	PendingCall    *model.ToolCall  `json:"pendingCall,omitempty"`
-	RemainingCalls []model.ToolCall `json:"remainingCalls,omitempty"`
-	ApprovalID     string           `json:"approvalId,omitempty"`
-	MainCompleted  bool             `json:"mainCompleted,omitempty"`
-	MainContent    string           `json:"mainContent,omitempty"`
-	CheckpointHash string           `json:"checkpointHash,omitempty"`
-	InFlightCall   *model.ToolCall  `json:"inFlightCall,omitempty"`
+	Repository          string           `json:"repository"`
+	Attempt             int              `json:"attempt"`
+	Handle              worktree.Handle  `json:"handle"`
+	Messages            []model.Message  `json:"messages,omitempty"`
+	Usage               model.Usage      `json:"usage"`
+	PendingCall         *model.ToolCall  `json:"pendingCall,omitempty"`
+	RemainingCalls      []model.ToolCall `json:"remainingCalls,omitempty"`
+	ApprovalID          string           `json:"approvalId,omitempty"`
+	MainCompleted       bool             `json:"mainCompleted,omitempty"`
+	MainContent         string           `json:"mainContent,omitempty"`
+	CheckpointHash      string           `json:"checkpointHash,omitempty"`
+	InFlightCall        *model.ToolCall  `json:"inFlightCall,omitempty"`
+	ConfigurationHash   string           `json:"configurationHash,omitempty"`
+	ExperimentState     experiment.State `json:"experimentState"`
+	EvaluationStarted   bool             `json:"evaluationStarted,omitempty"`
+	EvaluationCompleted bool             `json:"evaluationCompleted,omitempty"`
 }
 
 type runner struct {
@@ -198,7 +213,9 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	defer func() { cancel(); r.Active.Delete(task.TaskID) }()
 	go r.watchCancellation(ctx, task.TaskID, cancel)
 	go r.watchLease(ctx, task.TaskID, task.Attempt, cancel)
-	events := event.NewRunnerSink(&httpEventSink{client: r.HTTP, baseURL: r.ControlPlane, token: r.Token}, randomRunnerID(), r.ID, task.Attempt)
+	collector := experiment.NewCollector(&httpEventSink{client: r.HTTP, baseURL: r.ControlPlane, token: r.Token}, task.SourceRevision)
+	collector.Set("experimentGroup", task.ExperimentGroup)
+	events := event.NewRunnerSink(collector, randomRunnerID(), r.ID, task.Attempt)
 	defer func() {
 		if runErr == nil {
 			return
@@ -207,10 +224,18 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		if errors.Is(ctx.Err(), context.Canceled) {
 			kind = event.TaskCancelled
 		}
-		if emitErr := events.Emit(context.Background(), task.TaskID, kind, map[string]any{"error": runErr.Error()}); emitErr != nil {
+		payload := map[string]any{"error": runErr.Error()}
+		if task.ExperimentGroup != "" {
+			payload["experimentResult"] = collector.Report(false, runErr.Error())
+		}
+		if emitErr := events.Emit(context.Background(), task.TaskID, kind, payload); emitErr != nil {
 			runErr = errors.Join(runErr, fmt.Errorf("publish terminal event: %w", emitErr))
 		}
 	}()
+	if err := validateExperimentTask(task); err != nil {
+		return err
+	}
+	configurationHash := r.configurationHash(task)
 
 	base := filepath.Join(r.WorkspaceRoot, task.TaskID, fmt.Sprintf("attempt-%d", task.Attempt))
 	metadataPath := filepath.Join(base, "run.json")
@@ -225,8 +250,12 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	resumed := false
 	if data, readErr := os.ReadFile(metadataPath); readErr == nil {
 		if json.Unmarshal(data, &saved) == nil && saved.Repository == task.Repository && saved.Attempt == task.Attempt && existingHandle(base, saved.Handle) {
+			if saved.ConfigurationHash != configurationHash {
+				return errors.New("cannot reuse persisted task with a different execution configuration")
+			}
 			handle = saved.Handle
 			resumed = true
+			collector.Restore(saved.ExperimentState)
 		}
 	}
 	if task.Resume && !resumed {
@@ -242,12 +271,15 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		if err := clone(ctx, task.Repository, task.Branch, repository); err != nil {
 			return err
 		}
+		if err := checkoutRevision(ctx, repository, task.SourceRevision); err != nil {
+			return err
+		}
 		manager = worktree.Manager{Repository: repository, Root: filepath.Join(base, "worktrees")}
 		handle, err = manager.Create(ctx, task.TaskID)
 		if err != nil {
 			return err
 		}
-		saved = workspaceMetadata{Repository: task.Repository, Attempt: task.Attempt, Handle: handle}
+		saved = workspaceMetadata{Repository: task.Repository, Attempt: task.Attempt, Handle: handle, ConfigurationHash: configurationHash, ExperimentState: collector.Snapshot()}
 		data, marshalErr := json.Marshal(saved)
 		if marshalErr != nil {
 			return marshalErr
@@ -255,6 +287,9 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		if err := os.WriteFile(metadataPath, data, 0600); err != nil {
 			return err
 		}
+	}
+	if task.SourceRevision != "" && !strings.EqualFold(handle.Base, task.SourceRevision) {
+		return errors.New("persisted worktree does not match the fixed source revision")
 	}
 	defer func() {
 		if keepWorkspace {
@@ -289,21 +324,15 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	if err != nil {
 		return err
 	}
-	modelHTTP := r.ModelHTTP
-	if modelHTTP == nil {
-		modelHTTP = &http.Client{}
+	coordinator, request, err := r.execution(task, ws, events)
+	if err != nil {
+		return err
 	}
-	provider := &model.OpenAICompatible{BaseURL: r.ModelBaseURL, APIKey: r.ModelAPIKey, Client: modelHTTP}
-	mainTools := tool.NewRegistry(tool.ReadFile{Workspace: ws}, tool.ListFiles{Workspace: ws}, tool.SearchCode{Workspace: ws}, tool.ApplyPatch{Workspace: ws}, tool.RunCommand{Workspace: ws, Policy: r.CommandPolicy}, tool.GitDiff{Workspace: ws})
-	readTools := tool.NewRegistry(tool.ReadFile{Workspace: ws}, tool.ListFiles{Workspace: ws}, tool.SearchCode{Workspace: ws}, tool.GitDiff{Workspace: ws})
-	verifyTools := tool.NewRegistry(tool.ReadFile{Workspace: ws}, tool.ListFiles{Workspace: ws}, tool.SearchCode{Workspace: ws}, tool.GitDiff{Workspace: ws})
-	coordinator := &agent.Coordinator{Provider: provider, MainTools: mainTools, ScoutTools: readTools, VerifierTools: verifyTools, Approval: agent.AutomaticApproval{AllowWrite: r.AllowWrite, AllowExec: r.AllowExec}, Events: events, Model: task.Model}
-	if r.JevMode != "off" {
-		coordinator.Router = &decision.Client{BaseURL: r.JevBaseURL, APIKey: r.JevAPIKey, Model: r.JevModel, HTTP: &http.Client{Timeout: 3 * time.Second}}
-		coordinator.Routing = agent.ToolRoutingPolicy{Mode: r.JevMode, MinConfidence: r.JevThreshold}
+	if task.ExperimentGroup != "" {
+		collector.Set("profileApplied", true)
 	}
-	request := agent.CoordinateRequest{TaskID: task.TaskID, Prompt: task.Prompt, SuppressTaskComplete: true}
 	writeState := func() error {
+		saved.ExperimentState = collector.Snapshot()
 		data, err := json.Marshal(saved)
 		if err != nil {
 			return err
@@ -392,6 +421,57 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		}
 		return err
 	}
+	if task.ExperimentGroup != "" {
+		// A crash during evaluation leaves an unknown outcome. Never repeat a
+		// command or patch whose outcome was not durably recorded.
+		if saved.EvaluationStarted && !saved.EvaluationCompleted {
+			return errors.New("experimental evaluator was interrupted with an unknown outcome")
+		}
+		if !saved.EvaluationCompleted {
+			saved.EvaluationStarted = true
+			if err := writeState(); err != nil {
+				return err
+			}
+			applied, patchErr := applyGeneratedPatch(ctx, ws, result.Main.Content)
+			if patchErr != nil {
+				collector.Set("patchSucceeded", false)
+				return patchErr
+			}
+			if applied {
+				collector.Set("patchSucceeded", true)
+			}
+			testResult, testErr := evaluateTests(ctx, ws, task.TestCommand, r.CommandPolicy)
+			// A real nonzero exit is a measured failure. A rejected command or
+			// failure to start the executable has no measured test outcome.
+			var passed any
+			if code, ok := testResult.Metadata["exitCode"].(int); ok && (code >= 0 || testResult.Metadata["timedOut"] == true) {
+				passed = testErr == nil && !testResult.IsError
+				collector.Set("testsPassed", passed)
+			}
+			verification := map[string]any{"evaluator": "fixed-test-command", "command": task.TestCommand, "passed": passed, "output": testResult.Content, "metadata": testResult.Metadata}
+			if testErr != nil {
+				verification["error"] = testErr.Error()
+			}
+			if err := events.Emit(ctx, task.TaskID, event.VerificationDone, verification); err != nil {
+				return err
+			}
+			saved.EvaluationCompleted = true
+			if err := writeState(); err != nil {
+				return err
+			}
+			if testErr != nil {
+				return testErr
+			}
+		} else if saved.ExperimentState.Values["testsPassed"] != true {
+			return errors.New("fixed experiment test command failed")
+		}
+	}
+	completedPayload := func(payload map[string]any) map[string]any {
+		if task.ExperimentGroup != "" {
+			payload["experimentResult"] = collector.Report(true, "")
+		}
+		return payload
+	}
 	hash := saved.CheckpointHash
 	if hash == "" {
 		workingPatch, err := manager.WorkingPatch(ctx, handle)
@@ -399,7 +479,7 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 			return err
 		}
 		if workingPatch == "" {
-			if err := events.Emit(ctx, task.TaskID, event.TaskCompleted, map[string]any{"result": result.Main.Content, "branch": handle.Branch, "unchanged": true}); err != nil {
+			if err := events.Emit(ctx, task.TaskID, event.TaskCompleted, completedPayload(map[string]any{"result": result.Main.Content, "branch": handle.Branch, "unchanged": true})); err != nil {
 				return err
 			}
 			keepWorkspace = false
@@ -426,7 +506,7 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 			return fmt.Errorf("publish checkpoint: %w", err)
 		}
 	}
-	if err := events.Emit(ctx, task.TaskID, event.TaskCompleted, map[string]any{"result": result.Main.Content, "commit": hash, "branch": handle.Branch, "unchanged": patch == ""}); err != nil {
+	if err := events.Emit(ctx, task.TaskID, event.TaskCompleted, completedPayload(map[string]any{"result": result.Main.Content, "commit": hash, "branch": handle.Branch, "unchanged": patch == ""})); err != nil {
 		return err
 	}
 	keepWorkspace = false

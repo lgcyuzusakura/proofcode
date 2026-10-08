@@ -66,6 +66,9 @@ services:
       SPRING_ARTEMIS_PASSWORD: proofcode
       PROOFCODE_AUTH_TOKEN: ${DEV_AUTH_TOKEN:-change-me}
       PROOFCODE_RUNNER_TOKEN: ${RUNNER_TOKEN:-change-runner-token}
+      DATA_SECRET_PG_DEV: ${DATA_SECRET_PG_DEV:-}
+      DATA_SECRET_REDIS_DEV: ${DATA_SECRET_REDIS_DEV:-}
+      DATA_SNAPSHOT_KEY: ${DATA_SNAPSHOT_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

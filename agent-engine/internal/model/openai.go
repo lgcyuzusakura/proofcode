@@ -66,6 +66,7 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 		"temperature": request.Temperature, "stream": true,
 		"stream_options": map[string]any{"include_usage": true},
 	}
+	if len(tools) == 0 { delete(payload, "tools") }
 	inputEstimate := 0
 	for _, message := range request.Messages {
 		toolData, _ := json.Marshal(message.ToolCalls)
@@ -162,7 +163,7 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 			return Response{}, fmt.Errorf("model stream error: %s", chunk.Error.Message)
 		}
 		if chunk.Usage != nil {
-			result.Usage = Usage{InputTokens: chunk.Usage.PromptTokens, OutputTokens: chunk.Usage.CompletionTokens}
+			result.Usage = Usage{InputTokens: chunk.Usage.PromptTokens, OutputTokens: chunk.Usage.CompletionTokens, Reported: true}
 		}
 		for _, choice := range chunk.Choices {
 			sawChoice = true

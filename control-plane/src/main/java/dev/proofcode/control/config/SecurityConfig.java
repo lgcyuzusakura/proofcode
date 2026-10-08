@@ -1,5 +1,6 @@
 package dev.proofcode.control.config;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,7 @@ public class SecurityConfig {
         return http.csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/actuator/health/**", "/ws/**").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
@@ -57,4 +59,3 @@ public class SecurityConfig {
         }
     }
 }
-

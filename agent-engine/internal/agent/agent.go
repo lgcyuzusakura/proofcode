@@ -38,7 +38,10 @@ type AutomaticApproval struct {
 	AllowExec  bool
 }
 
-func (a AutomaticApproval) Approve(_ context.Context, _ string, risk tool.Risk, _ string, _ json.RawMessage) (bool, error) {
+func (a AutomaticApproval) Approve(_ context.Context, _ string, risk tool.Risk, name string, _ json.RawMessage) (bool, error) {
+	if name == "data_execute" {
+		return false, nil
+	}
 	switch risk {
 	case tool.RiskRead:
 		return true, nil
@@ -57,6 +60,8 @@ type RunRequest struct {
 	Prompt                string
 	Model                 string
 	MaxSteps              int
+	Temperature           *float64
+	PrepareMessages       func(context.Context, int, []model.Message) ([]model.Message, error)
 	SuppressTaskLifecycle bool
 	InitialMessages       []model.Message
 	ResumeToolCall        *model.ToolCall
@@ -89,6 +94,7 @@ type ToolRouter interface {
 type ToolRoutingPolicy struct {
 	Mode          string
 	MinConfidence float64
+	Required      bool
 }
 
 func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) {
@@ -98,25 +104,35 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 	if request.MaxSteps <= 0 {
 		request.MaxSteps = 24
 	}
-	messages := request.InitialMessages
+	messages := cloneMessages(request.InitialMessages)
 	if len(messages) == 0 {
 		messages = []model.Message{{Role: model.RoleSystem, Content: request.SystemPrompt}, {Role: model.RoleUser, Content: request.Prompt}}
-	} else {
-		messages = append([]model.Message(nil), messages...)
-	}
-	if !request.SuppressTaskLifecycle {
-		if err := a.Events.Emit(ctx, request.TaskID, event.TaskStarted, map[string]any{"model": request.Model}); err != nil {
-			return RunResult{Messages: messages}, err
-		}
 	}
 	total := request.InitialUsage
+	allUsageReported := len(request.InitialMessages) == 0 || total.Reported
+	if !request.SuppressTaskLifecycle {
+		if err := a.Events.Emit(ctx, request.TaskID, event.TaskStarted, map[string]any{"model": request.Model}); err != nil {
+			return RunResult{Messages: messages, Usage: total}, err
+		}
+	}
+	recordUsage := func(usage model.Usage) error {
+		total.InputTokens += usage.InputTokens
+		total.OutputTokens += usage.OutputTokens
+		allUsageReported = allUsageReported && usage.Reported
+		total.Reported = allUsageReported
+		return a.Events.Emit(ctx, request.TaskID, event.UsageUpdated, map[string]any{"inputTokens": total.InputTokens, "outputTokens": total.OutputTokens, "totalTokens": total.InputTokens + total.OutputTokens, "budget": config.MaxTotalTokens, "budgetRemaining": config.MaxTotalTokens - total.InputTokens - total.OutputTokens, "usageReported": total.Reported})
+	}
+	temperature := 0.1
+	if request.Temperature != nil {
+		temperature = *request.Temperature
+	}
 	if request.ResumeToolCall != nil {
 		if request.ResumeApproved == nil {
-			return RunResult{Messages: messages}, errors.New("resume approval decision is missing")
+			return RunResult{Messages: messages, Usage: total}, errors.New("resume approval decision is missing")
 		}
 		selected, ok := a.Tools.Get(request.ResumeToolCall.Name)
 		if !ok {
-			return RunResult{Messages: messages}, fmt.Errorf("model requested unknown tool %q", request.ResumeToolCall.Name)
+			return RunResult{Messages: messages, Usage: total}, fmt.Errorf("model requested unknown tool %q", request.ResumeToolCall.Name)
 		}
 		if request.Checkpoint == nil {
 			return RunResult{Messages: messages, Usage: total}, errors.New("resume checkpoint callback is required")
@@ -141,7 +157,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 			if result.IsError {
 				kind = event.ToolFailed
 			}
-			if err := a.Events.Emit(ctx, request.TaskID, kind, map[string]any{"tool": request.ResumeToolCall.Name, "callId": request.ResumeToolCall.ID, "result": result.Content, "metadata": result.Metadata, "resumed": true}); err != nil {
+			if err := a.Events.Emit(ctx, request.TaskID, kind, toolResultPayload(*request.ResumeToolCall, result, true)); err != nil {
 				return RunResult{Messages: messages, Usage: total}, err
 			}
 			encoded, _ := json.Marshal(result)
@@ -166,7 +182,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 			return RunResult{Messages: messages, Usage: total}, fmt.Errorf("model requested unknown tool %q", call.Name)
 		}
 		risk := selected.Risk(call.Arguments)
-		if err := a.Events.Emit(ctx, request.TaskID, event.ToolRequested, map[string]any{"tool": call.Name, "callId": call.ID, "risk": risk, "arguments": json.RawMessage(call.Arguments), "resumed": true}); err != nil {
+		if err := a.Events.Emit(ctx, request.TaskID, event.ToolRequested, toolRequestPayload(call, risk, true)); err != nil {
 			return RunResult{Messages: messages, Usage: total}, err
 		}
 		approved, approvalErr := a.Approval.Approve(ctx, request.TaskID, risk, call.Name, call.Arguments)
@@ -181,7 +197,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 					return state, err
 				}
 			}
-			if err := a.Events.Emit(ctx, request.TaskID, event.ToolApprovalNeeded, map[string]any{"tool": call.Name, "callId": call.ID, "risk": risk, "arguments": json.RawMessage(call.Arguments)}); err != nil {
+			if err := a.Events.Emit(ctx, request.TaskID, event.ToolApprovalNeeded, toolRequestPayload(call, risk, true)); err != nil {
 				return state, err
 			}
 			return state, pause
@@ -205,7 +221,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 		if result.IsError {
 			kind = event.ToolFailed
 		}
-		if err := a.Events.Emit(ctx, request.TaskID, kind, map[string]any{"tool": call.Name, "callId": call.ID, "result": result.Content, "metadata": result.Metadata, "resumed": true}); err != nil {
+		if err := a.Events.Emit(ctx, request.TaskID, kind, toolResultPayload(call, result, true)); err != nil {
 			return RunResult{Messages: messages, Usage: total}, err
 		}
 		encoded, _ := json.Marshal(result)
@@ -227,13 +243,30 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 			if !request.SuppressTaskLifecycle {
 				_ = a.Events.Emit(context.Background(), request.TaskID, event.TaskCancelled, map[string]any{"reason": err.Error()})
 			}
-			return RunResult{}, err
-		}
-		definitions, err := a.routeTools(ctx, request.TaskID, step, messages)
-		if err != nil {
 			return RunResult{Messages: messages, Usage: total}, err
 		}
 		allDefinitions := a.Tools.Definitions()
+		view := cloneMessages(messages)
+		if request.PrepareMessages != nil {
+			var err error
+			view, err = request.PrepareMessages(ctx, step, view)
+			if err != nil {
+				return RunResult{Messages: messages, Usage: total}, err
+			}
+		}
+		modelMessages, dropped, estimatedTokens, err := prepareModelMessages(view, allDefinitions)
+		if err != nil {
+			return RunResult{Messages: messages, Usage: total}, err
+		}
+		if dropped > 0 {
+			if err := a.Events.Emit(ctx, request.TaskID, event.ContextSelected, map[string]any{"step": step, "droppedMessages": dropped, "keptMessages": len(modelMessages), "estimatedInputTokens": estimatedTokens}); err != nil {
+				return RunResult{Messages: messages, Usage: total}, err
+			}
+		}
+		definitions, err := a.routeTools(ctx, request.TaskID, step, modelMessages)
+		if err != nil {
+			return RunResult{Messages: messages, Usage: total}, err
+		}
 		routed := len(definitions) < len(allDefinitions)
 		buffered := ""
 		var streamErr error
@@ -246,14 +279,23 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 		if routed {
 			stream = func(delta string) { buffered += delta }
 		}
-		chatRequest := model.Request{Model: request.Model, Messages: messages, Tools: definitions, Temperature: 0.1, MaxTokens: config.DefaultMaxOutputTokens}
+		chatRequest := model.Request{Model: request.Model, Messages: modelMessages, Tools: definitions, Temperature: temperature, MaxTokens: config.DefaultMaxOutputTokens}
 		response, err := a.Provider.Chat(ctx, chatRequest, stream)
+		if usageErr := recordUsage(response.Usage); usageErr != nil {
+			return RunResult{Messages: messages, Usage: total}, usageErr
+		}
 		if routed && (err != nil || !callsUseDefinitions(response.ToolCalls, definitions)) && ctx.Err() == nil {
+			if a.Routing.Required {
+				return RunResult{Messages: messages, Usage: total}, fmt.Errorf("required Jev route was not honored by the model: %v", err)
+			}
 			if emitErr := a.Events.Emit(ctx, request.TaskID, event.ToolRouteFallback, map[string]any{"step": step, "reason": "selected tool was unavailable in model response"}); emitErr != nil {
 				return RunResult{Messages: messages, Usage: total}, emitErr
 			}
 			chatRequest.Tools = allDefinitions
 			response, err = a.Provider.Chat(ctx, chatRequest, emitDelta)
+			if usageErr := recordUsage(response.Usage); usageErr != nil {
+				return RunResult{Messages: messages, Usage: total}, usageErr
+			}
 		} else if routed && buffered != "" {
 			emitDelta(buffered)
 		}
@@ -264,14 +306,9 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 			if !request.SuppressTaskLifecycle {
 				_ = a.Events.Emit(ctx, request.TaskID, event.TaskFailed, map[string]any{"error": err.Error()})
 			}
-			return RunResult{}, err
-		}
-		total.InputTokens += response.Usage.InputTokens
-		total.OutputTokens += response.Usage.OutputTokens
-		messages = append(messages, model.Message{Role: model.RoleAssistant, Content: response.Content, ToolCalls: response.ToolCalls})
-		if err := a.Events.Emit(ctx, request.TaskID, event.UsageUpdated, map[string]any{"inputTokens": total.InputTokens, "outputTokens": total.OutputTokens, "totalTokens": total.InputTokens + total.OutputTokens, "budget": config.MaxTotalTokens, "budgetRemaining": config.MaxTotalTokens - total.InputTokens - total.OutputTokens}); err != nil {
 			return RunResult{Messages: messages, Usage: total}, err
 		}
+		messages = append(messages, model.Message{Role: model.RoleAssistant, Content: response.Content, ToolCalls: response.ToolCalls})
 		if len(response.ToolCalls) == 0 {
 			if err := a.Events.Emit(ctx, request.TaskID, event.MessageCompleted, map[string]any{"content": response.Content}); err != nil {
 				return RunResult{Messages: messages, Usage: total}, err
@@ -286,15 +323,17 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 		for callIndex, call := range response.ToolCalls {
 			selected, ok := a.Tools.Get(call.Name)
 			if !ok {
-				return RunResult{}, fmt.Errorf("model requested unknown tool %q", call.Name)
+				_ = a.Events.Emit(ctx, request.TaskID, event.ToolRequested, map[string]any{"tool": call.Name, "callId": call.ID, "invalid": true})
+				_ = a.Events.Emit(ctx, request.TaskID, event.ToolFailed, map[string]any{"tool": call.Name, "callId": call.ID, "invalid": true})
+				return RunResult{Messages: messages, Usage: total}, fmt.Errorf("model requested unknown tool %q", call.Name)
 			}
 			risk := selected.Risk(call.Arguments)
-			if err := a.Events.Emit(ctx, request.TaskID, event.ToolRequested, map[string]any{"tool": call.Name, "callId": call.ID, "risk": risk, "arguments": json.RawMessage(call.Arguments)}); err != nil {
+			if err := a.Events.Emit(ctx, request.TaskID, event.ToolRequested, toolRequestPayload(call, risk, false)); err != nil {
 				return RunResult{Messages: messages, Usage: total}, err
 			}
 			approved, approvalErr := a.Approval.Approve(ctx, request.TaskID, risk, call.Name, call.Arguments)
 			if approvalErr != nil {
-				return RunResult{}, approvalErr
+				return RunResult{Messages: messages, Usage: total}, approvalErr
 			}
 			if !approved {
 				pause := &ApprovalRequiredError{CallID: call.ID, Tool: call.Name, Risk: risk, Arguments: call.Arguments, Remaining: append([]model.ToolCall(nil), response.ToolCalls[callIndex+1:]...)}
@@ -304,7 +343,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 						return state, err
 					}
 				}
-				if err := a.Events.Emit(ctx, request.TaskID, event.ToolApprovalNeeded, map[string]any{"tool": call.Name, "callId": call.ID, "risk": risk, "arguments": json.RawMessage(call.Arguments)}); err != nil {
+				if err := a.Events.Emit(ctx, request.TaskID, event.ToolApprovalNeeded, toolRequestPayload(call, risk, false)); err != nil {
 					return RunResult{Messages: messages, Usage: total}, err
 				}
 				return state, pause
@@ -328,7 +367,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 			if result.IsError {
 				kind = event.ToolFailed
 			}
-			if err := a.Events.Emit(ctx, request.TaskID, kind, map[string]any{"tool": call.Name, "callId": call.ID, "result": result.Content, "metadata": result.Metadata}); err != nil {
+			if err := a.Events.Emit(ctx, request.TaskID, kind, toolResultPayload(call, result, false)); err != nil {
 				return RunResult{Messages: messages, Usage: total}, err
 			}
 			encoded, _ := json.Marshal(result)
@@ -344,7 +383,18 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 	if !request.SuppressTaskLifecycle {
 		_ = a.Events.Emit(ctx, request.TaskID, event.TaskFailed, map[string]any{"error": err.Error()})
 	}
-	return RunResult{}, err
+	return RunResult{Messages: messages, Usage: total}, err
+}
+
+func cloneMessages(messages []model.Message) []model.Message {
+	result := append([]model.Message(nil), messages...)
+	for i := range result {
+		result[i].ToolCalls = append([]model.ToolCall(nil), messages[i].ToolCalls...)
+		for j := range result[i].ToolCalls {
+			result[i].ToolCalls[j].Arguments = append(json.RawMessage(nil), messages[i].ToolCalls[j].Arguments...)
+		}
+	}
+	return result
 }
 
 func callsUseDefinitions(calls []model.ToolCall, definitions []model.ToolDefinition) bool {
@@ -362,7 +412,13 @@ func callsUseDefinitions(calls []model.ToolCall, definitions []model.ToolDefinit
 
 func (a *Agent) routeTools(ctx context.Context, taskID string, step int, messages []model.Message) ([]model.ToolDefinition, error) {
 	definitions := a.Tools.Definitions()
-	if a.Router == nil || a.Routing.Mode == "off" || len(definitions) < 2 {
+	if a.Routing.Required && (a.Router == nil || a.Routing.Mode != "route") {
+		return nil, errors.New("experiment requires an available Jev router in route mode")
+	}
+	if a.Routing.Required && len(definitions) == 0 {
+		return nil, errors.New("required Jev routing has no available tool candidates")
+	}
+	if a.Router == nil || a.Routing.Mode == "off" || (len(definitions) < 2 && !a.Routing.Required) {
 		return definitions, nil
 	}
 	options := make([]decision.Option, 0, len(definitions))
@@ -373,6 +429,9 @@ func (a *Agent) routeTools(ctx context.Context, taskID string, step int, message
 	if err != nil {
 		if emitErr := a.Events.Emit(ctx, taskID, event.ToolRouted, map[string]any{"step": step, "mode": a.Routing.Mode, "applied": false, "error": err.Error()}); emitErr != nil {
 			return nil, emitErr
+		}
+		if a.Routing.Required {
+			return nil, fmt.Errorf("required Jev routing failed: %w", err)
 		}
 		return definitions, nil
 	}
@@ -394,6 +453,9 @@ func (a *Agent) routeTools(ctx context.Context, taskID string, step int, message
 	}
 	if err := a.Events.Emit(ctx, taskID, event.ToolRouted, map[string]any{"step": step, "mode": a.Routing.Mode, "choice": choice.Choice, "confidence": choice.Confidence, "probabilities": choice.Probabilities, "model": choice.Model, "latencyMs": choice.LatencyMS, "threshold": minimum, "applied": apply}); err != nil {
 		return nil, err
+	}
+	if a.Routing.Required && !apply {
+		return nil, fmt.Errorf("required Jev routing did not select a valid confident tool: choice=%q confidence=%g", choice.Choice, choice.Confidence)
 	}
 	return definitions, nil
 }

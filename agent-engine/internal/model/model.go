@@ -44,6 +44,7 @@ type Request struct {
 type Usage struct {
 	InputTokens  int `json:"inputTokens"`
 	OutputTokens int `json:"outputTokens"`
+	Reported     bool `json:"reported,omitempty"`
 }
 
 type Response struct {

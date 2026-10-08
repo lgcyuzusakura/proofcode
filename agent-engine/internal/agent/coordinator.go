@@ -22,10 +22,14 @@ type Coordinator struct {
 	Model         string
 	Router        ToolRouter
 	Routing       ToolRoutingPolicy
+	SingleAgent   bool
 }
 type CoordinateRequest struct {
 	TaskID               string
 	Prompt               string
+	MaxSteps             int
+	Temperature          *float64
+	PrepareMessages      func(context.Context, int, []model.Message) ([]model.Message, error)
 	SuppressTaskComplete bool
 	InitialMessages      []model.Message
 	ResumeToolCall       *model.ToolCall
@@ -50,7 +54,7 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 	result := CoordinateResult{}
 	var reports []string
 	var err error
-	if !request.Resume {
+	if !request.Resume && !c.SingleAgent {
 		reports, err = c.scout(ctx, request)
 		if err != nil {
 			return result, err
@@ -71,7 +75,7 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 		result.Main = request.MainResult
 	} else {
 		main := Agent{Provider: c.Provider, Tools: c.MainTools, Approval: c.Approval, Events: c.Events, Router: c.Router, Routing: c.Routing}
-		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: 24, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
+		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: request.MaxSteps, Temperature: request.Temperature, PrepareMessages: request.PrepareMessages, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
 		if err != nil {
 			var approvalErr *ApprovalRequiredError
 			if !errors.As(err, &approvalErr) && !request.SuppressTaskComplete {
@@ -85,7 +89,7 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 			}
 		}
 	}
-	if c.VerifierTools != nil {
+	if c.VerifierTools != nil && !c.SingleAgent {
 		verifier := Agent{Provider: c.Provider, Tools: c.VerifierTools, Approval: c.Approval, Events: c.Events}
 		verification, verifyErr := verifier.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: verifierPrompt, Prompt: "Independently inspect the current Git diff and relevant source/tests. Report concrete defects or PASS. Do not modify files or run commands.", Model: c.Model, MaxSteps: 10, SuppressTaskLifecycle: true})
 		if verifyErr != nil {
