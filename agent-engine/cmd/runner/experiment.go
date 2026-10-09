@@ -36,8 +36,9 @@ func (r *runner) configurationHash(task taskMessage) string {
 		JevThreshold                                                           float64
 		AllowWrite, AllowExec                                                  bool
 		Commands                                                               tool.CommandPolicy
+		BrowserEnabled, BrowserExecutable, BrowserNoSandbox                    string
 		RetrievalAlgorithm, Index, Compression, ContextCapacity, OutputReserve string
-	}{task, r.ModelBaseURL, r.JevBaseURL, r.JevModel, r.JevMode, r.JevThreshold, r.AllowWrite, r.AllowExec, r.CommandPolicy, codecontext.AlgorithmVersion, codecontext.IndexVersion, codecontext.CompressionVersion, os.Getenv("PROOFCODE_MODEL_CONTEXT_TOKENS"), os.Getenv("PROOFCODE_OUTPUT_RESERVE_TOKENS")})
+	}{task, r.ModelBaseURL, r.JevBaseURL, r.JevModel, r.JevMode, r.JevThreshold, r.AllowWrite, r.AllowExec, r.CommandPolicy, os.Getenv("RUNNER_BROWSER_ENABLED"), os.Getenv("RUNNER_BROWSER_EXECUTABLE"), os.Getenv("RUNNER_BROWSER_NO_SANDBOX"), codecontext.AlgorithmVersion, codecontext.IndexVersion, codecontext.CompressionVersion, os.Getenv("PROOFCODE_MODEL_CONTEXT_TOKENS"), os.Getenv("PROOFCODE_OUTPUT_RESERVE_TOKENS")})
 }
 
 func (r *runner) execution(task taskMessage, ws *workspace.Workspace, events *event.SequencedSink) (*agent.Coordinator, agent.CoordinateRequest, error) {

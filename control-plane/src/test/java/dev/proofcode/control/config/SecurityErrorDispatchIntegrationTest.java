@@ -70,6 +70,16 @@ class SecurityErrorDispatchIntegrationTest {
             String.class);
     }
 
+    @Test
+    void editorSourceFilesRequireUserAuthentication() {
+        String path = "/api/projects/" + java.util.UUID.randomUUID()
+            + "/workspaces/" + java.util.UUID.randomUUID()
+            + "/sources/" + java.util.UUID.randomUUID() + "/files";
+        assertEquals(HttpStatus.FORBIDDEN, rest.getForEntity(url(path), String.class).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, rest.exchange(url(path), HttpMethod.GET, authorized("runner-token"), String.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, rest.exchange(url(path), HttpMethod.GET, authorized("test-token"), String.class).getStatusCode());
+    }
+
     private HttpEntity<Void> authorized(String token) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);

@@ -2,7 +2,7 @@
 
 Windows Wails 应用，直接导入共享 React 工作台。`frontend/dist` 在构建后嵌入 Go 二进制。
 
-原生桥接支持桌面工程幂等创建、本机源码快照、受控补丁应用、项目隔离和事件轮询。源码上传排除凭据、Git 内部目录、缓存目录和链接；补丁应用会校验基线与文件并发变化。
+原生桥接支持桌面工程幂等创建、本机源码快照、受控补丁应用、项目隔离和事件轮询，并提供 Monaco编辑/版本核对保存、真实命令控制台、Git管理与独立Edge/Chrome预览。主界面以对话为中心，审查在独立页面。详见[操作与边界](../../docs/developer-workspace.md)。源码上传排除凭据、Git 内部目录、缓存目录和链接；补丁应用会校验基线与文件并发变化。
 
 ```powershell
 $env:PROOFCODE_CONTROL_PLANE_URL = "http://127.0.0.1:8080"
@@ -19,7 +19,7 @@ $env:PROOFCODE_CONTROL_PLANE_URL = "http://127.0.0.1:8080"
 
 ## Live Development
 
-需要 Node/npm、Go、Wails 2.10.2 和 Windows WebView2。在本目录运行 `wails dev`。构建脚本支持 `PROOFCODE_GO_ROOT` 和 `PROOFCODE_WAILS_BIN`，默认从仓库 `.tools/` 寻找工具。
+需要 Node/npm、Go 1.24或更新版本、Wails 2.10.2 和 Windows WebView2。在本目录运行 `wails dev`。构建脚本支持 `PROOFCODE_GO_ROOT` 和 `PROOFCODE_WAILS_BIN`，默认从仓库 `.tools/` 寻找工具。
 
 ## Building
 

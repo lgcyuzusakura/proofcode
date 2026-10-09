@@ -51,12 +51,37 @@ func (m Manager) Create(ctx context.Context, taskID string) (Handle, error) {
 	if err != nil {
 		return Handle{}, err
 	}
+	if err := excludeGeneratedFiles(ctx, repository); err != nil {
+		return Handle{}, err
+	}
 	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branch, path, "HEAD")
 	cmd.Dir = repository
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return Handle{}, fmt.Errorf("create worktree: %w: %s", err, output)
 	}
 	return Handle{Path: path, Branch: branch, Base: strings.TrimSpace(base)}, nil
+}
+
+// Repository-local ignores affect only untracked generated files. A tracked
+// file in one of these directories still participates in patches and commits.
+func excludeGeneratedFiles(ctx context.Context, repository string) error {
+	value, err := gitOutput(ctx, repository, "rev-parse", "--git-path", "info/exclude")
+	if err != nil {
+		return err
+	}
+	path := strings.TrimSpace(value)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(repository, path)
+	}
+	if info, err := os.Lstat(path); err != nil && !os.IsNotExist(err) || err == nil && !info.Mode().IsRegular() {
+		return errors.New("Git local exclude must be a regular file")
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	_, writeErr := file.WriteString("\n# ProofCode task-local generated files\n.proofcode/\n.context-store/\n__pycache__/\n.pytest_cache/\n.mypy_cache/\nnode_modules/\n.venv/\n")
+	return errors.Join(writeErr, file.Close())
 }
 
 func (m Manager) Checkpoint(ctx context.Context, handle Handle, message string) (string, error) {

@@ -91,6 +91,7 @@ class LocalProjectWorkflowIntegrationTest {
         assertEquals(1, uploaded.getFileCount());
         assertFalse(json.valueToTree(uploaded).has("content"));
         assertFalse(json.valueToTree(uploaded).has("files"));
+        assertEquals(uploaded.getContent(), sourceController.editorFiles(project, scope.workspaceId(), uploaded.getId()));
         assertEquals(archive.manifestHash(), json.readTree(uploaded.getContent()).path("manifestHash").asText());
 
         assertThrows(IllegalArgumentException.class, () -> tasks.createWithOutcome(project, "改代码", "fixture", null,
@@ -111,6 +112,8 @@ class LocalProjectWorkflowIntegrationTest {
             null, null, null, null, "CODE", uploaded.getId()));
         assertEquals(HttpStatus.NOT_FOUND, mismatch.getStatusCode());
         UUID otherProject = localProject();
+        assertThrows(ResponseStatusException.class, () -> sourceController.editorFiles(project, otherWorkspace.getId(), uploaded.getId()));
+        assertThrows(ResponseStatusException.class, () -> sourceController.editorFiles(otherProject, scope.workspaceId(), uploaded.getId()));
         assertThrows(ResponseStatusException.class, () -> sources.require(otherProject, null, uploaded.getId()));
         assertThrows(ResponseStatusException.class, () -> messages.list(otherProject, scope.workspaceId(), scope.conversationId(), 0));
         var changed = archive.files().get(0);

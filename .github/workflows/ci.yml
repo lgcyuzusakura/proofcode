@@ -71,3 +71,42 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build frontend
         run: npm run build
+
+  native:
+    name: Windows desktop build and tests
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop/native
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/native/go.mod
+          cache: true
+          cache-dependency-path: desktop/native/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: desktop/native/frontend/package-lock.json
+      - name: Install and build desktop frontend
+        working-directory: desktop/native/frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Test native project operations
+        run: go test ./... -count=1
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+      - name: Build Windows application
+        run: wails build -clean
+      - name: Save Windows application
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofcode-windows-amd64
+          path: desktop/native/build/bin/*.exe
+          if-no-files-found: error

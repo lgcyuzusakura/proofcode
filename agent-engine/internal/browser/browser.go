@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,9 @@ type Session struct {
 
 func New(parent context.Context, executable string, value *workspace.Workspace) (*Session, error) {
 	options := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", true), chromedp.Flag("disable-gpu", true), chromedp.Flag("no-first-run", true), chromedp.Flag("disable-background-networking", true))
+	if os.Getenv("RUNNER_BROWSER_NO_SANDBOX") == "true" {
+		options = append(options, chromedp.Flag("no-sandbox", true))
+	}
 	if executable != "" {
 		options = append(options, chromedp.ExecPath(executable))
 	}
@@ -52,11 +56,15 @@ func New(parent context.Context, executable string, value *workspace.Workspace) 
 		}
 		valueSession.consoleMu.Lock()
 		valueSession.console = append(valueSession.console, fmt.Sprintf("%s: %s", called.Type, strings.Join(parts, " ")))
+		if len(valueSession.console) > 100 {
+			valueSession.console = valueSession.console[len(valueSession.console)-100:]
+		}
 		valueSession.consoleMu.Unlock()
 	})
-	startCtx, startCancel := context.WithTimeout(ctx, 20*time.Second)
-	defer startCancel()
-	if err := chromedp.Run(startCtx); err != nil {
+	startupDeadline := time.AfterFunc(20*time.Second, valueSession.cancel)
+	err := chromedp.Run(ctx)
+	startupDeadline.Stop()
+	if err != nil {
 		valueSession.cancel()
 		return nil, err
 	}
@@ -83,6 +91,8 @@ func (s *Session) Execute(ctx context.Context, raw json.RawMessage) tool.Result 
 	defer s.executionMu.Unlock()
 	runCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
+	stop := context.AfterFunc(ctx, cancel)
+	defer stop()
 	if ctx.Err() != nil {
 		return tool.Result{Content: ctx.Err().Error(), IsError: true}
 	}
@@ -173,6 +183,7 @@ func (t Tool) Execute(ctx context.Context, raw json.RawMessage) tool.Result {
 	return t.Session.Execute(ctx, raw)
 }
 func allowedURL(value string) bool {
-	return strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://")
+	parsed, err := url.Parse(value)
+	return err == nil && len(value) <= 4096 && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Hostname() != "" && parsed.User == nil
 }
 func failure(err error) tool.Result { return tool.Result{Content: err.Error(), IsError: true} }

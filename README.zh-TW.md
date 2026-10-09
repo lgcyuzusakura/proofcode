@@ -6,14 +6,22 @@ ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存�
 
 核心流程是：**提交目標 → 隔離工作樹 → 工具與核准 → 程式碼修補 → 測試驗證 → 審閱產物 → 套用至原儲存庫**。
 
+## 以對話為主的開發介面
+
+預設進入清爽的對話頁；審查使用獨立頁面，各程式碼回合以小型「查看修改」按鈕準確跳轉。Windows 桌面端提供真實 Monaco 編輯、版本核對儲存及工程草稿恢復、本機命令主控台、Git 暫存/提交/分支/遠端管理，以及可點擊輸入的獨立 Edge/Chrome 預覽。一般程式碼任務可選擇啟用瀏覽器工具；A–F 對照設定保持固定。
+
+[操作、實作邊界與參考專案](docs/developer-workspace.md) · [本輪驗收紀錄](docs/verification-developer-2026-10-09.md)
+
+
 ## 版本與開發狀態
 
-本文對應 `codex/project-workspace-bootstrap` 實作分支，該分支尚未合併至 `main`。儲存庫首頁仍對應 `main`；請依下表選擇版本，並使用該分支的文件與設定。
+本文對應 `codex/chat-ide-browser-git` 實作分支，該分支尚未合併至 `main`。儲存庫首頁仍對應 `main`；請依下表選擇版本，並使用該分支的文件與設定。
 
 | 分支 | 內容範圍 |
 | --- | --- |
 | [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | 程式設計 Agent 主迴圈、工具核准、Git worktree、任務復原、修改產物、可選 Jev 路由、Web 入口與桌面介面原型 |
-| [`codex/project-workspace-bootstrap`](https://github.com/lgcyuzusakura/proofcode/tree/codex/project-workspace-bootstrap) | 目前實作：桌面工程與持久對話、共用 UI／API 代理、原始碼快照與修補保護、專案資料庫／快取工作台、版本化 RAG／原文回取、A–F v2 對照 |
+| [`codex/chat-ide-browser-git`](https://github.com/lgcyuzusakura/proofcode/tree/codex/chat-ide-browser-git) | 目前實作：對話優先、獨立回合審查、Monaco IDE、真實命令/瀏覽器與 Git 管理；包含資料工作台、版本化 RAG 與 A–F v2 |
+| [`codex/project-workspace-bootstrap`](https://github.com/lgcyuzusakura/proofcode/tree/codex/project-workspace-bootstrap) | 前一實作：桌面工程與持久對話、共用 UI／API 代理、原始碼快照與修補保護、專案資料庫／快取工作台、版本化 RAG／原文回取、A–F v2 對照 |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | 早期後端版本：專案／工作區／對話作用域、四路文字檢索、重複日誌去重、PostgreSQL／Redis 資料閘道、A–F v1 對照與 CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | 附有來源與工程證據的學士畢業專題論文初稿、Word／PDF、參考文獻與重現材料 |
 | [`codex/project-data-context-plan-20261008`](https://github.com/lgcyuzusakura/proofcode/blob/codex/project-data-context-plan-20261008/docs/plans/2026-10-08-project-data-context-plan.md) | 本輪開發之前的方案與設計取捨，保留為設計記錄 |
@@ -63,7 +71,7 @@ ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存�
 需要 Docker Desktop 與 Docker Compose。真實程式設計任務還需要可用的 OpenAI-compatible 介面設定。
 
 ```powershell
-git clone --branch codex/project-workspace-bootstrap https://github.com/lgcyuzusakura/proofcode.git
+git clone --branch codex/chat-ide-browser-git https://github.com/lgcyuzusakura/proofcode.git
 cd proofcode
 Copy-Item .env.example .env
 ```
@@ -150,7 +158,7 @@ go -C agent-engine run ./cmd/proofcode-apply -url http://localhost:8080 -task "<
 所有組均保留工作區、路徑、指令與資料核准底線。v1 與 v2 的演算法和設定不同，不應混成同一批實驗。可在獨立目錄取得目前版本：
 
 ```powershell
-git clone --branch codex/project-workspace-bootstrap https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
+git clone --branch codex/chat-ide-browser-git https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
 cd proofcode-backend
 docker compose -f compose.experiments.yml up --build -d runner
 docker compose -f compose.experiments.yml run --build --rm verify

@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/proofcode-runner .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/proofcode-apply ./cmd/proofcode-apply
 
 FROM golang:1.24-alpine
-RUN apk add --no-cache ca-certificates git ripgrep nodejs npm python3 py3-pytest su-exec \
+RUN apk add --no-cache ca-certificates git ripgrep nodejs npm python3 py3-pytest su-exec chromium \
     && addgroup -S proofcode && adduser -S proofcode -G proofcode \
     && mkdir -p /workspaces
 COPY --from=build /out/proofcode-runner /usr/local/bin/proofcode-runner

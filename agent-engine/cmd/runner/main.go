@@ -20,6 +20,7 @@ import (
 
 	amqp "github.com/Azure/go-amqp"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/agent"
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/browser"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/event"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/experiment"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/model"
@@ -355,6 +356,13 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	coordinator, request, err := r.execution(task, ws, events)
 	if err != nil {
 		return err
+	}
+	if task.ExperimentGroup == "" && envBool("RUNNER_BROWSER_ENABLED", false) {
+		browserTool := browser.NewTaskTool(ctx, os.Getenv("RUNNER_BROWSER_EXECUTABLE"), ws)
+		defer browserTool.Close()
+		policyRegistry := tool.WithDeterministicPolicy(tool.NewRegistry(browserTool))
+		guarded, _ := policyRegistry.Get("browser")
+		coordinator.MainTools.Register(guarded)
 	}
 	if !resumed {
 		history, err := r.conversationHistory(ctx, task)

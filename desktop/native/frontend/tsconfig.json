@@ -1,9 +1,51 @@
 {
   "extends": "../../../frontend/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020", "useDefineForClassFields": true, "lib": ["ES2020", "DOM", "DOM.Iterable"], "allowJs": false, "skipLibCheck": true, "esModuleInterop": true, "allowSyntheticDefaultImports": true, "strict": true, "forceConsistentCasingInFileNames": true, "module": "ESNext", "moduleResolution": "Bundler", "resolveJsonModule": true, "isolatedModules": true, "noEmit": true, "jsx": "react-jsx",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
     "baseUrl": ".",
-    "paths": { "react": ["node_modules/@types/react/index.d.ts"], "react/*": ["node_modules/@types/react/*"], "react-dom/*": ["node_modules/@types/react-dom/*"], "lucide-react": ["node_modules/lucide-react/dist/lucide-react.d.ts"] }
+    "paths": {
+      "react": [
+        "node_modules/@types/react/index.d.ts"
+      ],
+      "react/*": [
+        "node_modules/@types/react/*"
+      ],
+      "react-dom/*": [
+        "node_modules/@types/react-dom/*"
+      ],
+      "lucide-react": [
+        "node_modules/lucide-react/dist/lucide-react.d.ts"
+      ],
+      "monaco-editor/*": [
+        "node_modules/monaco-editor/*"
+      ],
+      "react-markdown": [
+        "node_modules/react-markdown/index.d.ts"
+      ],
+      "remark-gfm": [
+        "node_modules/remark-gfm/index.d.ts"
+      ]
+    }
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

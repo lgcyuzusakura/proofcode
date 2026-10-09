@@ -12,10 +12,28 @@ export function CreateScratchProject(arg1:string):Promise<main.ScratchProject>;
 
 export function GetModelConfig():Promise<main.RedactedModelConfig>;
 
+export function GetProjectCommand(arg1:string):Promise<main.CommandState>;
+
+export function GetProjectGit(arg1:string):Promise<main.GitState>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function ListLocalProjects():Promise<Array<main.ScratchProject>>;
 
+export function ListProjectFiles(arg1:string):Promise<Array<main.ProjectFile>>;
+
+export function ProjectBrowser(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<main.BrowserState>;
+
+export function ProjectGitAction(arg1:string,arg2:string,arg3:string,arg4:string,arg5:Array<string>):Promise<main.GitState>;
+
 export function ProxyRequest(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<main.ProxyResponse>;
 
+export function ReadProjectFile(arg1:string,arg2:string):Promise<main.EditorFile>;
+
 export function RegisterLocalProject():Promise<main.ScratchProject>;
+
+export function SaveProjectFile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<main.EditorFile>;
+
+export function StartProjectCommand(arg1:string,arg2:string,arg3:Array<string>):Promise<main.CommandState>;
+
+export function StopProjectCommand(arg1:string,arg2:string):Promise<void>;

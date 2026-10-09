@@ -1,0 +1,96 @@
+.chat-route { background: #fff; }
+.agent-chat-page { max-width: 920px; margin: 0 auto; padding: 28px 36px; }
+.agent-chat-page .agent-page-header h1 { font-size: 20px; }
+.agent-chat-page .conversation-panel { border: 0; border-radius: 0; min-height: calc(100vh - 250px); }
+.agent-chat-page .conversation-stream { padding: 16px 0 28px; overflow: visible; }
+.agent-chat-page .message-row { max-width: 100%; margin-bottom: 28px; }
+.agent-chat-page .message-bubble { border: 0; background: transparent; max-width: calc(100% - 38px); padding: 4px 10px; overflow-wrap: anywhere; }
+.agent-chat-page .message-row.user .message-bubble { background: #f3f5f7; border-radius: 12px; padding: 12px 16px; }
+.agent-chat-page .message-bubble p { white-space: pre-wrap; font-size: 14px; line-height: 1.8; }
+.agent-chat-page .agent-composer { position: sticky; bottom: 16px; background: #fff; border: 1px solid #dce2e8; border-radius: 14px; box-shadow: 0 4px 20px #2434470a; }
+.agent-chat-page .conversation-empty { min-height: 280px; }
+.chat-run-status { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+.message-run-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11px; }
+.developer-page { padding: 26px; max-width: 1600px; margin: 0 auto; color: #344355; }
+.developer-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.developer-heading h1 { font-size: 22px; margin: 0 0 6px; }
+.developer-heading h2 { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 0; }
+.developer-heading p { margin: 0; color: #8190a1; font-size: 12px; overflow-wrap: anywhere; }
+.developer-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 260px; padding: 24px; color: #8391a0; }
+.developer-empty h2 { font-size: 16px; color: #526475; }
+.developer-empty p { font-size: 12px; line-height: 1.8; max-width: 500px; }
+.developer-page input, .developer-page select, .developer-page textarea { border: 1px solid #dbe2e9; border-radius: 5px; padding: 8px; color: #405166; background: #fff; min-width: 0; font: inherit; font-size: 12px; }
+.ide-layout, .git-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); background: #fff; border: 1px solid #dfe5ec; border-radius: 8px; overflow: hidden; }
+.file-explorer, .git-sidebar { border-right: 1px solid #e2e7ed; padding: 14px; overflow: auto; max-height: 660px; }
+.ide-tree label { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.ide-tree input { width: 100%; }
+.ide-tree form { display: flex; gap: 4px; margin-bottom: 12px; }
+.ide-tree > button { display: flex; align-items: center; gap: 6px; width: 100%; border: 0; border-radius: 4px; padding: 8px; background: transparent; color: #637185; font-size: 11px; text-align: left; word-break: break-all; cursor: pointer; }
+.ide-tree > button:hover, .ide-tree > button.selected { background: #edf4ff; color: #2468bc; }
+.ide-editor { min-width: 0; }
+.editor-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #e6ebf0; font-size: 12px; }
+.monaco-host { height: 540px; width: 100%; }
+.command-console { background: #fff; border: 1px solid #dfe5ec; border-radius: 8px; padding: 16px; margin-top: 16px; }
+.command-console .developer-heading { margin-bottom: 12px; font-size: 11px; }
+.command-console form { display: flex; gap: 8px; align-items: flex-end; }
+.command-console label { display: grid; gap: 5px; font-size: 11px; }
+.command-args { flex: 1; }
+.command-console pre, .browser-inspection pre { background: #192330; color: #dae5f1; border-radius: 6px; padding: 14px; line-height: 1.6; font-size: 12px; max-height: 300px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.branch-controls, .git-sidebar form { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.branch-controls select, .git-sidebar form input { flex: 1; width: 0; }
+.git-sidebar h2 { font-size: 13px; margin-top: 20px; }
+.git-file { display: grid; gap: 5px; border-bottom: 1px solid #edf0f4; padding: 9px 0; font-size: 11px; overflow-wrap: anywhere; }
+.git-file code { margin-right: 8px; color: #b07520; }
+.git-file > div { display: flex; gap: 8px; }
+.git-sidebar textarea { width: 100%; margin: 14px 0 8px; resize: vertical; }
+.git-content { min-width: 0; }
+.git-content .data-tabs { padding: 0 14px; }
+.review-patch { margin: 0; padding: 18px; background: #fff; color: #59677a; font-size: 12px; line-height: 1.65; overflow: auto; max-height: 620px; }
+.review-patch > span { display: block; white-space: pre; min-width: fit-content; }
+.review-patch .diff-added { background: #e7f6eb; color: #216b3a; }
+.review-patch .diff-removed { background: #fff0ef; color: #a43939; }
+.review-patch .diff-hunk { color: #346fc0; background: #eef5ff; }
+.commit-history { padding: 16px; }
+.commit-history > div { padding: 12px 0; border-bottom: 1px solid #edf0f4; }
+.commit-history strong, .commit-history small { display: block; font-size: 12px; }
+.commit-history small { margin-top: 6px; color: #8794a4; font-size: 11px; }
+.browser-toolbar, .browser-input, .review-task-picker, .review-toolbar { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.browser-toolbar input, .browser-input input, .review-task-picker select { flex: 1; }
+.browser-title { display: flex; justify-content: space-between; padding: 10px 4px; font-size: 12px; }
+.browser-title span { color: #8593a2; font-size: 11px; }
+.browser-viewport { background: #fff; border: 1px solid #dfe6ee; border-radius: 8px; overflow: hidden; }
+.browser-viewport img { display: block; width: 100%; max-width: 1280px; height: auto; cursor: crosshair; margin: 0 auto; }
+.browser-inspection { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.browser-inspection details { padding: 14px; background: #fff; border: 1px solid #dfe6ee; border-radius: 8px; min-width: 0; }
+.browser-inspection summary { cursor: pointer; font-size: 12px; }
+.review-toolbar small { flex: 1; }
+.review-page .review-patch { border: 1px solid #dfe6ee; border-radius: 8px; }
+.review-notes { display: grid; gap: 8px; font-size: 12px; margin: 18px 0; }
+.review-approvals article, .review-events article { background: #fff; border: 1px solid #e0e6ee; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.review-approvals h3 { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.review-approvals h3 span, .review-events small { color: #8492a3; font-size: 11px; }
+.review-approvals pre { overflow: auto; }
+.review-approvals article > div { display: flex; gap: 8px; }
+.review-events strong, .review-events small { display: block; margin-bottom: 8px; }
+.file-search { display: flex; align-items: center; gap: 6px; }
+.file-search input { width: 100%; }
+.new-file-form { display: flex; gap: 4px; margin: 10px 0; }
+.new-file-form input { min-width: 0; width: 100%; }
+.file-list button { display: flex; align-items: center; gap: 7px; border: 0; background: transparent; color: #687b8f; font-size: 11px; padding: 8px; width: 100%; border-radius: 4px; text-align: left; cursor: pointer; }
+.file-list button.current, .file-list button:hover { background: #edf4ff; color: #2468bc; }
+.file-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-area { min-width: 0; }
+.draft-recovered { color: #96702e; font-size: 12px; }
+.chat-code-block { position: relative; margin: 12px 0; padding-top: 28px; border-radius: 8px; background: #f2f4f7; }
+.chat-code-block > button { position: absolute; top: 7px; right: 10px; display: flex; align-items: center; gap: 4px; }
+.chat-code-block pre { margin: 0; padding: 12px; overflow: auto; font-size: 12px; line-height: 1.6; }
+.chat-markdown { line-height: 1.8; font-size: 14px; }
+.agent-chat-page .chat-markdown p { white-space: normal; }
+.chat-markdown > :first-child { margin-top: 8px; }
+.chat-markdown code { font-size: 12px; }
+.chat-markdown :not(pre) > code { background: #f0f3f7; border-radius: 3px; padding: 2px 4px; }
+.chat-markdown table { border-collapse: collapse; display: block; overflow: auto; max-width: 100%; }
+.chat-markdown th, .chat-markdown td { border: 1px solid #dde4ec; padding: 6px 10px; }
+.chat-markdown a { color: #3674bd; }
+@media (max-width: 900px) { .developer-page { padding: 18px; } .ide-layout, .git-layout { grid-template-columns: 190px minmax(0, 1fr); } .browser-input { flex-wrap: wrap; } }
+@media (max-width: 680px) { .agent-chat-page { padding: 22px 16px; } .agent-chat-page .message-bubble { max-width: calc(100% - 38px); } .ide-layout, .git-layout { grid-template-columns: 1fr; } .file-explorer, .git-sidebar { max-height: 240px; border-right: 0; border-bottom: 1px solid #e2e7ed; } .monaco-host { height: 420px; } .command-console form, .browser-inspection { display: flex; flex-direction: column; align-items: stretch; } .browser-toolbar, .review-toolbar { flex-wrap: wrap; } }

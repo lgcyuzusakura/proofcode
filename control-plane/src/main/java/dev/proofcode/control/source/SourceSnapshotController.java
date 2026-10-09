@@ -12,6 +12,8 @@ import org.springframework.web.server.ResponseStatusException;
     public record Upload(UUID workspaceId,String manifestHash,List<SourceSnapshotService.FileEntry> files){}
     @PostMapping("/api/projects/{projectId}/sources") public ResponseEntity<SourceSnapshot> upload(@PathVariable UUID projectId,@RequestBody Upload value){return ResponseEntity.status(201).body(sources.create(projectId,value.workspaceId(),new SourceSnapshotService.Archive(value.manifestHash(),value.files())));}
     @GetMapping("/api/projects/{projectId}/sources/{sourceId}") public SourceSnapshot metadata(@PathVariable UUID projectId,@PathVariable UUID sourceId){scopes.requireProject(projectId);return sources.require(projectId,null,sourceId);}
+    @GetMapping(value="/api/projects/{projectId}/workspaces/{workspaceId}/sources/{sourceId}/files",produces=MediaType.APPLICATION_JSON_VALUE)
+    public String editorFiles(@PathVariable UUID projectId,@PathVariable UUID workspaceId,@PathVariable UUID sourceId){scopes.requireWorkspace(projectId,workspaceId);return sources.require(projectId,workspaceId,sourceId).getContent();}
     @GetMapping(value="/internal/tasks/{taskId}/source",produces=MediaType.APPLICATION_JSON_VALUE) public String content(@PathVariable UUID taskId,@RequestParam int attempt){
         var task=tasks.findById(taskId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
         if(task.getAttempt()!=attempt||task.getSourceSnapshotId()==null)throw new ResponseStatusException(HttpStatus.CONFLICT,"task source or attempt mismatch");

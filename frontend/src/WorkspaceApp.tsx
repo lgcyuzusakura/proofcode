@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Activity, Bot, CheckCircle2, ChevronDown, CircleDot, Database, FolderGit2, Gauge, GitBranch, Layers3, Loader2, Menu, MessageSquare, Plus, RefreshCw, Search, Settings2, ShieldCheck, Sparkles, Workflow, Wrench, X, XCircle } from "lucide-react";
+import { Activity, Bot, CheckCircle2, ChevronDown, CircleDot, Code2, Globe, Database, FolderGit2, Gauge, GitBranch, Layers3, Loader2, Menu, MessageSquare, Plus, RefreshCw, Search, Settings2, ShieldCheck, Sparkles, Workflow, Wrench, X, XCircle } from "lucide-react";
 import { api, createScratchProject, desktopApp, pendingBootstrap, post, registerProject, scopedPath, token } from "./api";
 import { ActionPanel, AgentWorkspace, StatusBadge, ToolchainPage, ToolUsagePage } from "./TaskViews";
 import type { PanelKind } from "./TaskViews";
 import type { Conversation, ConversationMessage, ExecutionMode, LocalProject, Project, Scope, Task, TaskApproval, TaskArtifact, TaskEvent, Workspace } from "./types";
 import { DataWorkbench } from "./DataWorkbench";
+import { IDEPage, GitPage, BrowserPage, ReviewPage } from "./DeveloperPages";
 
 const blankProject: Project = { id: "", name: "新工程对话", defaultBranch: "main", sourceKind: "SCRATCH" };
 const savedScopeKey = "proofcode.selected-scope";
@@ -27,6 +28,7 @@ export function WorkspaceApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [task, setTask] = useState<Task | null>(null);
   const [events, setEvents] = useState<TaskEvent[]>([]);
+  const [runDataTaskId, setRunDataTaskId] = useState("");
   const [artifacts, setArtifacts] = useState<TaskArtifact[]>([]);
   const [approvals, setApprovals] = useState<TaskApproval[]>([]);
   const [localProjects, setLocalProjects] = useState<LocalProject[]>([]);
@@ -51,7 +53,9 @@ export function WorkspaceApp() {
   const retainedBootstrap = pendingBootstrap();
 
   const clearRun = () => { setTasks([]); setTask(null); setEvents([]); setArtifacts([]); setApprovals([]); setMessages([]); };
+  const beforeNavigation = () => window.dispatchEvent(new Event("proofcode:before-navigation", {cancelable:true}));
   const chooseProject = (next: Project) => {
+    if (!beforeNavigation()) return;
     scopeGeneration.current++;
     projectRef.current = next;
     scopeRef.current = { projectId: next.id };
@@ -60,6 +64,7 @@ export function WorkspaceApp() {
     else localStorage.removeItem(savedScopeKey);
   };
   const chooseConversation = (nextWorkspace: Workspace, nextConversation: Conversation) => {
+    if (!beforeNavigation()) return;
     if (nextConversation.projectId !== projectRef.current.id || nextConversation.workspaceId !== nextWorkspace.id) return;
     scopeGeneration.current++;
     scopeRef.current = { projectId: projectRef.current.id, workspaceId: nextWorkspace.id, conversationId: nextConversation.id };
@@ -160,7 +165,7 @@ export function WorkspaceApp() {
     let cursor = 0, syncing = false, needsSync = false, retryDelay = 1000;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let socket: WebSocket | undefined;
-    setEvents([]); setArtifacts([]); setApprovals([]);
+    setEvents([]); setArtifacts([]); setApprovals([]); setRunDataTaskId(taskId);
     const merge = (batch: TaskEvent[]) => {
       if (!current()) return;
       for (const item of batch) known.set(item.sequence, item);
@@ -248,9 +253,9 @@ export function WorkspaceApp() {
       chooseConversation(currentWorkspace, created);
     } catch (cause) { setNotice(`新建对话失败：${String(cause)}`); } finally { setCreatingConversation(false); }
   };
-  const mutateTask = async (action: "retry" | "cancel") => {
-    if (!task) return; const scope = { ...scopeRef.current }, generation = scopeGeneration.current;
-    try { await api(`/api/tasks/${task.id}/${action}`, { method: "POST" }); if (generation !== scopeGeneration.current) return; await loadTasks(scope); await loadMessages(scope); } catch (cause) { if (generation === scopeGeneration.current && scopeEquals(scopeRef.current, scope)) setNotice(String(cause)); }
+  const mutateTask = async (action: "retry" | "cancel", selectedId = task?.id) => {
+    if (!selectedId) return; const scope = { ...scopeRef.current }, generation = scopeGeneration.current;
+    try { await api(`/api/tasks/${selectedId}/${action}`, { method: "POST" }); if (generation !== scopeGeneration.current) return; await loadTasks(scope); await loadMessages(scope); } catch (cause) { if (generation === scopeGeneration.current && scopeEquals(scopeRef.current, scope)) setNotice(String(cause)); }
   };
   const decideApproval = async (approvalId: string, approved: boolean) => {
     if (!task) return; const scope = { ...scopeRef.current }, generation = scopeGeneration.current;
@@ -260,7 +265,7 @@ export function WorkspaceApp() {
       setApprovals((old) => old.map((item) => item.id === value.id ? value : item)); await loadTasks(scope);
     } catch (cause) { if (generation === scopeGeneration.current && scopeEquals(scopeRef.current, scope)) setNotice(String(cause)); }
   };
-  const navigate = (label: string) => { setActiveNav(label); setOpenPanel(null); if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true); };
+  const navigate = (label: string, taskId?: string) => { if (!beforeNavigation()) return; if (taskId) { const selected = tasks.find(value => value.id === taskId); if (selected) setTask(selected); } setActiveNav(label); setOpenPanel(null); if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true); };
   const local = localProjects.find((value) => value.localHandle === project.localHandle);
   const filteredTasks = tasks.filter((value) => value.prompt.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const totals = { active: tasks.filter(isActiveTask).length, succeeded: tasks.filter((value) => value.status === "SUCCEEDED").length, completed: tasks.filter((value) => ["SUCCEEDED", "FAILED", "CANCELLED"].includes(value.status)).length };
@@ -268,17 +273,21 @@ export function WorkspaceApp() {
   return <div className={`app-shell has-route ${collapsed ? "tree-collapsed" : ""}`}>
     <header className="topbar"><div className="top-left"><button className="rail-toggle" title={collapsed ? "展开导航" : "收起导航"} onClick={() => setCollapsed((value) => !value)}><Menu size={17}/></button><div className="brand-mark">P</div><div className="brand-copy"><strong>ProofCode</strong><span>可验证编程工作台</span></div><div className="workspace-picker"><span className="workspace-dot"/>{project.name}<ChevronDown size={14}/></div></div><div className="top-center"><div className="command-search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索当前对话的任务"/></div></div><div className="top-right"><span className={`connection ${backendOnline ? "online" : "local"}`}><span/>{backendOnline ? "Control Plane 在线" : "Control Plane 离线"}</span><button className="icon-button" title="刷新项目与会话" onClick={() => { void loadProjects(); void loadTasks(); void loadMessages(); setTreeRevision((value) => value + 1); }}><RefreshCw size={16}/></button><button className="avatar" title="账户" onClick={() => setOpenPanel("账户")}>A</button></div></header>
     <div className={`app-body ${collapsed ? "rail-collapsed" : ""}`}><aside className={`nav-rail ${collapsed ? "collapsed" : ""}`}>
-      <div className="nav-group"><NavButton icon={<Bot size={16}/>} label="编码与聊天" active={activeNav === "工作台"} onClick={() => navigate("工作台")}/><NavButton icon={<Layers3 size={16}/>} label="运行概览" active={activeNav === "概览"} onClick={() => navigate("概览")}/><NavButton icon={<Database size={16}/>} label="数据库与缓存" active={activeNav === "数据"} onClick={() => navigate("数据")}/><NavButton icon={<Workflow size={16}/>} label="执行链" active={activeNav === "执行链"} onClick={() => navigate("执行链")}/><NavButton icon={<Wrench size={16}/>} label="可用工具" active={activeNav === "插件"} onClick={() => navigate("插件")}/></div>
+      <div className="nav-group"><NavButton icon={<Bot size={16}/>} label="编码与聊天" active={activeNav === "工作台"} onClick={() => navigate("工作台")}/><NavButton icon={<Code2 size={16}/>} label="代码 IDE" active={activeNav === "代码"} onClick={() => navigate("代码")}/><NavButton icon={<Globe size={16}/>} label="浏览器" active={activeNav === "浏览器"} onClick={() => navigate("浏览器")}/><NavButton icon={<GitBranch size={16}/>} label="Git" active={activeNav === "Git"} onClick={() => navigate("Git")}/><NavButton icon={<ShieldCheck size={16}/>} label="代码审查" active={activeNav === "审查"} onClick={() => navigate("审查")}/><NavButton icon={<Layers3 size={16}/>} label="运行概览" active={activeNav === "概览"} onClick={() => navigate("概览")}/><NavButton icon={<Database size={16}/>} label="数据库与缓存" active={activeNav === "数据"} onClick={() => navigate("数据")}/><NavButton icon={<Workflow size={16}/>} label="执行链" active={activeNav === "执行链"} onClick={() => navigate("执行链")}/><NavButton icon={<Wrench size={16}/>} label="可用工具" active={activeNav === "插件"} onClick={() => navigate("插件")}/></div>
       <div className="scope-tree"><div className="nav-label project-label">工程 / 对话<button className="tiny-button" title="连接或新建工程" onClick={() => setShowProjectForm(true)}><Plus size={14}/></button></div><button className={`tree-blank ${!project.id ? "selected" : ""}`} onClick={() => { chooseProject(blankProject); navigate("工作台"); }}><Plus size={14}/><span>新建独立工程对话</span></button>{projects.map((value) => <div className="project-tree" key={value.id}><button className={`mini-project ${project.id === value.id ? "selected" : ""}`} onClick={() => chooseProject(value)}><FolderGit2 size={14}/><span>{value.name}</span></button>{value.id === project.id && <div className="workspace-tree">{scopeLoading && <small className="scope-loading"><Loader2 size={12}/>加载工作区</small>}{workspaces.map((item) => <div key={item.id}><div className={`tree-workspace ${workspace?.id === item.id ? "current" : ""}`}><GitBranch size={12}/><span>{item.name}</span></div>{(conversationTree[item.id] || []).map((chat) => <button className={`tree-conversation ${conversation?.id === chat.id ? "selected" : ""}`} key={chat.id} title={chat.title} onClick={() => chooseConversation(item, chat)}><MessageSquare size={12}/><span>{chat.title === "Legacy" ? "默认对话" : chat.title}</span></button>)}</div>)}<div className="tree-create-actions"><button onClick={() => void newConversation()} disabled={creatingConversation}><Plus size={12}/>新对话</button><button onClick={() => setShowWorkspaceForm(true)}><GitBranch size={12}/>工作区</button></div></div>}</div>)}</div>
       <div className="nav-bottom"><NavButton icon={<Settings2 size={16}/>} label="设置" onClick={() => setOpenPanel("Agent 设置")}/><div className="privacy-note"><ShieldCheck size={14}/><span>工程隔离 · 数据审批<br/>持久会话与操作审计</span></div></div>
     </aside></div>
-    <div className="route-overlay"><div className="scope-banner"><span><FolderGit2 size={13}/>{project.name}</span><span>/ {workspace?.name || "自动工程"}</span><span>/ {conversation?.title === "Legacy" ? "默认对话" : conversation?.title || "首次发送时创建"}</span>{local && <span className="local-project-path" title={local.path}>{local.path}</span>}{project.id && <button className="text-button" onClick={() => void newConversation()} disabled={creatingConversation}><Plus size={12}/>新对话</button>}</div>
-      {activeNav === "工作台" && <AgentWorkspace project={project} conversation={conversation} messages={messages} task={task} tasks={filteredTasks} events={events} artifacts={artifacts} approvals={approvals} onCreated={createTask} onSelectTask={setTask} onApprove={decideApproval} onCancel={() => void mutateTask("cancel")} onRetry={() => void mutateTask("retry")} onNavigate={navigate} onNotice={setNotice}/>}
+    <div className={`route-overlay ${activeNav === "工作台" ? "chat-route" : ""}`}><div className="scope-banner"><span><FolderGit2 size={13}/>{project.name}</span><span>/ {workspace?.name || "自动工程"}</span><span>/ {conversation?.title === "Legacy" ? "默认对话" : conversation?.title || "首次发送时创建"}</span>{local && <span className="local-project-path" title={local.path}>{local.path}</span>}{project.id && <button className="text-button" onClick={() => void newConversation()} disabled={creatingConversation}><Plus size={12}/>新对话</button>}</div>
+      {activeNav === "工作台" && <AgentWorkspace project={project} conversation={conversation} messages={messages} task={task} tasks={tasks} events={runDataTaskId === task?.id ? events : []} artifacts={runDataTaskId === task?.id ? artifacts : []} approvals={runDataTaskId === task?.id ? approvals : []} onCreated={createTask} onSelectTask={setTask} onApprove={decideApproval} onCancel={(id?: string) => void mutateTask("cancel", id)} onRetry={() => void mutateTask("retry")} onNavigate={navigate} onNotice={setNotice}/>}
+      {activeNav === "代码" && <IDEPage key={project.id} project={project} task={task}/>}
+      {activeNav === "Git" && <GitPage key={project.id} project={project}/>}
+      {activeNav === "浏览器" && <BrowserPage key={project.id} project={project}/>}
+      {activeNav === "审查" && <ReviewPage key={`${project.id}:${task?.id || "empty"}`} project={project} task={task} tasks={tasks} artifacts={runDataTaskId === task?.id ? artifacts : []} events={runDataTaskId === task?.id ? events : []} approvals={runDataTaskId === task?.id ? approvals : []} onSelect={setTask} onApprove={decideApproval} onCancel={(id?: string) => void mutateTask("cancel", id)} onRetry={() => void mutateTask("retry")}/>}
       {activeNav === "数据" && (project.id ? <DataWorkbench key={project.id} project={project} onNotice={setNotice}/> : <section className="data-empty-page"><Database size={35}/><h1>为工程连接数据库与缓存</h1><p>先选择工程，或直接开始新对话自动创建独立工程。</p><button className="primary-button" onClick={() => setShowProjectForm(true)}><Plus size={15}/>新建工程</button></section>)}
-      {activeNav === "执行链" && <ToolchainPage task={task} events={events}/>}{activeNav === "插件" && <ToolUsagePage task={task} events={events}/>}
+      {activeNav === "执行链" && <ToolchainPage task={task} events={runDataTaskId === task?.id ? events : []}/>}{activeNav === "插件" && <ToolUsagePage task={task} events={runDataTaskId === task?.id ? events : []}/>}
       {activeNav === "概览" && <section className="overview-page"><div className="page-heading"><div><div className="breadcrumb">{workspace?.name} / {conversation?.title}</div><h1>运行概览</h1><p>当前对话的持久任务与执行记录。</p></div><button className="secondary-button" onClick={() => setOpenPanel("运行统计")}><Gauge size={15}/>运行统计</button></div><div className="metric-grid"><Metric icon={<Activity size={17}/>} label="活跃任务" value={totals.active}/><Metric icon={<CheckCircle2 size={17}/>} label="已完成" value={totals.succeeded}/><Metric icon={<ShieldCheck size={17}/>} label="成功率" value={totals.completed ? `${Math.round(totals.succeeded / totals.completed * 100)}%` : "--"}/><Metric icon={<Sparkles size={17}/>} label="持久消息" value={messages.length}/></div><div className="overview-tasks">{filteredTasks.map((value) => <button key={value.id} className="overview-task" onClick={() => { setTask(value); navigate("工作台"); }}><span><strong>{value.prompt}</strong><small>{value.executionMode === "CHAT" ? "普通聊天" : "代码任务"} · {value.model} · {new Date(value.createdAt).toLocaleString()}</small></span><StatusBadge status={value.status}/></button>)}{!filteredTasks.length && <div className="empty-state">当前对话还没有任务</div>}</div></section>}
     </div>
-    {showProjectForm && <ProjectForm onClose={() => setShowProjectForm(false)} onCreated={(value) => { addProject(value); setShowProjectForm(false); }}/>} {showWorkspaceForm && project.id && <WorkspaceForm project={project} onClose={() => setShowWorkspaceForm(false)} onCreated={() => { setShowWorkspaceForm(false); setTreeRevision((value) => value + 1); }}/>} {openPanel && <ActionPanel kind={openPanel} tasks={tasks} events={events} artifacts={artifacts} onClose={() => setOpenPanel(null)}/>}
+    {showProjectForm && <ProjectForm onClose={() => setShowProjectForm(false)} onCreated={(value) => { addProject(value); setShowProjectForm(false); }}/>} {showWorkspaceForm && project.id && <WorkspaceForm project={project} onClose={() => setShowWorkspaceForm(false)} onCreated={() => { setShowWorkspaceForm(false); setTreeRevision((value) => value + 1); }}/>} {openPanel && <ActionPanel kind={openPanel} tasks={tasks} events={runDataTaskId === task?.id ? events : []} artifacts={runDataTaskId === task?.id ? artifacts : []} onClose={() => setOpenPanel(null)}/>}
     {retainedBootstrap && !project.id && <div className="bootstrap-retry"><CircleDot size={14}/>上次工程注册未完成；再次发送会继续同一工程。</div>}{notice && <div className="toast" role="status"><XCircle size={16}/><span>{notice}</span><button aria-label="关闭提示" onClick={() => setNotice("")}><X size={14}/></button></div>}
   </div>;
 }

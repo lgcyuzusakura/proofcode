@@ -21,6 +21,9 @@ type App struct {
 	projectMu   sync.Mutex
 	desktopRoot string
 	registryDir string
+	commands    map[string]*commandRun
+	browserMu   sync.Mutex
+	browser     *browserRun
 }
 
 // ProxyResponse is the control-plane response exposed to the local frontend.

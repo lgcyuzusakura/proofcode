@@ -22,6 +22,14 @@ export function GetModelConfig() {
   return window['go']['main']['App']['GetModelConfig']();
 }
 
+export function GetProjectCommand(arg1) {
+  return window['go']['main']['App']['GetProjectCommand'](arg1);
+}
+
+export function GetProjectGit(arg1) {
+  return window['go']['main']['App']['GetProjectGit'](arg1);
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
@@ -30,10 +38,38 @@ export function ListLocalProjects() {
   return window['go']['main']['App']['ListLocalProjects']();
 }
 
+export function ListProjectFiles(arg1) {
+  return window['go']['main']['App']['ListProjectFiles'](arg1);
+}
+
+export function ProjectBrowser(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['ProjectBrowser'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function ProjectGitAction(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['ProjectGitAction'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function ProxyRequest(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ProxyRequest'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function ReadProjectFile(arg1, arg2) {
+  return window['go']['main']['App']['ReadProjectFile'](arg1, arg2);
+}
+
 export function RegisterLocalProject() {
   return window['go']['main']['App']['RegisterLocalProject']();
+}
+
+export function SaveProjectFile(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SaveProjectFile'](arg1, arg2, arg3, arg4);
+}
+
+export function StartProjectCommand(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartProjectCommand'](arg1, arg2, arg3);
+}
+
+export function StopProjectCommand(arg1, arg2) {
+  return window['go']['main']['App']['StopProjectCommand'](arg1, arg2);
 }
