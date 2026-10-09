@@ -10,17 +10,17 @@ ProofCode は、検証可能なコード変更を行うプログラミング Age
 
 最初に開くのはシンプルな会話画面です。レビューは独立したページで、コード変更の各ターンから小さなボタンで該当の差分へ移動できます。Windows 版は Monaco 編集、保存時のバージョン確認、プロジェクト別の編集下書き、実際のコマンド実行、Git 操作、隔離した Edge/Chrome の対話型プレビューを提供します。通常のコードタスクではブラウザツールを任意で有効化でき、A–F 実験設定は固定です。
 
-[操作、実装範囲と参考プロジェクト](docs/developer-workspace.md) · [検証記録](docs/verification-developer-2026-10-09.md)
+[操作、実装範囲と参考プロジェクト](docs/developer-workspace.md) · [構造化マージと IDE プロトコル](docs/structured-merge-and-debugging.md) · [検証記録](docs/verification-structured-merge-2026-10-09.md)
 
 
 ## バージョンと開発状況
 
-本文は `codex/chat-ide-browser-git` 実装ブランチに対応します。まだ `main` に統合されていません。ブランチごとのドキュメントと設定を使用してください。
+本文は `codex/structured-merge-debug-tools` 実装ブランチに対応します。まだ `main` に統合されていません。ブランチごとのドキュメントと設定を使用してください。
 
 | ブランチ | 公開されている内容 |
 | --- | --- |
 | [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent のメインループ、ツール承認、Git worktree、タスクの復旧、変更成果物、任意の Jev ルーティング、Web 入口とデスクトップ UI のプロトタイプ |
-| [`codex/chat-ide-browser-git`](https://github.com/lgcyuzusakura/proofcode/tree/codex/chat-ide-browser-git) | 現在の実装：会話画面、ターン別レビュー、Monaco IDE、実コマンド/ブラウザ、Git管理。データワークベンチ、バージョン付きRAG、A–F v2を含む |
+| [`codex/structured-merge-debug-tools`](https://github.com/lgcyuzusakura/proofcode/tree/codex/structured-merge-debug-tools) | 現在の実装：会話画面、ターン別レビュー、Monaco IDE、実コマンド/ブラウザ、Git管理、構造化マージ、LSP/DAP、Chromium DevTools |
 | [`codex/project-workspace-bootstrap`](https://github.com/lgcyuzusakura/proofcode/tree/codex/project-workspace-bootstrap) | デスクトップ工程、永続会話、共通 UI／API 代理、ソーススナップショット、データベース／キャッシュ管理、バージョン別 RAG と復元可能な圧縮、A–F v2 比較 |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | プロジェクト・ワークスペース・会話のスコープ、4 系統のコード検索、重複ログの圧縮、PostgreSQL/Redis データゲートウェイ、実行可能な A–F 比較、CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | 出典と実装の証拠に基づく学部卒業論文の初稿、Word/PDF、参考文献、再現用資料 |
@@ -48,7 +48,7 @@ Docker Desktop と Docker Compose が必要です。実際のプログラミン�
 ```powershell
 git clone https://github.com/lgcyuzusakura/proofcode.git
 cd proofcode
-git switch codex/project-workspace-bootstrap
+git switch codex/structured-merge-debug-tools
 Copy-Item .env.example .env
 ```
 
@@ -121,7 +121,7 @@ go -C agent-engine run ./cmd/proofcode-apply -url http://localhost:8080 -task "<
 この実装ブランチで A–F の独立タスクを実行し、同一の commit とテストコマンドで比較できます。
 
 ```powershell
-git clone --branch codex/chat-ide-browser-git https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
+git clone --branch codex/structured-merge-debug-tools https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
 cd proofcode-backend
 docker compose -f compose.experiments.yml up --build -d runner
 docker compose -f compose.experiments.yml run --build --rm verify

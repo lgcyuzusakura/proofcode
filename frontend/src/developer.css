@@ -81,6 +81,19 @@
 .file-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-area { min-width: 0; }
 .draft-recovered { color: #96702e; font-size: 12px; }
+.merge-workbench,.protocol-panel { margin:18px 28px; padding:18px; background:white; border:1px solid #dfe6ee; border-radius:8px; font-size:12px; }
+.ide-page .protocol-panel { margin:18px 0; }
+.merge-workbench h2,.protocol-panel h2 { font-size:15px; }
+.merge-workbench form,.merge-actions,.protocol-form,.debug-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:end; margin:12px 0; }
+.merge-workbench label,.protocol-panel label { display:grid; gap:6px; margin:10px 0; }
+.merge-workbench textarea,.protocol-panel textarea { width:100%; resize:vertical; font-family:monospace; }
+.merge-three-way,.debug-inspection { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.merge-workbench pre,.protocol-panel pre { max-height:300px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; background:#f3f6fa; padding:10px; }
+.merge-summary small { display:block; margin-top:8px; }
+.debug-breakpoint { background:#df4d50; border-radius:50%; width:10px!important; height:10px!important; margin:4px; }
+.debug-inspection { grid-template-columns:1fr 1fr; }
+.debug-inspection button { display:block; }
+@media(max-width:680px) { .merge-three-way,.debug-inspection { grid-template-columns:1fr; } .merge-workbench { margin:12px; } }
 .chat-code-block { position: relative; margin: 12px 0; padding-top: 28px; border-radius: 8px; background: #f2f4f7; }
 .chat-code-block > button { position: absolute; top: 7px; right: 10px; display: flex; align-items: center; gap: 4px; }
 .chat-code-block pre { margin: 0; padding: 12px; overflow: auto; font-size: 12px; line-height: 1.6; }
@@ -94,3 +107,4 @@
 .chat-markdown a { color: #3674bd; }
 @media (max-width: 900px) { .developer-page { padding: 18px; } .ide-layout, .git-layout { grid-template-columns: 190px minmax(0, 1fr); } .browser-input { flex-wrap: wrap; } }
 @media (max-width: 680px) { .agent-chat-page { padding: 22px 16px; } .agent-chat-page .message-bubble { max-width: calc(100% - 38px); } .ide-layout, .git-layout { grid-template-columns: 1fr; } .file-explorer, .git-sidebar { max-height: 240px; border-right: 0; border-bottom: 1px solid #e2e7ed; } .monaco-host { height: 420px; } .command-console form, .browser-inspection { display: flex; flex-direction: column; align-items: stretch; } .browser-toolbar, .review-toolbar { flex-wrap: wrap; } }
+.monaco-shell{position:relative;flex:1;min-height:360px;display:flex}.monaco-shell>.monaco-host{width:100%}.editor-completion{position:absolute;right:18px;top:4px;z-index:5;background:#fff}

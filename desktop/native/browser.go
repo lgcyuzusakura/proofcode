@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	cdruntime "github.com/chromedp/cdproto/runtime"
@@ -27,11 +28,14 @@ type BrowserState struct {
 	Height  int      `json:"height"`
 }
 type browserRun struct {
-	handle  string
-	ctx     context.Context
-	cancel  context.CancelFunc
-	mu      sync.Mutex
-	console []string
+	handle        string
+	ctx           context.Context
+	cancel        context.CancelFunc
+	mu            sync.Mutex
+	console       []string
+	profile       string
+	inspector     context.Context
+	stopInspector context.CancelFunc
 }
 
 func browserExecutable() string {
@@ -81,13 +85,25 @@ func (a *App) ProjectBrowser(handle, action, value string, x, y int) (BrowserSta
 			a.browser.cancel()
 			a.browser = nil
 		}
-		options := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.WindowSize(1280, 800), chromedp.Flag("disable-background-networking", true))
+		profile, profileErr := os.MkdirTemp("", "proofcode-browser-")
+		if profileErr != nil {
+			return BrowserState{}, profileErr
+		}
+		options := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.UserDataDir(profile), chromedp.Flag("remote-debugging-address", "127.0.0.1"), chromedp.Flag("remote-allow-origins", "devtools://devtools"), chromedp.WindowSize(1280, 800), chromedp.Flag("disable-background-networking", true))
 		if executable := browserExecutable(); executable != "" {
 			options = append(options, chromedp.ExecPath(executable))
 		}
 		alloc, stopAllocator := chromedp.NewExecAllocator(context.Background(), options...)
 		ctx, stopBrowser := chromedp.NewContext(alloc)
-		run := &browserRun{handle: handle, ctx: ctx, console: []string{}, cancel: func() { stopBrowser(); stopAllocator() }}
+		run := &browserRun{handle: handle, ctx: ctx, profile: profile, console: []string{}}
+		run.cancel = func() {
+			if run.stopInspector != nil {
+				run.stopInspector()
+			}
+			stopBrowser()
+			stopAllocator()
+			_ = os.RemoveAll(profile)
+		}
 		chromedp.ListenTarget(ctx, func(event any) {
 			if called, ok := event.(*cdruntime.EventConsoleAPICalled); ok {
 				parts := []string{}
@@ -156,6 +172,10 @@ func (a *App) ProjectBrowser(handle, action, value string, x, y int) (BrowserSta
 		}
 		actions = []chromedp.Action{chromedp.Evaluate("window.scrollBy(0,"+strconv.Itoa(y)+")", nil)}
 	case "inspect":
+	case "devtools":
+		if err = a.openDevTools(run); err != nil {
+			return BrowserState{}, err
+		}
 	default:
 		return BrowserState{}, errors.New("unsupported browser action")
 	}
@@ -185,6 +205,20 @@ func (a *App) shutdown(ctx context.Context) {
 	a.browserMu.Unlock()
 	a.projectMu.Lock()
 	defer a.projectMu.Unlock()
+	for _, run := range a.merges {
+		_ = os.RemoveAll(run.dir)
+	}
+	a.protocolMu.Lock()
+	for _, run := range a.protocols {
+		run.mu.Lock()
+		running := run.state.Running
+		run.mu.Unlock()
+		if running {
+			_ = stopCommandTree(run.cmd)
+			run.cancel()
+		}
+	}
+	a.protocolMu.Unlock()
 	for _, run := range a.commands {
 		run.mu.Lock()
 		running := run.state.Running
@@ -194,4 +228,39 @@ func (a *App) shutdown(ctx context.Context) {
 			run.cancel()
 		}
 	}
+}
+
+// Use the browser's bundled DevTools against the exact existing project target.
+// The inspector has its own disposable profile and never uses personal logins.
+func (a *App) openDevTools(run *browserRun) error {
+	if run.inspector != nil {
+		return nil
+	}
+	active, err := os.ReadFile(filepath.Join(run.profile, "DevToolsActivePort"))
+	if err != nil {
+		return err
+	}
+	port := strings.Split(strings.TrimSpace(string(active)), "\n")[0]
+	if _, err = strconv.Atoi(port); err != nil {
+		return err
+	}
+	target := chromedp.FromContext(run.ctx).Target.TargetID
+	inspectorURL := fmt.Sprintf("devtools://devtools/bundled/inspector.html?ws=127.0.0.1:%s/devtools/page/%s", port, target)
+	options := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", os.Getenv("PROOFCODE_DEVTOOLS_HEADLESS") == "1"), chromedp.WindowSize(1400, 900))
+	if executable := browserExecutable(); executable != "" {
+		options = append(options, chromedp.ExecPath(executable))
+	}
+	alloc, stopAlloc := chromedp.NewExecAllocator(context.Background(), options...)
+	ctx, stopBrowser := chromedp.NewContext(alloc)
+	stop := func() { stopBrowser(); stopAlloc() }
+	deadline := time.AfterFunc(20*time.Second, stop)
+	err = chromedp.Run(ctx, chromedp.Navigate(inspectorURL))
+	deadline.Stop()
+	if err != nil {
+		stop()
+		return fmt.Errorf("open Chromium DevTools: %w", err)
+	}
+	run.inspector = ctx
+	run.stopInspector = stop
+	return nil
 }

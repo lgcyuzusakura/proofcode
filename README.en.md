@@ -8,19 +8,19 @@ The workflow is **submit a goal → isolated worktree → tools and approval →
 
 ## Conversation first development workspace
 
-The default page is a clean conversation. Review has its own page, and each coding turn has a small link to its exact changes. Windows adds real Monaco editing with version checks and scoped drafts, a local command console, Git staging/commits/branches/remotes, and an interactive isolated Edge/Chrome preview. Ordinary coding tasks can optionally use the browser tool; the fixed A–F experiment profiles are preserved.
+The default page is a clean conversation. Review has its own page, and each coding turn has a small link to its exact changes. Windows adds real Monaco editing with version checks and scoped drafts, a local command console, Git staging/commits/branches/remotes, structured merge review, standard LSP/DAP language services and breakpoint debugging, plus an isolated Edge/Chrome preview with the browser's bundled Chromium DevTools. Ordinary coding tasks can optionally use the browser tool; the fixed A–F experiment profiles are preserved.
 
-[Operations, boundaries and reference projects](docs/developer-workspace.md) · [Verification record](docs/verification-developer-2026-10-09.md)
+[Operations, boundaries and reference projects](docs/developer-workspace.md) · [Structured merge and IDE protocols](docs/structured-merge-and-debugging.md) · [Verification record](docs/verification-structured-merge-2026-10-09.md)
 
 
 ## Versions and development status
 
-This document describes the `codex/chat-ide-browser-git` implementation branch, which has not been merged into `main`. The repository homepage still follows `main`; choose a version below and use that branch's documentation and configuration.
+This document describes the `codex/structured-merge-debug-tools` implementation branch, which has not been merged into `main`. The repository homepage still follows `main`; choose a version below and use that branch's documentation and configuration.
 
 | Branch | Scope |
 | --- | --- |
 | [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent loop, tool approval, Git worktrees, recovery, artifacts, optional Jev routing, a web entry point, and a desktop UI prototype |
-| [`codex/chat-ide-browser-git`](https://github.com/lgcyuzusakura/proofcode/tree/codex/chat-ide-browser-git) | Current: conversation first, dedicated turn review, Monaco IDE, real commands/browser and Git management; includes the data workbench, versioned RAG and A–F v2 |
+| [`codex/structured-merge-debug-tools`](https://github.com/lgcyuzusakura/proofcode/tree/codex/structured-merge-debug-tools) | Current: conversation first, dedicated review, Monaco IDE, real commands/browser, Git management, structured merge, LSP/DAP, and Chromium DevTools |
 | [`codex/project-workspace-bootstrap`](https://github.com/lgcyuzusakura/proofcode/tree/codex/project-workspace-bootstrap) | Previous implementation: desktop projects, durable conversations, shared UI/API bridge, source snapshots and patch protection, project database/cache workbench, versioned RAG and original-context retrieval, A–F v2 comparisons |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | Earlier backend: project/workspace/conversation scope, four text retrieval routes, repeated-log deduplication, PostgreSQL/Redis gateway, A–F v1 comparisons, and CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | Evidence-backed undergraduate thesis draft, Word/PDF, bibliography, and reproduction materials |
@@ -71,7 +71,7 @@ Details: [versioned context](docs/backend-context.md) · [data workbench and rec
 Docker Desktop and Docker Compose are required. Real coding tasks also require a working OpenAI-compatible provider configuration.
 
 ```powershell
-git clone --branch codex/chat-ide-browser-git https://github.com/lgcyuzusakura/proofcode.git
+git clone --branch codex/structured-merge-debug-tools https://github.com/lgcyuzusakura/proofcode.git
 cd proofcode
 Copy-Item .env.example .env
 ```
@@ -158,7 +158,7 @@ The current branch uses the fixed `proofcode.experiment.v2-context` profile and 
 Workspace, path, command, and data approval boundaries remain in every group. Algorithms and profiles differ between v1 and v2; do not combine them as one experiment batch. Obtain the current version in a separate directory:
 
 ```powershell
-git clone --branch codex/chat-ide-browser-git https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
+git clone --branch codex/structured-merge-debug-tools https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
 cd proofcode-backend
 docker compose -f compose.experiments.yml up --build -d runner
 docker compose -f compose.experiments.yml run --build --rm verify

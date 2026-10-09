@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	cdruntime "github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/chromedp"
 	"image/png"
 	"net/http"
 	"net/http/httptest"
@@ -211,6 +213,7 @@ func TestCommandOutputStopAndProjectScope(t *testing.T) {
 }
 
 func TestRealProjectBrowserClickInputScreenshotAndScope(t *testing.T) {
+	t.Setenv("PROOFCODE_DEVTOOLS_HEADLESS", "1")
 	if browserExecutable() == "" {
 		t.Skip("Chrome or Edge required")
 	}
@@ -256,6 +259,32 @@ func TestRealProjectBrowserClickInputScreenshotAndScope(t *testing.T) {
 	state, err = app.ProjectBrowser(p.LocalHandle, "click", "", 40, 120)
 	if err != nil || !strings.Contains(state.Text, "clicked") {
 		t.Fatalf("click: %v %s", err, state.Text)
+	}
+	if _, err = app.ProjectBrowser(p.LocalHandle, "devtools", "", 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(app.browser.inspector, 15*time.Second)
+	defer cancel()
+	var inspectorURL string
+	if err = chromedp.Run(ctx, chromedp.Location(&inspectorURL), chromedp.WaitVisible(".tabbed-pane", chromedp.ByQuery)); err != nil {
+		t.Fatal("DevTools frontend failed:", err)
+	}
+	if !strings.HasPrefix(inspectorURL, "devtools://") {
+		t.Fatal("not native Chromium DevTools")
+	}
+	var inspectorText string
+	if err = chromedp.Run(ctx, chromedp.Evaluate("(()=>{let texts=[];function visit(root){for(const element of root.querySelectorAll('[role=tab]'))texts.push(element.textContent);for(const element of root.querySelectorAll('*'))if(element.shadowRoot)visit(element.shadowRoot)}visit(document.body);return texts.join(' | ')})()", &inspectorText)); err != nil {
+		t.Fatal(err)
+	}
+	if (!strings.Contains(inspectorText, "Elements") && !strings.Contains(inspectorText, "元素")) || (!strings.Contains(inspectorText, "Console") && !strings.Contains(inspectorText, "控制台")) {
+		t.Fatalf("DevTools tabs missing: %s", inspectorText)
+	}
+	var targetResult string
+	if err = chromedp.Run(ctx, chromedp.Evaluate(`import('./core/sdk/sdk.js').then(async SDK=>{const manager=SDK.TargetManager.TargetManager.instance();for(let i=0;i<100;i++){const target=manager.primaryPageTarget()||manager.targets().find(target=>target.type()==='frame');if(target){const result=await target.runtimeAgent().invoke_evaluate({expression:"document.getElementById('value').innerText",returnByValue:true});if(!result.result)throw new Error(JSON.stringify(result));return result.result.value}await new Promise(resolve=>setTimeout(resolve,100))}throw new Error('DevTools target did not connect: '+manager.targets().map(target=>target.type()).join(','))})`, &targetResult, func(params *cdruntime.EvaluateParams) *cdruntime.EvaluateParams { return params.WithAwaitPromise(true) })); err != nil {
+		t.Fatal("DevTools connection:", err)
+	}
+	if targetResult != "clicked" {
+		t.Fatalf("inspected wrong project target: %s", targetResult)
 	}
 	if _, err = app.ProjectBrowser(p.LocalHandle, "close", "", 0, 0); err != nil {
 		t.Fatal(err)

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -43,7 +44,7 @@ func TestDeveloperUIEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := []string{"ListLocalProjects", "CaptureProjectSource", "ApplyProjectPatch", "ListProjectFiles", "ReadProjectFile", "SaveProjectFile", "GetProjectGit", "ProjectGitAction", "StartProjectCommand", "GetProjectCommand", "StopProjectCommand", "ProjectBrowser"}
+	names := []string{"ListLocalProjects", "CaptureProjectSource", "ApplyProjectPatch", "ListProjectFiles", "ReadProjectFile", "SaveProjectFile", "GetProjectGit", "ProjectGitAction", "StartProjectCommand", "GetProjectCommand", "StopProjectCommand", "ProjectBrowser", "PreviewProjectMerge", "ResolveProjectMerge", "ApplyProjectMerge", "DiscardProjectMerge", "StartProjectProtocol", "ProjectProtocolRequest", "GetProjectProtocol", "StopProjectProtocol"}
 	allowed := map[string]bool{}
 	for _, name := range names {
 		allowed[name] = true
@@ -101,12 +102,15 @@ func TestDeveloperUIEndToEnd(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(result)
 	}))
-	defer server.Close()
+	defer func() {
+		server.CloseClientConnections()
+		server.Close()
+	}()
 	script, err := filepath.Abs(filepath.Join("..", "..", "smoke", "developer", "ui.cjs"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	config, _ := json.Marshal(map[string]any{"bridge": server.URL, "bridgeToken": bridgeToken, "handle": project.LocalHandle, "names": names})
+	config, _ := json.Marshal(map[string]any{"bridge": server.URL, "bridgeToken": bridgeToken, "handle": project.LocalHandle, "names": names, "python": os.Getenv("PROOFCODE_IDE_TEST_PYTHON")})
 	cmd := exec.Command("node", script)
 	cmd.Env = append(os.Environ(), "PROOFCODE_UI_NATIVE="+string(config))
 	out, err := cmd.CombinedOutput()
@@ -119,8 +123,22 @@ func TestDeveloperUIEndToEnd(t *testing.T) {
 		t.Fatalf("UI did not persist source: %v %s", err, saved)
 	}
 	state, err = app.GetProjectGit(project.LocalHandle)
-	if err != nil || len(state.Commits) != 1 {
+	if err != nil || len(state.Commits) == 0 {
 		t.Fatalf("UI did not make real Git commit: %v %+v", err, state)
+	}
+	if os.Getenv("PROOFCODE_IDE_TEST_PYTHON") != "" {
+		cmd := exec.Command("git", "log", "--all", "--format=%s")
+		cmd.Dir = dir
+		history, e := cmd.Output()
+		if e != nil || !strings.Contains(string(history), "Merge colleague (reviewed in ProofCode)") || !strings.Contains(string(history), "Add debugger fixture") {
+			t.Fatalf("UI did not persist reviewed merge and debugger fixture: %v %s", e, history)
+		}
+		cmd = exec.Command("git", "rev-list", "--parents", "-n", "1", "HEAD~1")
+		cmd.Dir = dir
+		parents, e := cmd.Output()
+		if e != nil || len(strings.Fields(string(parents))) != 3 {
+			t.Fatalf("UI merge must have two parents: %v %s", e, parents)
+		}
 	}
 	if _, err = os.Stat(filepath.Join(dir, "app.py")); err != nil {
 		t.Fatalf("review did not apply real agent patch: %v", err)

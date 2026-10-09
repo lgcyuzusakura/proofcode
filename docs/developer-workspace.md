@@ -1,6 +1,6 @@
 # 对话与开发工作台
 
-实现分支：`codex/chat-ide-browser-git`。默认入口是共享 Web/Wails 对话页面，代码、浏览器、Git、代码审查和数据库/缓存各有独立页面。代码任务的助手消息保留一个小型“查看修改”按钮，选择消息绑定的 task ID，再进入该回合的审查页。
+实现分支：`codex/structured-merge-debug-tools`。默认入口是共享 Web/Wails 对话页面，代码、浏览器、Git、代码审查和数据库/缓存各有独立页面。代码任务的助手消息保留一个小型“查看修改”按钮，选择消息绑定的 task ID，再进入该回合的审查页。
 
 ## 日常操作
 
@@ -8,9 +8,10 @@
 2. 普通聊天只调用模型；代码任务捕获当前允许的源码，在 Runner 的隔离工作树执行。模型输出支持 Markdown、表格、代码复制及实时文字；Enter 发送，Shift+Enter 换行，中文输入法组合输入不触发发送。
 3. 打开“代码 IDE”，搜索/打开文件，使用 Monaco 编辑和 Ctrl+S 保存。新增文件通过相对路径创建。切页面或工程后，同一工程的未保存草稿可以从当前 WebView/浏览器会话恢复；关闭会话不保证恢复，保存才写入磁盘。
 4. 命令控制台使用“程序 + JSON 参数数组”，工作目录固定为注册工程目录。它是用户主动执行的本机程序，拥有当前用户的权限。Windows npm/npx 的 `.cmd` 入口转换为 Node 执行其 JavaScript 入口，参数不会拼入 shell。每工程同时运行一个程序，输出最多 1 MiB，可以停止进程树。
-5. 打开“浏览器”并输入开发地址。原生端以临时配置启动独立 Edge/Chrome，展示真实的 1280×800 页面截图。可以点击、输入、Enter、滚动、后退/前进/刷新，查看页面文本和控制台。它是按操作刷新截图的预览，不是完整浏览器 DevTools、视频视口或独立 IDE 调试器。
-6. 打开“Git”，精确暂存/取消暂存文件，提交、创建/切换本地分支、设置 origin、获取远程、仅快进拉取或推送。设置远程、拉取、推送有明确确认；不支持强推和自动解决冲突。远程支持无密码的 HTTPS URL 或 `ssh://git@host/path`。Git 身份及凭据由本机 Git 配置管理。
+5. 打开“浏览器”并输入开发地址。原生端以临时配置启动独立 Edge/Chrome，展示真实的 1280×800 页面截图。可以点击、输入、Enter、滚动、后退/前进/刷新，查看页面文本和控制台。“打开完整 Chromium DevTools”在独立临时窗口打开 Chromium 自带 inspector，连接当前项目页面。关闭项目浏览器会清理检查器；截图预览仍不是视频视口。
+6. 打开“Git”，精确暂存/取消暂存文件，提交、创建/切换本地分支、设置 origin、获取远程、仅快进拉取或推送。设置远程、拉取、推送有明确确认；不支持强推。结构化合并在隔离仓库中运行 Git ort 和可选 Mergiraf，展示三方原文、结果和 diff；必须审查批准后才能应用。远程支持无密码的 HTTPS URL 或 `ssh://git@host/path`。Git 身份及凭据由本机 Git 配置管理。
 7. 在代码任务消息旁点击“查看修改”，审阅 checkpoint/recovery 补丁，处理工具审批，查看验证/执行证据，下载 patch，或批准应用到绑定的本机工程。审批详情不占据主聊天页面。审查笔记保存在当前设备的 localStorage。
+8. 在“代码 IDE”启动标准 stdio LSP 或 DAP 服务。语言服务接入补全、悬停、F12 定义和诊断；调试器接入 launch/attach、断点、调用堆栈、作用域、变量、表达式求值、继续和单步。点击行号左侧设置断点，补全也有图标入口。每项目每种协议只允许一个活动服务，离开 IDE 会停止服务。
 
 ## 文件与 Git 一致性
 
@@ -46,4 +47,4 @@ Git 操作先核对状态指纹，包含文件清单、工作区/暂存 diff、H
 - [react-markdown](https://github.com/remarkjs/react-markdown) / [remark-gfm](https://github.com/remarkjs/remark-gfm)：Markdown与表格；禁用原始HTML，远程图片按说明文字显示。
 - [Git](https://git-scm.com/docs)：porcelain状态、index、分支、diff及远程操作。
 
-这些项目是依赖与实现参考；不声称复制了 Codex/Claude Code 全部能力。通用 LSP、断点调试、扩展市场、Git rebase/merge冲突解决和完整浏览器 DevTools尚未实现。
+这些项目是依赖与实现参考；不声称复制了 Codex/Claude Code 全部能力。已新增标准 stdio LSP/DAP、审批式结构化合并和原生 Chromium DevTools，详见[研究与实现说明](structured-merge-and-debugging.md)。当前没有扩展市场、Git rebase/stash、LSP rename/format/workspace edit 完整支持或远程 TCP 调试适配器。

@@ -24,6 +24,9 @@ type App struct {
 	commands    map[string]*commandRun
 	browserMu   sync.Mutex
 	browser     *browserRun
+	merges      map[string]*mergeRun
+	protocolMu  sync.Mutex
+	protocols   map[string]*protocolRun
 }
 
 // ProxyResponse is the control-plane response exposed to the local frontend.
