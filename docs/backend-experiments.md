@@ -12,7 +12,9 @@
 - 旧客户端不传作用域时，服务在项目锁内取得或创建稳定的 `Legacy` 工作区和对话，避免升级后旧任务接口失效。
 - 对话列表 API 是 `GET /api/tasks?projectId={id}&conversationId={id}`。不传 `conversationId` 的旧查询仍返回整个项目的任务。
 
-自动创建桌面工程目录、按目录切换对话的 UI 与本后端 API 分开交付；这些 API 不会在服务器上创建或暴露客户端本机目录。
+Windows 原生端已连接这些 API，可在首次发送时创建桌面工程目录；Web 端创建服务端空白工程。本机路径仅由原生端保存，后端只接收不透明 handle 和相对路径源码快照。
+
+同一 SCRATCH 工作区最多有一个普通 CODE 任务处于 QUEUED、RUNNING、VERIFYING 或 WAITING_APPROVAL。创建和重试在项目锁内检查，避免不同对话并发修改后丢失源码继承。相同请求的幂等重发先返回原任务；CHAT、独立工作区和实验任务不受此限制。
 
 ## 固定实验输入
 
@@ -35,7 +37,7 @@ A 组没有任何 Agent 工具。它可以在最终答案中返回标准统一 d
 | E | 开启 | 关闭 | 关闭 | 开启 | 开启 | 关闭 |
 | F | 开启 | 开启 | 必须启用 | 开启 | 开启 | 开启 |
 
-协议版本为 `proofcode.experiment.v1`。C/F 缺少 Jev 时 run 必须失败，不得静默切换到其他路由策略。Runner 在每条终结事件中报告实际应用的 profile 与源码 commit；比较器只把 `profileApplied=true`、profile version、commit 及可选 group 均匹配的终结结果标为有效。
+协议版本为 `proofcode.experiment.v2-context`。C/F 缺少 Jev 时 run 必须失败，不得静默切换到其他路由策略。Runner 在每条终结事件中报告实际应用的 profile 与源码 commit；比较器只把 `profileApplied=true`、profile version、commit 及可选 group 均匹配的终结结果标为有效。v2 接入版本化分层检索、可回取压缩引用和 F 组失败反馈检索，不能与 v1 数值直接混合比较。
 
 ## 创建示例
 

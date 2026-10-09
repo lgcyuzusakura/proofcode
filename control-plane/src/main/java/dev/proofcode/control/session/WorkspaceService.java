@@ -1,6 +1,7 @@
 package dev.proofcode.control.session;
 
 import dev.proofcode.control.project.ProjectRepository;
+import dev.proofcode.control.project.ProjectEntity;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -50,11 +51,15 @@ public class WorkspaceService {
             return new Scope(projectId,conversation.getWorkspaceId(),conversationId);
         }
         WorkspaceEntity workspace=workspaceId==null?workspaces.findByProjectIdAndDefaultWorkspaceTrue(projectId)
-            .orElseGet(()->workspaces.saveAndFlush(new WorkspaceEntity(UUID.randomUUID(),projectId,"Legacy",WorkspaceEntity.Kind.REMOTE_REPOSITORY,true,Instant.now())))
+            .orElseGet(()->workspaces.saveAndFlush(new WorkspaceEntity(UUID.randomUUID(),projectId,"默认工作区",defaultKind(projectId),true,Instant.now())))
             :requireWorkspace(projectId,workspaceId);
         ConversationEntity conversation=conversations.findByProjectIdAndWorkspaceIdAndDefaultConversationTrue(projectId,workspace.getId())
             .orElseGet(()->conversations.saveAndFlush(new ConversationEntity(UUID.randomUUID(),projectId,workspace.getId(),"Legacy",true,Instant.now())));
         return new Scope(projectId,workspace.getId(),conversation.getId());
+    }
+    private WorkspaceEntity.Kind defaultKind(UUID projectId){
+        ProjectEntity project=projects.findById(projectId).orElseThrow(WorkspaceService::notFound);
+        return switch(project.getSourceKind()) { case "SCRATCH" -> WorkspaceEntity.Kind.SCRATCH; case "LOCAL_FOLDER" -> WorkspaceEntity.Kind.LOCAL_FOLDER; default -> WorkspaceEntity.Kind.REMOTE_REPOSITORY; };
     }
     private static String clean(String value,int length,String label){if(value==null||value.isBlank()||value.trim().length()>length)throw new IllegalArgumentException(label+" is invalid");return value.trim();}
     private static ResponseStatusException notFound(){return new ResponseStatusException(HttpStatus.NOT_FOUND,"project workspace or conversation not found");}

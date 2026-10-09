@@ -213,7 +213,7 @@ func TestScopedHybridRejectsObsoleteAndForeignEvidence(t *testing.T) {
 	}
 }
 
-func TestGitCommitAndTaskAttemptIsolation(t *testing.T) {
+func TestGitCommitIsolationAndSourceReuseAcrossTaskAttempts(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git unavailable")
 	}
@@ -249,7 +249,7 @@ func TestGitCommitAndTaskAttemptIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.SnapshotID == b.SnapshotID || c.CacheHit {
-		t.Fatal("attempt reused previous snapshot")
+	if c.SnapshotID != b.SnapshotID || !c.CacheHit {
+		t.Fatal("same source generation failed to reuse across task attempts")
 	}
 }

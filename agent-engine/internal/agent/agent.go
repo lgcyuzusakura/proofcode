@@ -64,6 +64,7 @@ type RunRequest struct {
 	PrepareMessages       func(context.Context, int, []model.Message) ([]model.Message, error)
 	SuppressTaskLifecycle bool
 	InitialMessages       []model.Message
+	HistoryMessages       []model.Message
 	ResumeToolCall        *model.ToolCall
 	ResumeApproved        *bool
 	InitialUsage          model.Usage
@@ -105,8 +106,20 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 		request.MaxSteps = 24
 	}
 	messages := cloneMessages(request.InitialMessages)
+	completedSteps := 0
+	for _, message := range messages {
+		// Older conversation turns can also be present in a resumed checkpoint.
+		if message.Role == model.RoleUser {
+			completedSteps = 0
+		}
+		if message.Role == model.RoleAssistant {
+			completedSteps++
+		}
+	}
 	if len(messages) == 0 {
-		messages = []model.Message{{Role: model.RoleSystem, Content: request.SystemPrompt}, {Role: model.RoleUser, Content: request.Prompt}}
+		messages = []model.Message{{Role: model.RoleSystem, Content: request.SystemPrompt}}
+		messages = append(messages, cloneMessages(request.HistoryMessages)...)
+		messages = append(messages, model.Message{Role: model.RoleUser, Content: request.Prompt})
 	}
 	total := request.InitialUsage
 	allUsageReported := len(request.InitialMessages) == 0 || total.Reported
@@ -230,12 +243,6 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 			if err := request.Checkpoint(RunResult{Messages: messages, Usage: total, RemainingCalls: request.RemainingCalls[index+1:]}); err != nil {
 				return RunResult{Messages: messages, Usage: total}, err
 			}
-		}
-	}
-	completedSteps := 0
-	for _, message := range messages {
-		if message.Role == model.RoleAssistant {
-			completedSteps++
 		}
 	}
 	for step := completedSteps + 1; step <= request.MaxSteps; step++ {

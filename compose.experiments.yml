@@ -79,7 +79,9 @@ services:
       SPRING_ARTEMIS_PASSWORD: experiment-fixture
       PROOFCODE_AUTH_TOKEN: experiment-smoke-user
       PROOFCODE_RUNNER_TOKEN: experiment-smoke-runner
+      DATA_SNAPSHOT_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
       DATA_SECRET_SMOKE_DB: '{"url":"jdbc:postgresql://data-postgres:5432/fixture","user":"fixture","password":"experiment-fixture"}'
+      DATA_SECRET_SMOKE_REDIS: '{"host":"redis","port":6379}'
     depends_on:
       postgres:
         condition: service_healthy

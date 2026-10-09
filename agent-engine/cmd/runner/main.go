@@ -29,28 +29,32 @@ import (
 )
 
 type taskMessage struct {
-	Version           string              `json:"version"`
-	TaskID            string              `json:"taskId"`
-	Attempt           int                 `json:"attempt"`
-	ProjectID         string              `json:"projectId"`
-	Repository        string              `json:"repositoryUrl"`
-	Branch            string              `json:"branch"`
-	Prompt            string              `json:"prompt"`
-	Model             string              `json:"model"`
-	Resume            bool                `json:"resume"`
-	ApprovalID        string              `json:"approvalId"`
-	Decision          string              `json:"approvalDecision"`
-	WorkspaceID       string              `json:"workspaceId"`
-	ConversationID    string              `json:"conversationId"`
-	SourceRevision    string              `json:"sourceRevision"`
-	ExperimentID      string              `json:"experimentId"`
-	ExperimentRunID   string              `json:"experimentRunId"`
-	ExperimentGroup   string              `json:"experimentGroup"`
-	ProfileVersion    string              `json:"profileVersion"`
-	ExperimentProfile *experiment.Profile `json:"experimentProfile"`
-	MaxSteps          int                 `json:"maxSteps"`
-	Temperature       *float64            `json:"temperature"`
-	TestCommand       string              `json:"testCommand"`
+	Version            string              `json:"version"`
+	TaskID             string              `json:"taskId"`
+	Attempt            int                 `json:"attempt"`
+	ProjectID          string              `json:"projectId"`
+	Repository         string              `json:"repositoryUrl"`
+	SourceKind         string              `json:"sourceKind"`
+	SourceSnapshotID   string              `json:"sourceSnapshotId"`
+	SourceManifestHash string              `json:"sourceManifestHash"`
+	ExecutionMode      string              `json:"executionMode"`
+	Branch             string              `json:"branch"`
+	Prompt             string              `json:"prompt"`
+	Model              string              `json:"model"`
+	Resume             bool                `json:"resume"`
+	ApprovalID         string              `json:"approvalId"`
+	Decision           string              `json:"approvalDecision"`
+	WorkspaceID        string              `json:"workspaceId"`
+	ConversationID     string              `json:"conversationId"`
+	SourceRevision     string              `json:"sourceRevision"`
+	ExperimentID       string              `json:"experimentId"`
+	ExperimentRunID    string              `json:"experimentRunId"`
+	ExperimentGroup    string              `json:"experimentGroup"`
+	ProfileVersion     string              `json:"profileVersion"`
+	ExperimentProfile  *experiment.Profile `json:"experimentProfile"`
+	MaxSteps           int                 `json:"maxSteps"`
+	Temperature        *float64            `json:"temperature"`
+	TestCommand        string              `json:"testCommand"`
 }
 
 type workspaceMetadata struct {
@@ -195,8 +199,20 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	if !taskIDPattern.MatchString(task.TaskID) {
 		return errors.New("task ID must be a UUID")
 	}
-	if !validRepositoryURL(task.Repository) {
-		return errors.New("repositoryUrl must be http or https")
+	if task.SourceKind == "" {
+		task.SourceKind = "REMOTE_REPOSITORY"
+	}
+	if task.ExecutionMode == "" {
+		task.ExecutionMode = "CODE"
+	}
+	if task.ExecutionMode != "CODE" && task.ExecutionMode != "CHAT" {
+		return errors.New("executionMode is invalid")
+	}
+	if task.ExecutionMode == "CODE" && task.SourceKind == "REMOTE_REPOSITORY" && !validRepositoryURL(task.Repository) {
+		return errors.New("repositoryUrl must be http or https for a remote project")
+	}
+	if task.SourceKind != "REMOTE_REPOSITORY" && task.SourceKind != "LOCAL_FOLDER" && task.SourceKind != "SCRATCH" {
+		return errors.New("sourceKind is invalid")
 	}
 	if task.Attempt < 1 {
 		return errors.New("task attempt must be positive")
@@ -235,6 +251,12 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	if err := validateExperimentTask(task); err != nil {
 		return err
 	}
+	if task.ExecutionMode == "CHAT" {
+		if task.ExperimentGroup != "" {
+			return errors.New("chat cannot redefine experiment profiles")
+		}
+		return r.runChat(ctx, task, events)
+	}
 	configurationHash := r.configurationHash(task)
 
 	base := filepath.Join(r.WorkspaceRoot, task.TaskID, fmt.Sprintf("attempt-%d", task.Attempt))
@@ -268,8 +290,14 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		if err := os.MkdirAll(base, 0750); err != nil {
 			return err
 		}
-		if err := clone(ctx, task.Repository, task.Branch, repository); err != nil {
-			return err
+		if task.SourceKind == "REMOTE_REPOSITORY" {
+			if err := clone(ctx, task.Repository, task.Branch, repository); err != nil {
+				return err
+			}
+		} else {
+			if err := r.prepareLocalSource(ctx, task, repository); err != nil {
+				return err
+			}
 		}
 		if err := checkoutRevision(ctx, repository, task.SourceRevision); err != nil {
 			return err
@@ -327,6 +355,13 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	coordinator, request, err := r.execution(task, ws, events)
 	if err != nil {
 		return err
+	}
+	if !resumed {
+		history, err := r.conversationHistory(ctx, task)
+		if err != nil {
+			return err
+		}
+		request.HistoryMessages = history
 	}
 	if task.ExperimentGroup != "" {
 		collector.Set("profileApplied", true)
@@ -479,6 +514,9 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 			return err
 		}
 		if workingPatch == "" {
+			if err := r.saveSourceResult(ctx, task, handle.Path); err != nil {
+				return err
+			}
 			if err := events.Emit(ctx, task.TaskID, event.TaskCompleted, completedPayload(map[string]any{"result": result.Main.Content, "branch": handle.Branch, "unchanged": true})); err != nil {
 				return err
 			}
@@ -505,6 +543,9 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		if err := events.Emit(ctx, task.TaskID, event.CheckpointCreated, map[string]any{"commit": hash, "branch": handle.Branch, "patch": patch, "base": handle.Base}); err != nil {
 			return fmt.Errorf("publish checkpoint: %w", err)
 		}
+	}
+	if err := r.saveSourceResult(ctx, task, handle.Path); err != nil {
+		return err
 	}
 	if err := events.Emit(ctx, task.TaskID, event.TaskCompleted, completedPayload(map[string]any{"result": result.Main.Content, "commit": hash, "branch": handle.Branch, "unchanged": patch == ""})); err != nil {
 		return err
@@ -754,6 +795,17 @@ func clone(ctx context.Context, repository, branch, destination string) error {
 	}
 	if err != nil {
 		return fmt.Errorf("clone repository: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+func initScratchRepository(ctx context.Context, destination string) error {
+	if err := os.MkdirAll(destination, 0750); err != nil {
+		return err
+	}
+	command := exec.CommandContext(ctx, "git", "init", "--initial-branch=main", destination)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("initialize scratch repository: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }

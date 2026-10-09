@@ -8,6 +8,8 @@ model quality or research measurements.
 from __future__ import annotations
 
 import csv
+import base64
+import hashlib
 import io
 import json
 import os
@@ -24,7 +26,7 @@ CONTROL = os.environ.get("CONTROL_PLANE_URL", "http://control-plane:8080").rstri
 FIXTURE = os.environ.get("FIXTURE_URL", "http://fixture:8000").rstrip("/")
 USER_TOKEN = os.environ.get("PROOFCODE_AUTH_TOKEN", "experiment-smoke-user")
 RUNNER_TOKEN = os.environ.get("PROOFCODE_RUNNER_TOKEN", "experiment-smoke-runner")
-TOTAL_TIMEOUT = 180.0
+TOTAL_TIMEOUT = 300.0
 POLL_INTERVAL = 1.0
 ARTIFACTS = Path(os.environ.get("RESULTS_DIR", "/results"))
 START = time.monotonic()
@@ -334,6 +336,72 @@ def run_database_approval(project_id: str) -> dict[str, Any]:
     }
 
 
+def finish_task(payload: dict[str, Any]) -> dict[str, Any]:
+    task = api("POST", "/api/tasks", payload)
+    completed = poll("source or chat task completion", lambda: task_state(task["id"]),
+        lambda value: value.get("status") in ("SUCCEEDED", "FAILED", "CANCELLED"))
+    require(completed.get("status") == "SUCCEEDED", f"task failed: {completed.get('error')}")
+    return completed
+
+
+def run_project_sources() -> dict[str, Any]:
+    project = api("POST", "/api/projects", {"name": "Scratch source smoke", "sourceKind": "SCRATCH",
+        "defaultBranch": "main", "bootstrapId": "smoke-" + str(time.time_ns())})
+    scope = api("POST", f"/api/projects/{project['id']}/default-scope", {})
+    require(scope == api("POST", f"/api/projects/{project['id']}/default-scope", {}), "default scope is not idempotent")
+    chat_payload = {**scope, "model": "fixture-only", "executionMode": "CHAT"}
+    first = finish_task({**chat_payload, "prompt": "PROOFCODE_CHAT_SMOKE FIRST"})
+    second = finish_task({**chat_payload, "prompt": "PROOFCODE_CHAT_SMOKE SECOND"})
+    require(first.get("result") == "Chat fixture: FIRST" and second.get("result") == "Chat fixture: SECOND", "chat replies are incorrect")
+    messages_path = f"/api/projects/{scope['projectId']}/workspaces/{scope['workspaceId']}/conversations/{scope['conversationId']}/messages"
+    messages = api("GET", messages_path)
+    require(len(messages) == 4 and [m['role'] for m in messages] == ['user', 'assistant', 'user', 'assistant'], "chat transcript did not persist both turns")
+    require(first.get("resultSourceSnapshotId") is None and second.get("resultSourceSnapshotId") is None, "chat produced code snapshots")
+    code_payload = {**scope, "model": "fixture-only", "executionMode": "CODE", "maxSteps": 6}
+    created = finish_task({**code_payload, "prompt": "PROOFCODE_SOURCE_SMOKE CREATE"})
+    source_id = created.get("resultSourceSnapshotId")
+    require(source_id, "scratch code result did not persist source")
+    updated = finish_task({**code_payload, "prompt": "PROOFCODE_SOURCE_SMOKE UPDATE"})
+    require(updated.get("sourceSnapshotId") == source_id, "next scratch task did not restore previous successful source")
+    archive = api("GET", f"/internal/tasks/{updated['id']}/source?attempt=1", internal=True)
+    app = next((entry for entry in archive["files"] if entry["path"] == "app.py"), None)
+    require(app and base64.b64decode(app["content"]) == b"def add(a, b):\n    return a + b\n", "restored scratch input has incorrect bytes")
+    unchanged = finish_task({**code_payload, "prompt": "PROOFCODE_SOURCE_SMOKE READ"})
+    require(unchanged.get("sourceSnapshotId") == updated.get("resultSourceSnapshotId")
+        and unchanged.get("resultSourceSnapshotId") == unchanged.get("sourceSnapshotId"), "unchanged source result was not preserved")
+    for task in (created, updated):
+        events = api("GET", f"/api/tasks/{task['id']}/events")
+        require(any(e.get("type") == "tool.completed" and e.get("payload", {}).get("tool") == "run_command" for e in events), "source task did not execute its real tests")
+        artifact = api("GET", f"/api/tasks/{task['id']}/artifacts/checkpoint")
+        require(artifact.get("patch") and "app.py" in artifact["patch"], "source task produced no reviewable code patch")
+
+    local = api("POST", "/api/projects", {"name": "Dirty local source smoke", "sourceKind": "LOCAL_FOLDER",
+        "defaultBranch": "main", "localHandle": "desktop:smoke-source", "bootstrapId": "local-" + str(time.time_ns())})
+    local_scope = api("POST", f"/api/projects/{local['id']}/default-scope", {})
+    content = b"def add(a, b):\n    return a + b\n"
+    file_hash = hashlib.sha256(content).hexdigest()
+    manifest = hashlib.sha256(("app.py\0" + file_hash + "\0" + "0\n").encode()).hexdigest()
+    upload = {"workspaceId": local_scope["workspaceId"], "manifestHash": manifest,
+        "files": [{"path": "app.py", "sha256": file_hash, "content": base64.b64encode(content).decode(), "executable": False}]}
+    metadata = api("POST", f"/api/projects/{local['id']}/sources", upload)
+    require("content" not in metadata, "public source metadata leaked file contents")
+    local_done = finish_task({**local_scope, "prompt": "PROOFCODE_SOURCE_SMOKE READ", "model": "fixture-only",
+        "executionMode": "CODE", "sourceSnapshotId": metadata["id"]})
+    require(local_done.get("sourceSnapshotId") == local_done.get("resultSourceSnapshotId") == metadata["id"], "unchanged local source was not recorded")
+    cross_scope_rejected = False
+    try:
+        api("POST", "/api/tasks", {**scope, "prompt": "must reject foreign source", "model": "fixture-only",
+            "executionMode": "CODE", "sourceSnapshotId": metadata["id"]})
+    except HttpFailure as error:
+        require(error.status == 404, f"foreign snapshot returned unexpected HTTP {error.status}")
+        cross_scope_rejected = True
+    require(cross_scope_rejected, "cross-project source snapshot was accepted")
+    return {"projectId": project["id"], "chatTaskIds": [first["id"], second["id"]],
+        "sourceTaskIds": [created["id"], updated["id"], unchanged["id"], local_done["id"]],
+        "chatHistoryPersisted": True, "realTestsExecuted": True, "unchangedSourcePersisted": True,
+        "crossProjectSourceRejected": True}
+
+
 def main() -> int:
     require(USER_TOKEN, "PROOFCODE_AUTH_TOKEN is required")
     fixture_info = fixture("/fixture")
@@ -346,6 +414,7 @@ def main() -> int:
     require(project.get("id"), "project create response has no id")
     experiment_result = run_experiment(project, fixture_info)
     data_result = run_database_approval(project["id"])
+    project_result = run_project_sources()
     summary = {
         "ok": True,
         "kind": "fixture-only end-to-end plumbing validation",
@@ -355,6 +424,7 @@ def main() -> int:
         "projectId": project["id"],
         "experiment": experiment_result,
         "databaseApproval": data_result,
+        "projectSources": project_result,
     }
     save_json(ARTIFACTS / "summary.json", summary)
     print(json.dumps({"ok": True, "summary": str(ARTIFACTS / "summary.json"), "elapsedSeconds": summary["elapsedSeconds"]}, ensure_ascii=False))

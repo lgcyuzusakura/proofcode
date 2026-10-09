@@ -32,6 +32,7 @@ type CoordinateRequest struct {
 	PrepareMessages      func(context.Context, int, []model.Message) ([]model.Message, error)
 	SuppressTaskComplete bool
 	InitialMessages      []model.Message
+	HistoryMessages      []model.Message
 	ResumeToolCall       *model.ToolCall
 	ResumeApproved       *bool
 	Resume               bool
@@ -75,7 +76,7 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 		result.Main = request.MainResult
 	} else {
 		main := Agent{Provider: c.Provider, Tools: c.MainTools, Approval: c.Approval, Events: c.Events, Router: c.Router, Routing: c.Routing}
-		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: request.MaxSteps, Temperature: request.Temperature, PrepareMessages: request.PrepareMessages, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
+		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: request.MaxSteps, Temperature: request.Temperature, PrepareMessages: request.PrepareMessages, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, HistoryMessages: request.HistoryMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
 		if err != nil {
 			var approvalErr *ApprovalRequiredError
 			if !errors.As(err, &approvalErr) && !request.SuppressTaskComplete {

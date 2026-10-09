@@ -10,6 +10,8 @@ import dev.proofcode.control.experiment.ExperimentProfile;
 import dev.proofcode.control.experiment.ExperimentRepository;
 import dev.proofcode.control.session.WorkspaceService;
 import dev.proofcode.control.data.DataOperationService;
+import dev.proofcode.control.source.SourceSnapshotService;
+import dev.proofcode.control.session.ConversationMessageService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -23,7 +25,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class TaskService {
     private final TaskRepository tasks; private final ProjectRepository projects; private final OutboxRepository outbox; private final TaskApprovalRepository approvals; private final ObjectMapper json; private final String queue; private final WorkspaceService scopes; private final ExperimentRepository experiments; private final DataOperationService dataOperations;
-    public TaskService(TaskRepository tasks,ProjectRepository projects,OutboxRepository outbox,TaskApprovalRepository approvals,ObjectMapper json,@Value("${proofcode.queue}")String queue,WorkspaceService scopes,ExperimentRepository experiments,DataOperationService dataOperations){this.tasks=tasks;this.projects=projects;this.outbox=outbox;this.approvals=approvals;this.json=json;this.queue=queue;this.scopes=scopes;this.experiments=experiments;this.dataOperations=dataOperations;}
+    private final SourceSnapshotService sources;private final ConversationMessageService messages;
+    public TaskService(TaskRepository tasks,ProjectRepository projects,OutboxRepository outbox,TaskApprovalRepository approvals,ObjectMapper json,@Value("${proofcode.queue}")String queue,WorkspaceService scopes,ExperimentRepository experiments,DataOperationService dataOperations,SourceSnapshotService sources,ConversationMessageService messages){this.tasks=tasks;this.projects=projects;this.outbox=outbox;this.approvals=approvals;this.json=json;this.queue=queue;this.scopes=scopes;this.experiments=experiments;this.dataOperations=dataOperations;this.sources=sources;this.messages=messages;}
     @Transactional
     public TaskEntity create(UUID projectId,String prompt,String model,String idempotencyKey){return createWithOutcome(projectId,prompt,model,idempotencyKey).task();}
     @Transactional
@@ -32,25 +35,37 @@ public class TaskService {
     }
     @Transactional
     public CreateResult createWithOutcome(UUID projectId,String prompt,String model,String idempotencyKey,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature){
+        return createWithOutcome(projectId,prompt,model,idempotencyKey,workspaceId,conversationId,sourceRevision,maxSteps,testCommand,temperature,"CODE",null);
+    }
+    @Transactional
+    public CreateResult createWithOutcome(UUID projectId,String prompt,String model,String idempotencyKey,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId){
         validateExecution(sourceRevision,maxSteps,testCommand,temperature);
+        String mode=normalizeMode(executionMode);
         var scope=scopes.resolve(projectId,workspaceId,conversationId);
         if(idempotencyKey!=null){
             var existing=tasks.findByProjectIdAndIdempotencyKey(projectId,idempotencyKey);
             if(existing.isPresent()){
                 TaskEntity task=existing.get();
-                if(!matches(task,prompt,model,scope.workspaceId(),scope.conversationId(),sourceRevision,maxSteps,testCommand,temperature)){
+                if(!matches(task,prompt,model,scope.workspaceId(),scope.conversationId(),sourceRevision,maxSteps,testCommand,temperature)||!task.getExecutionMode().equals(mode)||(sourceSnapshotId!=null&&!java.util.Objects.equals(task.getSourceSnapshotId(),sourceSnapshotId))){
                     throw new ResponseStatusException(HttpStatus.CONFLICT,"idempotency key already belongs to another request");
                 }
                 return new CreateResult(task,false);
             }
         }
         ProjectEntity project=projects.findById(projectId).orElseThrow();
+        requireScratchIdle(project,scope.workspaceId(),mode);
+        if(mode.equals("CHAT")&&(sourceSnapshotId!=null||sourceRevision!=null||testCommand!=null))throw new IllegalArgumentException("chat does not accept execution sources or commands");
+        if(sourceSnapshotId!=null){if(project.getSourceKind().equals("REMOTE_REPOSITORY")||sourceRevision!=null)throw new IllegalArgumentException("remote revision and local snapshot cannot be combined");sources.require(projectId,scope.workspaceId(),sourceSnapshotId);}
+        if(mode.equals("CODE")&&project.getSourceKind().equals("LOCAL_FOLDER")&&sourceSnapshotId==null)throw new IllegalArgumentException("local code task requires a captured sourceSnapshotId");
+        if(mode.equals("CODE")&&project.getSourceKind().equals("SCRATCH")&&sourceSnapshotId==null)sourceSnapshotId=sources.latest(projectId,scope.workspaceId()).map(dev.proofcode.control.source.SourceSnapshot::getId).orElse(null);
         Instant now=Instant.now();
         TaskEntity task=new TaskEntity(UUID.randomUUID(),projectId,prompt,model,idempotencyKey,now);
         task.bindScope(scope.workspaceId(),scope.conversationId());
+        task.bindSource(mode,sourceSnapshotId);
         task.configureExecution(sourceRevision,maxSteps,testCommand,temperature);
         task.transition(TaskStatus.QUEUED);
         tasks.save(task);
+        messages.start(task);
         enqueue(project,task,now,null,null);
         return new CreateResult(task,true);
     }
@@ -68,12 +83,16 @@ public class TaskService {
     }
     public TaskEntity create(UUID projectId,String prompt,String model){return create(projectId,prompt,model,null);}
     @Transactional
-    public TaskEntity retry(UUID taskId){TaskEntity task=tasks.lockById(taskId).orElseThrow();if(task.getStatus()!=TaskStatus.FAILED&&task.getStatus()!=TaskStatus.CANCELLED)throw new ResponseStatusException(HttpStatus.CONFLICT,"only failed or cancelled tasks can be retried");task.retry();ProjectEntity project=projects.findById(task.getProjectId()).orElseThrow();enqueue(project,task,Instant.now(),null,null);return task;}
+    public TaskEntity retry(UUID taskId){TaskEntity read=tasks.findById(taskId).orElseThrow();ProjectEntity project=projects.lockById(read.getProjectId()).orElseThrow();TaskEntity task=tasks.lockById(taskId).orElseThrow();if(task.getStatus()!=TaskStatus.FAILED&&task.getStatus()!=TaskStatus.CANCELLED)throw new ResponseStatusException(HttpStatus.CONFLICT,"only failed or cancelled tasks can be retried");if(task.getExperimentId()==null)requireScratchIdle(project,task.getWorkspaceId(),task.getExecutionMode());task.retry();messages.start(task);enqueue(project,task,Instant.now(),null,null);return task;}
+    private void requireScratchIdle(ProjectEntity project,UUID workspaceId,String mode){
+        if(project.getSourceKind().equals("SCRATCH")&&mode.equals("CODE")&&tasks.existsByProjectIdAndWorkspaceIdAndExecutionModeAndExperimentIdIsNullAndStatusIn(project.getId(),workspaceId,"CODE",java.util.List.of(TaskStatus.QUEUED,TaskStatus.RUNNING,TaskStatus.VERIFYING,TaskStatus.WAITING_APPROVAL)))throw new ResponseStatusException(HttpStatus.CONFLICT,"scratch workspace already has an active code task");
+    }
     @Transactional
     public TaskEntity cancel(UUID taskId){
         TaskEntity task=tasks.lockById(taskId).orElseThrow();
         if(task.getStatus()==TaskStatus.SUCCEEDED||task.getStatus()==TaskStatus.FAILED||task.getStatus()==TaskStatus.CANCELLED)return task;
         task.transition(TaskStatus.CANCELLED);
+        messages.finish(task,"","CANCELLED");
         approvals.findByTaskIdAndAttemptAndStatus(taskId,task.getAttempt(),ApprovalStatus.PENDING)
             .forEach(TaskApprovalEntity::cancel);
         return task;
@@ -95,8 +114,10 @@ public class TaskService {
     private void enqueue(ProjectEntity project,TaskEntity task,Instant now,String approvalCallId,String decision){
         try{
             Map<String,Object> payload=new LinkedHashMap<>();
-            payload.put("version","v1");payload.put("taskId",task.getId());payload.put("projectId",task.getProjectId());payload.put("attempt",task.getAttempt());payload.put("repositoryUrl",project.getRepositoryUrl());payload.put("branch",project.getDefaultBranch());payload.put("prompt",task.getPrompt());payload.put("model",task.getModel());
+            payload.put("version","v1");payload.put("taskId",task.getId());payload.put("projectId",task.getProjectId());payload.put("attempt",task.getAttempt());payload.put("repositoryUrl",project.getRepositoryUrl());payload.put("sourceKind",project.getSourceKind());payload.put("branch",project.getDefaultBranch());payload.put("prompt",task.getPrompt());payload.put("model",task.getModel());
             payload.put("workspaceId",task.getWorkspaceId());payload.put("conversationId",task.getConversationId());
+            payload.put("executionMode",task.getExecutionMode());payload.put("sourceSnapshotId",task.getSourceSnapshotId());
+            if(task.getSourceSnapshotId()!=null)payload.put("sourceManifestHash",sources.require(task.getProjectId(),task.getWorkspaceId(),task.getSourceSnapshotId()).getManifestHash());
             if(task.getSourceRevision()!=null)payload.put("sourceRevision",task.getSourceRevision());
             if(task.getMaxSteps()!=null)payload.put("maxSteps",task.getMaxSteps());
             if(task.getTestCommand()!=null)payload.put("testCommand",task.getTestCommand());
@@ -125,4 +146,5 @@ public class TaskService {
             &&java.util.Objects.equals(task.getTestCommand(),testCommand)&&java.util.Objects.equals(task.getTemperature(),temperature);
     }
     public record CreateResult(TaskEntity task,boolean created){}
+    public static String normalizeMode(String value){String mode=value==null?"CODE":value.trim().toUpperCase(java.util.Locale.ROOT);if(!java.util.Set.of("CODE","CHAT").contains(mode))throw new IllegalArgumentException("executionMode must be CODE or CHAT");return mode;}
 }

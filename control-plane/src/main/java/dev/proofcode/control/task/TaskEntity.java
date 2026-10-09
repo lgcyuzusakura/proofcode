@@ -32,16 +32,22 @@ public class TaskEntity {
     @Column(name="max_steps") private Integer maxSteps;
     @Column(name="test_command",columnDefinition="text") private String testCommand;
     @Column private Double temperature;
+    @Column(name="execution_mode",nullable=false,length=8) private String executionMode="CODE";
+    @Column(name="source_snapshot_id") private UUID sourceSnapshotId;
+    @Column(name="result_source_snapshot_id") private UUID resultSourceSnapshotId;
     protected TaskEntity(){}
     public TaskEntity(UUID id,UUID projectId,String prompt,String model,String idempotencyKey,Instant now){this.id=id;this.projectId=projectId;this.prompt=prompt;this.model=model;this.idempotencyKey=idempotencyKey;this.status=TaskStatus.CREATED;this.attempt=1;this.createdAt=now;this.updatedAt=now;}
     public TaskEntity(UUID id,UUID projectId,String prompt,String model,Instant now){this(id,projectId,prompt,model,null,now);}
     public void bindScope(UUID workspaceId,UUID conversationId){this.workspaceId=workspaceId;this.conversationId=conversationId;}
+    public void bindSource(String mode,UUID snapshotId){this.executionMode=mode;this.sourceSnapshotId=snapshotId;}
+    public String getExecutionMode(){return executionMode;} public UUID getSourceSnapshotId(){return sourceSnapshotId;}
+    public UUID getResultSourceSnapshotId(){return resultSourceSnapshotId;} public void bindResultSource(UUID id){this.resultSourceSnapshotId=id;}
     public void configureExecution(String sourceRevision,Integer maxSteps,String testCommand,Double temperature){this.sourceRevision=sourceRevision;this.maxSteps=maxSteps;this.testCommand=testCommand;this.temperature=temperature;}
     public void bindExperiment(UUID experimentId,UUID experimentRunId,ExperimentProfile.Group group){this.experimentId=experimentId;this.experimentRunId=experimentRunId;this.experimentGroup=group;this.profileVersion=ExperimentProfile.VERSION;}
     public void transition(TaskStatus next){if(status==next)return;if(!canTransition(next))throw new IllegalStateException("invalid task transition: "+status+" -> "+next);this.status=next;this.updatedAt=Instant.now();}
     private boolean canTransition(TaskStatus next){return switch(status){case CREATED -> next==TaskStatus.QUEUED||next==TaskStatus.CANCELLED;case QUEUED -> next==TaskStatus.RUNNING||next==TaskStatus.CANCELLED;case RUNNING -> next==TaskStatus.WAITING_APPROVAL||next==TaskStatus.VERIFYING||next==TaskStatus.SUCCEEDED||next==TaskStatus.FAILED||next==TaskStatus.CANCELLED;case WAITING_APPROVAL -> next==TaskStatus.RUNNING||next==TaskStatus.QUEUED||next==TaskStatus.FAILED||next==TaskStatus.CANCELLED;case VERIFYING -> next==TaskStatus.RUNNING||next==TaskStatus.SUCCEEDED||next==TaskStatus.FAILED||next==TaskStatus.CANCELLED;case SUCCEEDED -> false;case FAILED,CANCELLED -> next==TaskStatus.QUEUED;};}
     public void complete(String result){if(status==TaskStatus.SUCCEEDED)return;this.result=result;this.error=null;transition(TaskStatus.SUCCEEDED);} public void fail(String error){if(status==TaskStatus.FAILED)return;this.error=error;transition(TaskStatus.FAILED);}
-    public void retry(){if(status!=TaskStatus.FAILED&&status!=TaskStatus.CANCELLED)throw new IllegalStateException("only failed or cancelled tasks can be retried");this.result=null;this.error=null;this.runnerId=null;this.leaseUntil=null;this.attempt=Math.addExact(this.attempt,1);transition(TaskStatus.QUEUED);}
+    public void retry(){if(status!=TaskStatus.FAILED&&status!=TaskStatus.CANCELLED)throw new IllegalStateException("only failed or cancelled tasks can be retried");this.result=null;this.error=null;this.resultSourceSnapshotId=null;this.runnerId=null;this.leaseUntil=null;this.attempt=Math.addExact(this.attempt,1);transition(TaskStatus.QUEUED);}
     public void resume(){if(status!=TaskStatus.WAITING_APPROVAL)throw new IllegalStateException("only tasks waiting for approval can be resumed");this.error=null;this.runnerId=null;this.leaseUntil=null;transition(TaskStatus.QUEUED);}
     public boolean claim(UUID runner,Instant now){if(status!=TaskStatus.QUEUED && !((status==TaskStatus.RUNNING||status==TaskStatus.VERIFYING) && (leaseUntil==null || leaseUntil.isBefore(now))))return false;runnerId=runner;leaseUntil=now.plusSeconds(45);transition(TaskStatus.RUNNING);return true;}
     public boolean renew(UUID runner,Instant now){if((status!=TaskStatus.RUNNING && status!=TaskStatus.VERIFYING) || !runner.equals(runnerId))return false;leaseUntil=now.plusSeconds(45);return true;}

@@ -10,7 +10,7 @@ import (
 	"reflect"
 )
 
-const ProfileVersion = "proofcode.experiment.v1"
+const ProfileVersion = "proofcode.experiment.v2-context"
 
 type Profile struct {
 	Version                   string `json:"version"`

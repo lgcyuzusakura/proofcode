@@ -5,5 +5,6 @@ public interface TaskRepository extends JpaRepository<TaskEntity,UUID>{
     List<TaskEntity> findByProjectIdAndConversationIdOrderByCreatedAtDesc(UUID projectId,UUID conversationId);
     List<TaskEntity> findByExperimentIdOrderByCreatedAtAsc(UUID experimentId);
     Optional<TaskEntity> findByProjectIdAndIdempotencyKey(UUID projectId,String idempotencyKey);
+    boolean existsByProjectIdAndWorkspaceIdAndExecutionModeAndExperimentIdIsNullAndStatusIn(UUID projectId,UUID workspaceId,String executionMode,List<TaskStatus> statuses);
     @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select t from TaskEntity t where t.id = :id") Optional<TaskEntity> lockById(@Param("id") UUID id);
 }

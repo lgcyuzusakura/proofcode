@@ -118,6 +118,17 @@ def model_response(request):
     system = next((m.get("content", "") for m in messages if m.get("role") == "system"), "")
     if "scout" in system.lower() or "verifier" in system.lower():
         return {"tool": None, "content": "Fixture repository reviewed."}
+    current = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
+    if "PROOFCODE_CHAT_SMOKE" in current:
+        if request.get("tools"):
+            raise ValueError("chat unexpectedly received execution tools")
+        if current.endswith("SECOND"):
+            history = [m.get("content", "") for m in messages if m.get("role") == "assistant"]
+            if "Chat fixture: FIRST" not in history:
+                raise ValueError("chat lost its previous completed answer")
+        return {"tool": None, "content": "Chat fixture: " + current.split()[-1]}
+    if "PROOFCODE_SOURCE_SMOKE" in current:
+        return source_response(messages, current)
     if any("PROOFCODE_DATA_SMOKE" in str(m.get("content", "")) for m in messages if m.get("role") == "user"):
         return data_response(messages)
     if not request.get("tools"):
@@ -130,6 +141,31 @@ def model_response(request):
     if stage == 2:
         return tool_response("apply_patch", {"edits": [{"path": "add.go", "old_text": "func Add(a, b int) int { return a - b }", "new_text": "func Add(a, b int) int { return a + b }"}]})
     return {"tool": None, "content": "Fixed Add; the independent evaluator must verify the result."}
+
+
+def source_response(messages, current):
+    results = tool_results(messages)
+    if results and results[-1][0].get("isError"):
+        raise ValueError("source smoke tool failed: " + str(results[-1]))
+    stage = len(results)
+    if current.endswith("CREATE"):
+        if stage == 0:
+            return tool_response("apply_patch", {"edits": [
+                {"path": "app.py", "create": True, "new_text": "def add(a, b):\n    return a + b\n"},
+                {"path": "test_app.py", "create": True, "new_text": "from app import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"},
+            ]})
+        if stage == 1:
+            return tool_response("run_command", {"program": "python3", "args": ["-m", "pytest", "-q"]})
+        return {"tool": None, "content": "Created and tested the source snapshot."}
+    if stage == 0:
+        return tool_response("read_file", {"path": "app.py"})
+    if current.endswith("READ"):
+        return {"tool": None, "content": "Verified the unchanged source snapshot."}
+    if stage == 1:
+        return tool_response("apply_patch", {"edits": [{"path": "app.py", "old_text": "return a + b", "new_text": "return a + b + 0"}]})
+    if stage == 2:
+        return tool_response("run_command", {"program": "python3", "args": ["-m", "pytest", "-q"]})
+    return {"tool": None, "content": "Updated and tested the source snapshot."}
 
 
 class Handler(SimpleHTTPRequestHandler):

@@ -15,7 +15,7 @@ func TestPrepareModelMessagesDropsWholeOldToolGroups(t *testing.T) {
 		{Role: model.RoleSystem, Content: "system"},
 		{Role: model.RoleUser, Content: "old request"},
 		{Role: model.RoleAssistant, ToolCalls: []model.ToolCall{callOne}},
-		{Role: model.RoleTool, ToolCallID: callOne.ID, Content: strings.Repeat("old output ", (maxModelInputTokens*4+100)/len("old output "))},
+		{Role: model.RoleTool, ToolCallID: callOne.ID, Content: `{"isError":false,"content":"` + strings.Repeat("old output ", (maxModelInputTokens*4+100)/len("old output ")) + `"}`},
 		{Role: model.RoleUser, Content: "latest request"},
 		{Role: model.RoleAssistant, ToolCalls: []model.ToolCall{callTwo}},
 		{Role: model.RoleTool, ToolCallID: callTwo.ID, Content: "latest output"},
@@ -24,10 +24,10 @@ func TestPrepareModelMessagesDropsWholeOldToolGroups(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dropped != 3 || len(selected) != 4 {
+	if dropped != 2 || len(selected) != 5 {
 		t.Fatalf("unexpected pruning: dropped=%d selected=%d", dropped, len(selected))
 	}
-	if selected[0].Role != model.RoleSystem || selected[1].Content != "latest request" || selected[2].ToolCalls[0].ID != callTwo.ID || selected[3].ToolCallID != callTwo.ID {
+	if selected[0].Role != model.RoleSystem || selected[1].Content != "old request" || selected[2].Content != "latest request" || selected[3].ToolCalls[0].ID != callTwo.ID || selected[4].ToolCallID != callTwo.ID {
 		t.Fatalf("pruning broke current transcript: %+v", selected)
 	}
 	if _, _, err := groupMessages(selected); err != nil {
@@ -49,5 +49,26 @@ func TestPrepareModelMessagesRejectsOrphanToolResult(t *testing.T) {
 	messages := []model.Message{{Role: model.RoleSystem, Content: "system"}, {Role: model.RoleUser, Content: "request"}, {Role: model.RoleTool, ToolCallID: "missing", Content: "result"}}
 	if _, _, _, err := prepareModelMessages(messages, nil); err == nil {
 		t.Fatal("expected orphan tool result to be rejected")
+	}
+}
+
+func TestModelInputBudgetNeverAllowsEnvironmentToExceedHardTotalLimit(t *testing.T) {
+	for _, name := range []string{"PROOFCODE_MODEL_CONTEXT_TOKENS", "PROOFCODE_OUTPUT_RESERVE_TOKENS"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(name, "200001")
+			if _, e := ModelInputBudget(); e == nil {
+				t.Fatal("configuration bypassed 200000 hard token ceiling")
+			}
+		})
+	}
+	t.Setenv("PROOFCODE_MODEL_CONTEXT_TOKENS", "64000")
+	t.Setenv("PROOFCODE_OUTPUT_RESERVE_TOKENS", "16384")
+	b, e := ModelInputBudget()
+	if e != nil || b.ContextTokens != 64000 || b.OutputReserve != 16384 {
+		t.Fatalf("valid smaller model window rejected: %+v %v", b, e)
+	}
+	t.Setenv("PROOFCODE_OUTPUT_RESERVE_TOKENS", "1000")
+	if _, e := ModelInputBudget(); e == nil {
+		t.Fatal("output reserve under actual configured request max was accepted")
 	}
 }

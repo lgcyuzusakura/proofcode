@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	codecontext "github.com/proofcode-dev/proofcode/agent-engine/internal/context"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/event"
 )
 
@@ -26,6 +27,8 @@ func NewCollector(sink event.Sink, revision string) *Collector {
 		"profileVersion": ProfileVersion, "profileApplied": false, "sourceRevision": revision,
 		"toolCalls": 0, "toolErrors": 0, "invalidToolCalls": 0, "highRiskBlocked": 0,
 		"retrievalCalls": 0, "retrievalCacheHits": 0, "jevDecisions": 0, "jevApplied": 0,
+		"retrievalAlgorithmVersion": codecontext.AlgorithmVersion, "indexVersion": codecontext.IndexVersion,
+		"compressionAlgorithmVersion": codecontext.CompressionVersion, "tokenCounting": "utf8-json-bytes-div-4-estimate",
 	}}}
 }
 
@@ -53,7 +56,16 @@ func (c *Collector) Publish(ctx context.Context, value event.Event) error {
 		if p["applied"] == true {
 			inc("jevApplied")
 		}
+	case event.ToolCompleted:
+		if p["tool"] == "context_read" {
+			inc("contextReadCalls")
+		}
 	case event.ContextSelected:
+		for _, key := range []string{"retrievalAlgorithmVersion", "indexVersion", "compressionAlgorithmVersion", "tokenCounting"} {
+			if value, ok := p[key].(string); ok && value != "" {
+				v[key] = value
+			}
+		}
 		switch p["kind"] {
 		case "retrieval":
 			inc("retrievalCalls")
@@ -61,6 +73,9 @@ func (c *Collector) Publish(ctx context.Context, value event.Event) error {
 				inc("retrievalCacheHits")
 			}
 			v["snapshotId"] = p["snapshotId"]
+			if route, ok := p["versionRoute"].(string); ok {
+				v["versionRoute"] = route
+			}
 		case "compression":
 			before, beforePresent := p["beforeEstimatedTokens"]
 			after, afterPresent := p["afterEstimatedTokens"]
@@ -76,6 +91,11 @@ func (c *Collector) Publish(ctx context.Context, value event.Event) error {
 				v["compressionTokenBasis"] = "estimated"
 			}
 			v["deduplicatedMessages"] = integer(v["deduplicatedMessages"]) + integer(p["deduplicatedMessages"])
+			for _, key := range []string{"viewHash", "ledgerHash", "transcriptReferenceId"} {
+				if value, ok := p[key].(string); ok && value != "" {
+					v[key] = value
+				}
+			}
 		}
 	case event.UsageUpdated:
 		v["usageReported"] = p["usageReported"] == true

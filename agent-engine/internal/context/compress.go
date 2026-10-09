@@ -11,13 +11,21 @@ import (
 )
 
 type CompressionReport struct {
-	SourceHash            string   `json:"sourceHash"`
-	BeforeEstimatedTokens int      `json:"beforeEstimatedTokens"`
-	AfterEstimatedTokens  int      `json:"afterEstimatedTokens"`
-	SourceReferences      []string `json:"sourceReferences"`
-	Lossless              bool     `json:"lossless"`
-	DeduplicatedMessages  int      `json:"deduplicatedMessages"`
-	CompressedMessages    int      `json:"compressedMessages"`
+	SourceHash            string              `json:"sourceHash"`
+	BeforeEstimatedTokens int                 `json:"beforeEstimatedTokens"`
+	AfterEstimatedTokens  int                 `json:"afterEstimatedTokens"`
+	SourceReferences      []string            `json:"sourceReferences"`
+	Lossless              bool                `json:"lossless"`
+	DeduplicatedMessages  int                 `json:"deduplicatedMessages"`
+	CompressedMessages    int                 `json:"compressedMessages"`
+	AlgorithmVersion      string              `json:"algorithmVersion"`
+	TokenCounting         string              `json:"tokenCounting"`
+	LedgerHash            string              `json:"ledgerHash,omitempty"`
+	ViewHash              string              `json:"viewHash,omitempty"`
+	Changes               []CompressionChange `json:"changes,omitempty"`
+	Budget                BudgetReport        `json:"budget"`
+	Error                 string              `json:"error,omitempty"`
+	TranscriptReferenceID string              `json:"transcriptReferenceId,omitempty"`
 }
 
 // CompressMessages creates a model-only view. It never mutates durable input.

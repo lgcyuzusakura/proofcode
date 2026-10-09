@@ -42,6 +42,7 @@ type Hybrid struct {
 	SnapshotID  string
 	ProjectID   string
 	WorkspaceID string
+	Weights     map[string]float64
 }
 
 func (h Hybrid) Search(ctx context.Context, query string) ([]Hit, error) {
@@ -62,6 +63,14 @@ func (h Hybrid) Search(ctx context.Context, query string) ([]Hit, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s retrieval: %w", retriever.Name(), err)
 		}
+		seen := map[string]bool{}
+		weight := 1.0
+		if configured, ok := h.Weights[retriever.Name()]; ok {
+			weight = configured
+		}
+		if weight <= 0 {
+			continue
+		}
 		for rank, hit := range hits {
 			if h.SnapshotID != "" && hit.Chunk.SnapshotID != h.SnapshotID {
 				continue
@@ -77,12 +86,16 @@ func (h Hybrid) Search(ctx context.Context, query string) ([]Hit, error) {
 				id = fmt.Sprintf("%s:%d:%d:%s", hit.Chunk.Path, hit.Chunk.StartLine, hit.Chunk.EndLine, hit.Chunk.Hash)
 			}
 			id = hit.Chunk.ProjectID + "\x00" + hit.Chunk.WorkspaceID + "\x00" + hit.Chunk.SnapshotID + "\x00" + id
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
 			item := values[id]
 			if item == nil {
 				item = &aggregate{hit: hit, reasons: map[string]bool{}}
 				values[id] = item
 			}
-			item.score += 1.0 / (h.RankK + float64(rank+1))
+			item.score += weight / (h.RankK + float64(rank+1))
 			item.reasons[retriever.Name()] = true
 		}
 	}

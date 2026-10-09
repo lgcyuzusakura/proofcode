@@ -25,13 +25,13 @@ public class TaskController {
     @PostMapping ResponseEntity<TaskEntity> create(@RequestHeader(value="Idempotency-Key",required=false) String idempotencyKey,@Valid @RequestBody CreateTask request){
         String key=normalizeKey(idempotencyKey);
         try{
-            var result=service.createWithOutcome(request.projectId(),request.prompt(),request.model(),key,request.workspaceId(),request.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature());
+            var result=service.createWithOutcome(request.projectId(),request.prompt(),request.model(),key,request.workspaceId(),request.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature(),request.executionMode(),request.sourceSnapshotId());
             return ResponseEntity.status(result.created()?201:200).body(result.task());
         }catch(DataIntegrityViolationException conflict){
             if(key==null)throw conflict;
             TaskEntity existing=tasks.findByProjectIdAndIdempotencyKey(request.projectId(),key).orElseThrow(()->conflict);
             var scope=scopes.resolve(request.projectId(),request.workspaceId(),request.conversationId());
-            if(!TaskService.matches(existing,request.prompt(),request.model(),scope.workspaceId(),scope.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature())){
+            if(!TaskService.matches(existing,request.prompt(),request.model(),scope.workspaceId(),scope.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature())||!existing.getExecutionMode().equals(TaskService.normalizeMode(request.executionMode()))||(request.sourceSnapshotId()!=null&&!request.sourceSnapshotId().equals(existing.getSourceSnapshotId()))){
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"idempotency key already belongs to another request");
             }
             return ResponseEntity.ok(existing);
@@ -61,8 +61,9 @@ public class TaskController {
     @PostMapping("/{id}/retry") TaskEntity retry(@PathVariable UUID id){return service.retry(id);}
     private String normalizeKey(String value){if(value==null)return null;String key=value.trim();if(key.length()>200)throw new IllegalArgumentException("Idempotency-Key exceeds 200 characters");return key.isEmpty()?null:key;}
     public record CreateTask(@NotNull UUID projectId,@NotBlank @Size(max=131072) String prompt,@NotBlank @Size(max=200) String model,
-        UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature){
-        public CreateTask(UUID projectId,String prompt,String model){this(projectId,prompt,model,null,null,null,null,null,null);}
+        UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId){
+        public CreateTask(UUID projectId,String prompt,String model){this(projectId,prompt,model,null,null,null,null,null,null,null,null);}
+        public CreateTask(UUID projectId,String prompt,String model,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature){this(projectId,prompt,model,workspaceId,conversationId,sourceRevision,maxSteps,testCommand,temperature,null,null);}
     }
     public record ApprovalDecision(@NotNull Boolean approved){ }
     public record ArtifactSummary(UUID id,UUID taskId,int attempt,String kind,String commitHash,String branch,java.time.Instant createdAt){}

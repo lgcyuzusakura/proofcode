@@ -22,13 +22,15 @@ func TestCollectorRestoresPersistedCountersAndCompressionJSON(t *testing.T) {
 	emit(event.ToolRequested, nil)
 	emit(event.ToolFailed, map[string]any{"metadata": map[string]any{"policyBlocked": true}})
 	emit(event.ToolRouted, map[string]any{"applied": true})
-	emit(event.ContextSelected, map[string]any{"kind": "retrieval", "cacheHit": true, "snapshotId": "exact-snapshot"})
-	report := codecontext.CompressionReport{BeforeEstimatedTokens: 100, AfterEstimatedTokens: 40, DeduplicatedMessages: 2}
+	emit(event.ContextSelected, map[string]any{"kind": "retrieval", "cacheHit": true, "snapshotId": "exact-snapshot", "retrievalAlgorithmVersion": codecontext.AlgorithmVersion, "indexVersion": codecontext.IndexVersion, "versionRoute": "current"})
+	report := codecontext.CompressionReport{BeforeEstimatedTokens: 100, AfterEstimatedTokens: 40, DeduplicatedMessages: 2, ViewHash: "durable-view", LedgerHash: "durable-ledger", TranscriptReferenceID: "private-transcript"}
 	encoded, _ := json.Marshal(report)
 	var payload map[string]any
 	_ = json.Unmarshal(encoded, &payload)
 	payload["kind"] = "compression"
+	payload["compressionAlgorithmVersion"] = codecontext.CompressionVersion
 	emit(event.ContextSelected, payload)
+	emit(event.ToolCompleted, map[string]any{"tool": "context_read"})
 	emit(event.UsageUpdated, map[string]any{"usageReported": true, "inputTokens": 120, "outputTokens": 30, "totalTokens": 150})
 	persisted, _ := json.Marshal(collector.Snapshot())
 	var state State
@@ -48,6 +50,14 @@ func TestCollectorRestoresPersistedCountersAndCompressionJSON(t *testing.T) {
 	}
 	if metrics["sourceRevision"] != "fixed-revision" || metrics["snapshotId"] != "exact-snapshot" || metrics["compressionTokenBasis"] != "estimated" {
 		t.Fatalf("state provenance lost: %+v", metrics)
+	}
+	for key, want := range map[string]string{"retrievalAlgorithmVersion": codecontext.AlgorithmVersion, "indexVersion": codecontext.IndexVersion, "compressionAlgorithmVersion": codecontext.CompressionVersion, "versionRoute": "current", "viewHash": "durable-view", "ledgerHash": "durable-ledger", "transcriptReferenceId": "private-transcript"} {
+		if metrics[key] != want {
+			t.Fatalf("persisted context metadata %s=%v want %s", key, metrics[key], want)
+		}
+	}
+	if integer(metrics["contextReadCalls"]) != 1 {
+		t.Fatal("successful original context reads were not collected")
 	}
 	for _, key := range []string{"testsPassed", "retrievalAccuracy", "rollbackSuccess"} {
 		if _, ok := metrics[key]; ok {

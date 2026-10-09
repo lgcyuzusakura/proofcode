@@ -4,7 +4,7 @@ package dev.proofcode.control.experiment;
 public record ExperimentProfile(String version,Group group,boolean toolsEnabled,boolean mandatorySafety,
     boolean deterministicSafety,boolean jevRouting,boolean jevRequired,boolean ragEnabled,
     boolean contextCompressionEnabled,boolean feedbackRetrieval) {
-    public static final String VERSION="proofcode.experiment.v1";
+    public static final String VERSION="proofcode.experiment.v2-context";
     public enum Group { A,B,C,D,E,F }
     public static ExperimentProfile forGroup(Group group){
         return switch(group){

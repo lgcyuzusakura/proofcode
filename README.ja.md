@@ -2,22 +2,23 @@
 
 # ProofCode
 
-ProofCode は、検証可能なコード変更を行うプログラミング Agent です。リポジトリを読み取り、パッチを生成し、承認されたツールとテストを実行して、レビューと復旧が可能な変更成果物を提供します。Go の Agent エンジン、Spring Boot のコントロールプレーン、React の Web インターフェース、Windows 向け Wails デスクトップ UI のプロトタイプを組み合わせ、日常の開発ワークフローと計算機科学分野の学部卒業研究に利用します。
+ProofCode は、検証可能なコード変更を行うプログラミング Agent です。リポジトリを読み取り、パッチを生成し、承認されたツールとテストを実行して、レビューと復旧が可能な変更成果物を提供します。Go Agent、Spring Boot コントロールプレーン、共通 React Web／Windows Wails インターフェースを使用します。
 
 基本の流れは、**目標の送信 → 分離された作業ツリー → ツールと承認 → コードパッチ → テストによる検証 → 成果物のレビュー → 元のリポジトリへの適用**です。
 
 ## バージョンと開発状況
 
-リポジトリのトップページは `main` に対応しています。追加機能は個別の開発ブランチで公開しています。ブランチを切り替える際は、そのブランチのドキュメントと設定を使用してください。
+本文は `codex/project-workspace-bootstrap` 実装ブランチに対応します。まだ `main` に統合されていません。ブランチごとのドキュメントと設定を使用してください。
 
 | ブランチ | 公開されている内容 |
 | --- | --- |
 | [`main`](https://github.com/lgcyuzusakura/proofcode/tree/main) | Agent のメインループ、ツール承認、Git worktree、タスクの復旧、変更成果物、任意の Jev ルーティング、Web 入口とデスクトップ UI のプロトタイプ |
+| [`codex/project-workspace-bootstrap`](https://github.com/lgcyuzusakura/proofcode/tree/codex/project-workspace-bootstrap) | デスクトップ工程、永続会話、共通 UI／API 代理、ソーススナップショット、データベース／キャッシュ管理、バージョン別 RAG と復元可能な圧縮、A–F v2 比較 |
 | [`codex/backend-experiments-data-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/backend-experiments-data-20261008) | プロジェクト・ワークスペース・会話のスコープ、4 系統のコード検索、重複ログの圧縮、PostgreSQL/Redis データゲートウェイ、実行可能な A–F 比較、CI |
 | [`codex/thesis-ccu-20261008`](https://github.com/lgcyuzusakura/proofcode/tree/codex/thesis-ccu-20261008/thesis) | 出典と実装の証拠に基づく学部卒業論文の初稿、Word/PDF、参考文献、再現用資料 |
 | [`codex/project-data-context-plan-20261008`](https://github.com/lgcyuzusakura/proofcode/blob/codex/project-data-context-plan-20261008/docs/plans/2026-10-08-project-data-context-plan.md) | デスクトップ上でのプロジェクト自動作成、データベース・キャッシュの可視化管理、過去の複数バージョンを扱う RAG、再取得可能なコンテキストの実装計画 |
 
-データベース・キャッシュの可視化管理、フォルダーをインポートせずに会話を始めた際のデスクトップ上のプロジェクト自動作成、過去の複数バージョンの検索は今後の開発項目です。バックエンドブランチの検索は現在、決定的な方式を使用しており、embedding は設定していません。コンテキスト圧縮は主に、同一の成功ログの重複を除去します。6 グループの結合テストで使用するモデルと Jev の応答はモックです。実際のモデル性能や、論文における改善結果を示すデータとしては扱えません。
+このブランチでは、工程ごとの永続会話、PostgreSQL／Redis の可視化管理、Windows デスクトップ工程の自動作成、複数バージョンの検索を実装しています。検索は embedding を使わない重み付き分層 RRF と Go AST（他言語はテキスト）です。圧縮した原文はハッシュ参照で再取得できます。トークン数は推定です。6 グループの結合テストのモデルと Jev は固定フィクスチャであり、実際のモデル性能や論文の改善結果を示すものではありません。
 
 ## `main` に実装済みの機能
 
@@ -39,6 +40,7 @@ Docker Desktop と Docker Compose が必要です。実際のプログラミン�
 ```powershell
 git clone https://github.com/lgcyuzusakura/proofcode.git
 cd proofcode
+git switch codex/project-workspace-bootstrap
 Copy-Item .env.example .env
 ```
 
@@ -48,11 +50,11 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-現在の Runner はタスクの `model` フィールドを使用し、Web フォームで選択できるのは `gpt-4.1-mini`、`gpt-4o`、`deepseek-chat` です。画面で選択したモデル ID は、サービス提供者がサポートする ID と一致している必要があります。`.env` の `MODEL_NAME` を変更するだけでは、タスクのモデルは上書きされません。それ以外のモデル ID は、現時点では `POST /api/tasks` の `model` フィールドで指定して送信する必要があります。
+Runner はタスクの `model` フィールドを使用します。Web のモデル ID 入力にはサービス提供者がサポートする ID を指定してください。`.env` の `MODEL_NAME` だけではタスクのモデルは上書きされません。
 
 [http://localhost:3000](http://localhost:3000) を開きます。Compose は PostgreSQL、Redis、Artemis、コントロールプレーンが正常になるのを待ってから、依存サービスを起動します。
 
-現在の Web インターフェースは、ブラウザーのストレージからアクセストークンを読み取ります。開発者ツールの Console を開き、下のプレースホルダーを `.env` の `DEV_AUTH_TOKEN` に置き換えて実行してください。
+画面のアカウント設定に `.env` の `DEV_AUTH_TOKEN` を保存します。ブラウザーのストレージからも設定できます。
 
 ```javascript
 localStorage.setItem("proofcode.token", "<DEV_AUTH_TOKEN>");
@@ -79,7 +81,7 @@ location.reload();
 .\desktop\stop-desktop.ps1
 ```
 
-静的プレビューとネイティブデスクトップは、現在はインターフェースのデモに使用します。ネイティブ版にはデモ用タスクと機密情報を伏せた設定表示もありますが、コントロールプレーンの HTTP/WebSocket 連携はまだ実装されていません。実際のタスクには、Compose の Web 入口からコントロールプレーンと Runner に接続してください。詳細は[デスクトップ入口](desktop/README.md)と[ネイティブアプリケーション](desktop/native/README.md)を参照してください。
+ネイティブ版は Web と同じ UI を使い、許可された HTTP API を Go 代理経由でコントロールプレーンに接続します。イベントはポーリングで同期します。フォルダー未選択の会話は Windows Known Folder の Desktop 配下に工程を作成し、本機パスは端末だけで保持します。ローカルソースは相対パス・ハッシュ付きで送信し、適用時に排他的ファイルハンドルで原文を再確認します。詳細は[デスクトップ入口](desktop/README.md)と[ネイティブアプリケーション](desktop/native/README.md)を参照してください。
 
 ### ツール承認と実行環境
 
@@ -108,10 +110,10 @@ go -C agent-engine run ./cmd/proofcode-apply -url http://localhost:8080 -task "<
 
 ## 6 グループの比較とプロジェクトデータ機能
 
-これらの機能はバックエンド開発ブランチにあります。別のディレクトリにそのバージョンを取得できます。
+この実装ブランチで A–F の独立タスクを実行し、同一の commit とテストコマンドで比較できます。
 
 ```powershell
-git clone --branch codex/backend-experiments-data-20261008 https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
+git clone --branch codex/project-workspace-bootstrap https://github.com/lgcyuzusakura/proofcode.git proofcode-backend
 cd proofcode-backend
 docker compose -f compose.experiments.yml up --build -d runner
 docker compose -f compose.experiments.yml run --build --rm verify
@@ -122,13 +124,13 @@ docker compose -f compose.experiments.yml down --volumes --remove-orphans
 
 PostgreSQL/Redis のデータ操作には、Runner の自動書き込み・実行を有効にしていても、明示的なユーザー承認が必要です。認証情報はコントロールプレーンに保持します。PostgreSQL のトランザクション失敗時のロールバックと、Redis の条件付き補償は別の仕組みです。対象のコミット結果が不明な場合は、自動で再実行しません。
 
-詳細：[実験と会話](https://github.com/lgcyuzusakura/proofcode/blob/codex/backend-experiments-data-20261008/docs/backend-experiments.md) · [検索と圧縮](https://github.com/lgcyuzusakura/proofcode/blob/codex/backend-experiments-data-20261008/docs/backend-context.md) · [データゲートウェイ](https://github.com/lgcyuzusakura/proofcode/blob/codex/backend-experiments-data-20261008/docs/backend-data.md)。
+詳細：[実験と会話](docs/backend-experiments.md) · [検索と圧縮](docs/backend-context.md) · [データゲートウェイ](docs/backend-data.md)。PostgreSQL は型付き単一テーブル IR（JOIN／集約なし）、Redis は standalone string に対応します。行／キーの復旧は条件付き補償を新規承認して実行します。コミット済み migration の汎用逆変換は提供しません。
 
 ## アーキテクチャとディレクトリ構成
 
 ```mermaid
 flowchart LR
-    UI["React Web"] --> CP["Spring Boot コントロールプレーン"]
+    UI["共通 React Web / Windows Wails"] --> CP["Spring Boot コントロールプレーン"]
     CP --> MQ["Artemis"]
     MQ --> RUN["Go Runner"]
     RUN --> WS["分離された Git worktree"]
@@ -142,7 +144,7 @@ flowchart LR
 | `agent-engine/` | Go Agent、Runner、ツール、作業ツリー、ブラウザー、MCP |
 | `control-plane/` | Java コントロールプレーン、タスク状態、承認、信頼性のあるディスパッチ |
 | `frontend/` | 共有 React インターフェースと Web アプリケーション |
-| `desktop/` | Windows プレビューランチャーと Wails デスクトップ UI のプロトタイプ |
+| `desktop/` | Windows Wails、工程登録、API 代理、ソース確認と適用復旧 |
 | `protocol/` | バージョン管理されたメッセージとイベントの契約 |
 | `compose*.yml` | コンテナ起動、テスト、結合検証の設定 |
 | `docs/` | アーキテクチャ、セキュリティ、受け入れ基準、各ブランチの専用ドキュメント |

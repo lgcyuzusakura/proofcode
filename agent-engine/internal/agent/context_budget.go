@@ -1,11 +1,13 @@
 package agent
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/config"
+	codecontext "github.com/proofcode-dev/proofcode/agent-engine/internal/context"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/model"
 )
 
@@ -20,75 +22,37 @@ type messageGroup struct {
 // prepareModelMessages retains the durable transcript while selecting a
 // budgeted, tool-call-consistent view for the next model request.
 func prepareModelMessages(messages []model.Message, definitions []model.ToolDefinition) ([]model.Message, int, int, error) {
-	groups, latestUser, err := groupMessages(messages)
+	budget, err := ModelInputBudget()
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	tools := make([]map[string]any, 0, len(definitions))
-	for _, definition := range definitions {
-		tools = append(tools, map[string]any{"type": "function", "function": definition})
-	}
-	encodedTools, err := json.Marshal(tools)
-	if err != nil {
-		return nil, 0, 0, fmt.Errorf("encode tool definitions: %w", err)
-	}
-	total := config.EstimateTokens(string(encodedTools))
-	for index := range groups {
-		for _, message := range messages[groups[index].start:groups[index].end] {
-			encodedCalls, err := json.Marshal(message.ToolCalls)
-			if err != nil {
-				return nil, 0, 0, fmt.Errorf("encode tool calls: %w", err)
-			}
-			groups[index].tokens += config.EstimateTokens(message.Content, string(encodedCalls))
-		}
-		total += groups[index].tokens
-	}
-	if total <= maxModelInputTokens {
-		return messages, 0, total, nil
-	}
+	view, report, err := codecontext.SelectMessages(messages, definitions, budget)
+	return view, report.DroppedMessages, report.EstimatedInputTokens, err
+}
 
-	kept := make([]bool, len(groups))
-	for index := range kept {
-		kept[index] = true
-	}
-	dropped := 0
-	drop := func(start, end int) {
-		for index := start; index < end; index++ {
-			if !kept[index] || messages[groups[index].start].Role == model.RoleSystem {
-				continue
+// ModelInputBudget uses explicit model capacity/output reserve configuration.
+// Counts remain conservative byte estimates until a real tokenizer is wired.
+func ModelInputBudget() (codecontext.InputBudget, error) {
+	budget := codecontext.InputBudget{ContextTokens: config.MaxTotalTokens, OutputReserve: config.DefaultMaxOutputTokens, OverheadTokens: 256}
+	for _, option := range []struct {
+		name   string
+		target *int
+	}{
+		{"PROOFCODE_MODEL_CONTEXT_TOKENS", &budget.ContextTokens},
+		{"PROOFCODE_OUTPUT_RESERVE_TOKENS", &budget.OutputReserve},
+	} {
+		if value, present := os.LookupEnv(option.name); present {
+			n, err := strconv.Atoi(value)
+			if err != nil || n < 1 || n > config.MaxTotalTokens {
+				return budget, fmt.Errorf("invalid %s", option.name)
 			}
-			kept[index] = false
-			total -= groups[index].tokens
-			dropped += groups[index].end - groups[index].start
+			*option.target = n
 		}
 	}
-	for index := 0; index < latestUser && total > maxModelInputTokens; {
-		if messages[groups[index].start].Role == model.RoleSystem {
-			index++
-			continue
-		}
-		end := index + 1
-		if messages[groups[index].start].Role == model.RoleUser {
-			for end < latestUser && messages[groups[end].start].Role != model.RoleUser {
-				end++
-			}
-		}
-		drop(index, end)
-		index = end
+	if budget.OutputReserve < config.DefaultMaxOutputTokens || budget.ContextTokens <= budget.OutputReserve+budget.OverheadTokens {
+		return budget, errors.New("model context must exceed output reserve and overhead; output reserve must cover configured max output tokens")
 	}
-	for index := latestUser + 1; index < len(groups) && total > maxModelInputTokens; index++ {
-		drop(index, index+1)
-	}
-	if total > maxModelInputTokens {
-		return nil, 0, total, fmt.Errorf("system prompt, latest user request, and tool definitions need %d estimated input tokens; limit is %d", total, maxModelInputTokens)
-	}
-	selected := make([]model.Message, 0, len(messages)-dropped)
-	for index, group := range groups {
-		if kept[index] {
-			selected = append(selected, messages[group.start:group.end]...)
-		}
-	}
-	return selected, dropped, total, nil
+	return budget, nil
 }
 
 func groupMessages(messages []model.Message) ([]messageGroup, int, error) {

@@ -1,0 +1,24 @@
+export type SourceKind = "REMOTE_REPOSITORY" | "LOCAL_FOLDER" | "SCRATCH";
+export type Project = { id: string; name: string; repositoryUrl?: string; defaultBranch: string; sourceKind?: SourceKind; localHandle?: string; bootstrapId?: string };
+export type Workspace = { id: string; projectId: string; name: string; kind: SourceKind; defaultWorkspace: boolean; createdAt: string };
+export type Conversation = { id: string; projectId: string; workspaceId: string; title: string; defaultConversation: boolean; createdAt: string };
+export type Scope = { projectId: string; workspaceId: string; conversationId: string };
+export type ExecutionMode = "CODE" | "CHAT";
+export type Task = { id: string; projectId: string; workspaceId: string; conversationId: string; prompt: string; model: string; executionMode?: ExecutionMode; sourceSnapshotId?: string; attempt?: number; status: string; result?: string; error?: string; createdAt: string };
+export type ConversationMessage = { id: string; sequence: number; role: "user" | "assistant"; content: string; taskId?: string; attempt?: number; status: string; createdAt: string };
+export type TaskEvent = { sequence: number; type: string; timestamp: string; payload: Record<string, unknown>; attempt?: number; runId?: string };
+export type TaskArtifact = { id: string; taskId: string; attempt?: number; kind: string; commitHash?: string; branch?: string; createdAt: string };
+export type TaskArtifactDetail = TaskArtifact & { patch: string; metadata?: Record<string, unknown> };
+export type TaskApproval = { id: string; taskId: string; callId: string; tool: string; risk: string; arguments: Record<string, unknown>; status: string; decision?: string; createdAt: string };
+export type ModelConfig = { configured: boolean; provider: string; model: string; baseUrl: string; source: string; hasKey: boolean; keyLast4: string; maxContextTokens: number; maxOutputTokens: number; maxTotalTokens: number; error?: string };
+export type LocalProject = { name: string; localHandle: string; bootstrapId: string; path: string };
+export type SourceCapture = { manifestHash: string; files: { path: string; sha256: string; content: string; executable: boolean }[] };
+export type DesktopApp = {
+  ProxyRequest?: (path: string, method: string, body: string, authorization: string, idempotencyKey: string) => Promise<{ status: number; body: string }>;
+  GetModelConfig?: () => Promise<ModelConfig>;
+  BootstrapScratchProject?: (bootstrapId: string, title: string) => Promise<LocalProject>;
+  RegisterLocalProject?: () => Promise<LocalProject>;
+  ListLocalProjects?: () => Promise<LocalProject[]>;
+  CaptureProjectSource?: (localHandle: string) => Promise<SourceCapture>;
+  ApplyProjectPatch?: (localHandle: string, expectedManifestHash: string, patch: string) => Promise<{ applied: boolean; fileCount: number; path: string }>;
+};

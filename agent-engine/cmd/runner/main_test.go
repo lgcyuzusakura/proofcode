@@ -144,6 +144,8 @@ func TestRunnerCompletesReadOnlyTaskWithoutCheckpoint(t *testing.T) {
 			fileServer.ServeHTTP(w, request)
 		case strings.HasSuffix(request.URL.Path, "/claim"):
 			w.WriteHeader(http.StatusAccepted)
+		case strings.HasSuffix(request.URL.Path, "/conversation"):
+			_ = json.NewEncoder(w).Encode([]any{})
 		case strings.HasSuffix(request.URL.Path, "/events"):
 			var value event.Event
 			if err := json.NewDecoder(request.Body).Decode(&value); err != nil {
@@ -167,7 +169,7 @@ func TestRunnerCompletesReadOnlyTaskWithoutCheckpoint(t *testing.T) {
 	defer server.Close()
 
 	r := &runner{ID: "f112ca6b-3f25-4cc8-a088-fb1e36b3ac61", ControlPlane: server.URL, Token: "test", WorkspaceRoot: filepath.Join(root, "workspaces"), ModelBaseURL: server.URL, ModelAPIKey: "test", HTTP: server.Client(), ModelHTTP: server.Client()}
-	task := taskMessage{TaskID: "486c92f4-520f-4c87-9e17-141e34e4f35b", Attempt: 1, Repository: server.URL + "/repo.git", Branch: "main", Prompt: "Summarize the project", Model: "mock"}
+	task := taskMessage{TaskID: "486c92f4-520f-4c87-9e17-141e34e4f35b", Attempt: 1, ProjectID: "567892f4-520f-4c87-9e17-141e34e4f35b", WorkspaceID: "567892f4-520f-4c87-9e17-141e34e4f35c", ConversationID: "567892f4-520f-4c87-9e17-141e34e4f35d", Repository: server.URL + "/repo.git", Branch: "main", Prompt: "Summarize the project", Model: "mock"}
 	if err := r.runTask(context.Background(), task); err != nil {
 		t.Fatal(err)
 	}

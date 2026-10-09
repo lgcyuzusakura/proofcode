@@ -14,5 +14,5 @@ RUN apk add --no-cache ca-certificates git ripgrep nodejs npm python3 py3-pytest
 COPY --from=build /out/proofcode-runner /usr/local/bin/proofcode-runner
 COPY --from=build /out/proofcode-apply /usr/local/bin/proofcode-apply
 COPY runner-entrypoint.sh /usr/local/bin/runner-entrypoint
-RUN chmod +x /usr/local/bin/runner-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/runner-entrypoint && chmod +x /usr/local/bin/runner-entrypoint
 ENTRYPOINT ["runner-entrypoint"]

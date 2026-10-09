@@ -20,60 +20,71 @@ import (
 	"unicode/utf8"
 )
 
-const workspaceIndexVersion = "worktree-evidence-v1"
+const workspaceIndexVersion = IndexVersion
 
 // Evidence locates exact, original bytes in one immutable worktree snapshot.
 // Line numbers are display coordinates, never a substitute for BlobHash.
 type Evidence struct {
-	ID          string   `json:"id"`
-	SnapshotID  string   `json:"snapshotId"`
-	ProjectID   string   `json:"projectId"`
-	WorkspaceID string   `json:"workspaceId"`
-	Path        string   `json:"path"`
-	Symbol      string   `json:"symbol,omitempty"`
-	BlobHash    string   `json:"blobHash"`
-	SourceHash  string   `json:"sourceHash"`
-	StartByte   int      `json:"startByte"`
-	EndByte     int      `json:"endByte"`
-	StartLine   int      `json:"startLine"`
-	EndLine     int      `json:"endLine"`
-	Content     string   `json:"content"`
-	Score       float64  `json:"score"`
-	Reasons     []string `json:"reasons"`
+	ID            string   `json:"id"`
+	SnapshotID    string   `json:"snapshotId"`
+	ProjectID     string   `json:"projectId"`
+	WorkspaceID   string   `json:"workspaceId"`
+	Path          string   `json:"path"`
+	Symbol        string   `json:"symbol,omitempty"`
+	BlobHash      string   `json:"blobHash"`
+	SourceHash    string   `json:"sourceHash"`
+	StartByte     int      `json:"startByte"`
+	EndByte       int      `json:"endByte"`
+	StartLine     int      `json:"startLine"`
+	EndLine       int      `json:"endLine"`
+	Content       string   `json:"content"`
+	Score         float64  `json:"score"`
+	Reasons       []string `json:"reasons"`
+	ReferenceID   string   `json:"referenceId,omitempty"`
+	Parser        string   `json:"parser"`
+	RelationBasis string   `json:"relationBasis"`
 }
 
 type ContextResult struct {
-	Content             string     `json:"content"`
-	SnapshotID          string     `json:"snapshotId"`
-	BaseCommit          string     `json:"baseCommit,omitempty"`
-	Evidence            []Evidence `json:"evidence"`
-	CacheHit            bool       `json:"cacheHit"`
-	FilesScanned        int        `json:"filesScanned"`
-	FilesReused         int        `json:"filesReused"`
-	FilesParsed         int        `json:"filesParsed"`
-	EstimatedTokens     int        `json:"estimatedTokens"`
-	RetrievalRoutes     []string   `json:"retrievalRoutes"`
-	EmbeddingConfigured bool       `json:"embeddingConfigured"`
-	OmittedByBudget     int        `json:"omittedByBudget"`
+	Content             string            `json:"content"`
+	SnapshotID          string            `json:"snapshotId"`
+	BaseCommit          string            `json:"baseCommit,omitempty"`
+	Evidence            []Evidence        `json:"evidence"`
+	CacheHit            bool              `json:"cacheHit"`
+	FilesScanned        int               `json:"filesScanned"`
+	FilesReused         int               `json:"filesReused"`
+	FilesParsed         int               `json:"filesParsed"`
+	EstimatedTokens     int               `json:"estimatedTokens"`
+	RetrievalRoutes     []string          `json:"retrievalRoutes"`
+	EmbeddingConfigured bool              `json:"embeddingConfigured"`
+	OmittedByBudget     int               `json:"omittedByBudget"`
+	AlgorithmVersion    string            `json:"algorithmVersion"`
+	IndexVersion        string            `json:"indexVersion"`
+	VersionRoute        string            `json:"versionRoute"`
+	SnapshotIDs         []string          `json:"snapshotIds"`
+	TokenCounting       string            `json:"tokenCounting"`
+	Manifests           []ManifestSummary `json:"manifests,omitempty"`
 }
 
 // WorkspaceRetriever reads the real working tree on every retrieval. Cached
 // parsing is keyed by file bytes; query results are keyed by the full snapshot.
 // It deliberately implements deterministic routes, not a pretend vector index.
 type WorkspaceRetriever struct {
-	Root         string
-	ProjectID    string
-	WorkspaceID  string
-	TaskID       string
-	AttemptID    string
-	MaxFiles     int
-	MaxBytes     int64
-	MaxFileBytes int64
-	ByteBudget   int
-	ChunkLines   int
-	mu           sync.Mutex
-	files        map[string]indexedFile
-	results      map[string]ContextResult
+	Root           string
+	ProjectID      string
+	WorkspaceID    string
+	TaskID         string
+	AttemptID      string
+	ConversationID string
+	Store          *Store
+	MaxFiles       int
+	MaxBytes       int64
+	MaxFileBytes   int64
+	ByteBudget     int
+	ChunkLines     int
+	mu             sync.Mutex
+	files          map[string]indexedFile
+	results        map[string]ContextResult
 }
 
 type indexedFile struct {
@@ -111,133 +122,9 @@ func (w *WorkspaceRetriever) limits() workspaceLimits {
 
 func digest(value string) string { h := sha256.Sum256([]byte(value)); return hex.EncodeToString(h[:]) }
 
-// Retrieve fails closed if the working tree changes during snapshot capture or
-// its configured bounds are exceeded. Re-run after concurrent writes settle.
+// Retrieve captures and searches a verified current generation.
 func (w *WorkspaceRetriever) Retrieve(ctx context.Context, query, feedback string, limit int) (ContextResult, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if err := ctx.Err(); err != nil {
-		return ContextResult{}, err
-	}
-	if len(query)+len(feedback) > 128<<10 {
-		return ContextResult{}, errors.New("retrieval query exceeds 128 KiB")
-	}
-	root, err := filepath.Abs(w.Root)
-	if err != nil {
-		return ContextResult{}, err
-	}
-	root = filepath.Clean(root)
-	info, err := os.Lstat(root)
-	if err != nil {
-		return ContextResult{}, err
-	}
-	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return ContextResult{}, errors.New("retrieval root must be a real directory")
-	}
-	l := w.limits()
-	project, workspace := w.ProjectID, w.WorkspaceID
-	if project == "" {
-		project = digest("project\x00" + root)
-	}
-	if workspace == "" {
-		workspace = digest("workspace\x00" + root)
-	}
-	if limit <= 0 {
-		limit = 8
-	}
-	if limit > 64 {
-		limit = 64
-	}
-	commit := headCommit(ctx, root)
-	source, manifest, err := scanWorkspace(ctx, root, l)
-	if err != nil {
-		return ContextResult{}, err
-	}
-	_, confirm, err := scanWorkspace(ctx, root, l)
-	if err != nil {
-		return ContextResult{}, err
-	}
-	if manifest != confirm || commit != headCommit(ctx, root) {
-		return ContextResult{}, errors.New("working tree changed during snapshot capture")
-	}
-	scope := strings.Join([]string{workspaceIndexVersion, root, project, workspace, w.TaskID, w.AttemptID, commit}, "\x00")
-	snapshot := digest(scope + "\x00" + manifest)
-	key := digest(fmt.Sprintf("%s\x00%s\x00%s\x00%d\x00%d\x00%d", snapshot, query, feedback, limit, l.budget, l.lines))
-	if cached, ok := w.results[key]; ok {
-		result := cloneContextResult(cached)
-		result.CacheHit = true
-		result.FilesScanned = len(source)
-		result.FilesParsed = 0
-		result.FilesReused = len(source)
-		return result, nil
-	}
-	current := make(map[string]indexedFile, len(source))
-	chunks := []Chunk{}
-	parsed, reused := 0, 0
-	for _, file := range source {
-		if err := ctx.Err(); err != nil {
-			return ContextResult{}, err
-		}
-		cacheKey := fmt.Sprintf("%s\x00%s\x00%s\x00%d", scope, file.path, file.blob, l.lines)
-		entry, ok := w.files[cacheKey]
-		if ok {
-			reused++
-		} else {
-			parsed++
-			entry = file
-			entry.chunks = exactChunks(file.path, file.content, l.lines)
-		}
-		current[cacheKey] = entry
-		for _, original := range entry.chunks {
-			chunk := original
-			chunk.SnapshotID, chunk.ProjectID, chunk.WorkspaceID, chunk.BlobHash = snapshot, project, workspace, file.blob
-			chunk.ID = digest(fmt.Sprintf("%s\x00%s\x00%d\x00%d\x00%s", snapshot, file.path, chunk.StartByte, chunk.EndByte, chunk.Hash))
-			chunks = append(chunks, chunk)
-		}
-	}
-	w.files = current // Deleted/changed occurrences and previous scopes leave the cache.
-	searchText := query + "\n" + feedback
-	lexical := rankLexical(chunks, searchText)
-	symbol := rankSymbols(chunks, searchText)
-	dependency, tests := rankRelationships(chunks, append(append([]Hit{}, symbol...), lexical...), searchText)
-	hybrid := Hybrid{SnapshotID: snapshot, ProjectID: project, WorkspaceID: workspace, MaxResults: limit,
-		Retrievers: []Retriever{rankedRoute{"lexical", lexical}, rankedRoute{"symbol", symbol}, rankedRoute{"dependency", dependency}, rankedRoute{"test", tests}}}
-	hits, err := hybrid.Search(ctx, searchText)
-	if err != nil {
-		return ContextResult{}, err
-	}
-	result := ContextResult{SnapshotID: snapshot, BaseCommit: commit, FilesScanned: len(source), FilesParsed: parsed, FilesReused: reused,
-		RetrievalRoutes: []string{"lexical", "symbol", "dependency", "test"}, Evidence: []Evidence{}}
-	var content strings.Builder
-	for _, hit := range hits {
-		c := hit.Chunk
-		header := fmt.Sprintf("\n--- evidence=%s snapshot=%s blob=%s %s:%d-%d bytes=%d:%d routes=%s ---\n", c.ID, snapshot, c.BlobHash, c.Path, c.StartLine, c.EndLine, c.StartByte, c.EndByte, strings.Join(hit.Reason, ","))
-		if content.Len()+len(header)+len(c.Content)+1 > l.budget {
-			result.OmittedByBudget++
-			continue
-		}
-		content.WriteString(header)
-		content.WriteString(c.Content)
-		content.WriteByte('\n')
-		result.Evidence = append(result.Evidence, Evidence{ID: c.ID, SnapshotID: snapshot, ProjectID: project, WorkspaceID: workspace, Path: c.Path, Symbol: c.Symbol,
-			BlobHash: c.BlobHash, SourceHash: c.Hash, StartByte: c.StartByte, EndByte: c.EndByte, StartLine: c.StartLine, EndLine: c.EndLine, Content: c.Content, Score: hit.Score, Reasons: append([]string(nil), hit.Reason...)})
-	}
-	result.Content = content.String()
-	result.EstimatedTokens = (len(result.Content) + 3) / 4
-	if w.results == nil {
-		w.results = map[string]ContextResult{}
-	}
-	// Retain only bounded, exact-snapshot entries. A caller cannot poison the cache.
-	for k, r := range w.results {
-		if r.SnapshotID != snapshot {
-			delete(w.results, k)
-		}
-	}
-	if len(w.results) >= 32 {
-		w.results = map[string]ContextResult{}
-	}
-	w.results[key] = cloneContextResult(result)
-	return result, nil
+	return w.RetrieveVersion(ctx, query, feedback, limit, VersionSelector{Mode: "current"})
 }
 
 func cloneContextResult(r ContextResult) ContextResult {
@@ -246,6 +133,7 @@ func cloneContextResult(r ContextResult) ContextResult {
 		r.Evidence[i].Reasons = append([]string(nil), r.Evidence[i].Reasons...)
 	}
 	r.RetrievalRoutes = append([]string(nil), r.RetrievalRoutes...)
+	r.SnapshotIDs = append([]string(nil), r.SnapshotIDs...)
 	return r
 }
 
@@ -537,7 +425,7 @@ func rankSymbols(chunks []Chunk, query string) []Hit {
 	hits := []Hit{}
 	for _, c := range chunks {
 		score := 0.0
-		for _, name := range definitionNames(c.Content) {
+		for _, name := range chunkSymbols(c) {
 			for _, term := range words(name) {
 				if tokens[term] > 0 {
 					score += 3
@@ -563,7 +451,7 @@ func rankRelationships(chunks []Chunk, seeds []Hit, query string) ([]Hit, []Hit)
 		}
 		seedPaths[h.Chunk.Path] = true
 		stems[fileStem(h.Chunk.Path)] = true
-		for _, name := range definitionNames(h.Chunk.Content) {
+		for _, name := range chunkSymbols(h.Chunk) {
 			names[strings.ToLower(name)] = true
 		}
 	}
@@ -576,7 +464,7 @@ func rankRelationships(chunks []Chunk, seeds []Hit, query string) ([]Hit, []Hit)
 		// merely repeating its own name. This remains a heuristic, not an AST
 		// call graph; a lexical seed can itself contain a useful dependency.
 		references := definitionPattern.ReplaceAllString(c.Content, "")
-		terms := wordCounts(references)
+		terms := chunkReferences(c)
 		score := 0.0
 		for name := range names {
 			if terms[name] > 0 {

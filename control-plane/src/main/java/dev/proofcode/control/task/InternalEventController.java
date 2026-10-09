@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/internal/tasks")
 public class InternalEventController {
     private final TaskRepository tasks;private final TaskEventRepository events;private final TaskArtifactRepository artifacts;private final TaskApprovalRepository approvals;private final ObjectMapper json;private final TaskSocketHandler sockets;
-    public InternalEventController(TaskRepository tasks,TaskEventRepository events,TaskArtifactRepository artifacts,TaskApprovalRepository approvals,ObjectMapper json,TaskSocketHandler sockets){this.tasks=tasks;this.events=events;this.artifacts=artifacts;this.approvals=approvals;this.json=json;this.sockets=sockets;}
+    private final dev.proofcode.control.session.ConversationMessageService messages;
+    public InternalEventController(TaskRepository tasks,TaskEventRepository events,TaskArtifactRepository artifacts,TaskApprovalRepository approvals,ObjectMapper json,TaskSocketHandler sockets,dev.proofcode.control.session.ConversationMessageService messages){this.tasks=tasks;this.events=events;this.artifacts=artifacts;this.approvals=approvals;this.json=json;this.sockets=sockets;this.messages=messages;}
     @PostMapping("/{taskId}/events")
     @Transactional
     public ResponseEntity<?> ingest(@PathVariable UUID taskId,@RequestBody RunnerEvent value){
@@ -38,6 +39,9 @@ public class InternalEventController {
         JsonNode eventPayload=eventPayload(value);
         events.saveAndFlush(new TaskEventEntity(taskId,value.runnerId(),value.runId(),value.attempt(),sequence,eventKey,value.type(),eventPayload.toString(),timestamp));
         applyStatus(task,value);
+        if("task.completed".equals(value.type()))messages.finish(task,task.getResult(),"SUCCEEDED");
+        else if("task.failed".equals(value.type()))messages.finish(task,task.getError(),"FAILED");
+        else if("task.cancelled".equals(value.type()))messages.finish(task,"","CANCELLED");
         try {
             String message=json.writeValueAsString(new RunnerEvent(value.version(),taskId,value.runnerId(),value.runId(),value.attempt(),sequence,value.type(),timestamp,eventPayload));
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

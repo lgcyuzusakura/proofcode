@@ -6,5 +6,6 @@ import org.springframework.data.repository.query.Param;
 public interface DataOperationRepository extends JpaRepository<DataOperation,UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select o from DataOperation o where o.id=:id") Optional<DataOperation> lockById(@Param("id")UUID id);
     Optional<DataOperation> findByTaskIdAndAttemptAndIdempotencyKey(UUID task,int attempt,String key);
+    Optional<DataOperation> findByDataSessionIdAndIdempotencyKey(UUID session,String key);
     List<DataOperation> findByProjectIdOrderByCreatedAtDesc(UUID project);
 }
