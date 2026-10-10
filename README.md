@@ -10,7 +10,7 @@ ProofCode 是面向可验证代码修改的编程 Agent：读取仓库、生成�
 
 默认进入干净的对话页；审查是独立页面，每个代码回合用小型“查看修改”按钮准确跳转。Windows 桌面端增加真实 Monaco 编辑、版本核对保存与工程草稿恢复、本机命令控制台、Git 暂存/提交/分支/远程管理、结构化合并审查、标准 LSP/DAP 语言服务与断点调试，以及可点击输入和完整 Chromium DevTools 的独立 Edge/Chrome 预览。普通代码任务可选启用浏览器验证工具，A–F 对照配置保持固定。
 
-[操作、实现边界与参考项目](docs/developer-workspace.md) · [结构化合并与 IDE 协议说明](docs/structured-merge-and-debugging.md) · [本轮验收记录](docs/verification-structured-merge-2026-10-09.md)
+[操作、实现边界与参考项目](docs/developer-workspace.md) · [结构化合并与 IDE 协议说明](docs/structured-merge-and-debugging.md) · [可视化数据与审查界面设计](docs/visual-data-and-review-ui.md) · [本轮验收记录](docs/verification-structured-merge-2026-10-09.md)
 
 
 ## 版本与开发状态

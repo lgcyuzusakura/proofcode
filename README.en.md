@@ -10,7 +10,7 @@ The workflow is **submit a goal → isolated worktree → tools and approval →
 
 The default page is a clean conversation. Review has its own page, and each coding turn has a small link to its exact changes. Windows adds real Monaco editing with version checks and scoped drafts, a local command console, Git staging/commits/branches/remotes, structured merge review, standard LSP/DAP language services and breakpoint debugging, plus an isolated Edge/Chrome preview with the browser's bundled Chromium DevTools. Ordinary coding tasks can optionally use the browser tool; the fixed A–F experiment profiles are preserved.
 
-[Operations, boundaries and reference projects](docs/developer-workspace.md) · [Structured merge and IDE protocols](docs/structured-merge-and-debugging.md) · [Verification record](docs/verification-structured-merge-2026-10-09.md)
+[Operations, boundaries and reference projects](docs/developer-workspace.md) · [Structured merge and IDE protocols](docs/structured-merge-and-debugging.md) · [Visual data and review UI](docs/visual-data-and-review-ui.md) · [Verification record](docs/verification-structured-merge-2026-10-09.md)
 
 
 ## Versions and development status
