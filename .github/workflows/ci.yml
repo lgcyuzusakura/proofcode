@@ -99,6 +99,11 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
       - name: Test native project operations
+        env:
+          # Use the runner's Chrome to avoid Edge's first-run DevTools Welcome panel.
+          PROOFCODE_BROWSER_EXECUTABLE: C:\Program Files\Google\Chrome\Application\chrome.exe
+          PROOFCODE_BROWSER_HEADLESS: "1"
+          PROOFCODE_DEVTOOLS_HEADLESS: "1"
         run: go test ./... -count=1
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2

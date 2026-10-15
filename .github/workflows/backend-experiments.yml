@@ -29,10 +29,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare runner-owned evidence directory
+        run: mkdir -p .tools/experiment-e2e
       - name: Start isolated backend and fixtures
         run: docker compose -f compose.experiments.yml up --build -d runner
       - name: Run actual six-group and database approval workflow
-        run: docker compose -f compose.experiments.yml run --build --rm verify
+        run: docker compose -f compose.experiments.yml run --build --rm --user "$(id -u):$(id -g)" verify
       - name: Capture service diagnostics
         if: always()
         run: |
