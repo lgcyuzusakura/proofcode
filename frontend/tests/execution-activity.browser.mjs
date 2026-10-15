@@ -1,0 +1,124 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+// Local fixtures only: no runner, model provider or user data is accessed.
+const { chromium } = createRequire(import.meta.url)("playwright");
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const page = await context.newPage();
+const errors = []; page.on("pageerror", error => errors.push(error.message));
+const origin = process.env.PROOFCODE_UI_URL || "http://127.0.0.1:5177";
+const output = resolve(process.env.PROOFCODE_UI_EVIDENCE || "../.tools/activity-ui-20261015");
+await mkdir(output, { recursive: true });
+const base = Date.now() - 15000;
+const at = seconds => new Date(base + seconds * 1000).toISOString();
+const project = { id: "activity-project", name: "ProofCode", sourceKind: "REMOTE_REPOSITORY", defaultBranch: "main" };
+const workspace = { id: "activity-workspace", projectId: project.id, name: "开发工作区", defaultWorkspace: true };
+const conversation = { id: "activity-chat", projectId: project.id, workspaceId: workspace.id, title: "检查登录流程并修复测试", defaultConversation: true };
+const scope = { projectId: project.id, workspaceId: workspace.id, conversationId: conversation.id };
+const task = { id: "activity-task", ...scope, prompt: "检查登录流程，修复失败的测试。执行前先说明要检查哪些文件。", model: "本地验收模型", executionMode: "CODE", attempt: 1, status: "RUNNING", createdAt: at(0) };
+const older = { ...task, id: "older-task", status: "SUCCEEDED", prompt: "梳理登录模块结构" };
+const messages = [{ id: "old-user", sequence: 1, role: "user", content: older.prompt, taskId: older.id, attempt: 1, status: "COMPLETED", createdAt: at(-40) }, { id: "old-assistant", sequence: 2, role: "assistant", content: "登录模块结构已梳理，接下来可以检查 session 校验。", taskId: older.id, attempt: 1, status: "SUCCEEDED", createdAt: at(-39) }, { id: "user", sequence: 3, role: "user", content: task.prompt, taskId: task.id, attempt: 1, status: "COMPLETED", createdAt: at(0) }, { id: "assistant", sequence: 4, role: "assistant", content: "我会先读取登录实现与测试，再核对 session 校验。", taskId: task.id, attempt: 1, status: "PENDING", createdAt: at(0) }];
+const event = (sequence, type, payload = {}, seconds = sequence) => ({ sequence, type, payload, timestamp: at(seconds), attempt: 1, runId: "activity-run" });
+const events = [event(1, "task.started", { model: task.model }), event(2, "decision.tool_routed", { choice: "read_files", applied: true }), event(3, "tool.requested", { tool: "read_files", callId: "read", arguments: { paths: ["src/auth/session.ts", "tests/session.test.ts"] } }), event(4, "tool.started", { tool: "read_files", callId: "read" }), event(5, "tool.completed", { tool: "read_files", callId: "read", result: "已读取 session 校验与登录测试。发现过期 session 的边界条件缺少覆盖。" }), event(6, "context.selected", { kind: "compression", beforeEstimatedTokens: 18600, afterEstimatedTokens: 7200 }), event(7, "tool.requested", { tool: "run_command", callId: "test", arguments: { program: "npm", args: ["test", "--", "session"] } }), event(8, "tool.started", { tool: "run_command", callId: "test" })];
+let historicalPages = [], historyFailure = true, cancelCalls = 0;
+await context.addInitScript(scope => { localStorage.setItem("proofcode.session", "fixture"); localStorage.setItem("proofcode.selected-scope", JSON.stringify(scope)); }, scope);
+await page.route("**/api/**", async route => {
+  const url = new URL(route.request().url()), path = url.pathname;
+  let body = {};
+  if (path === "/api/auth/me") body = { id: "qa", username: "local-qa" };
+  else if (path === "/api/projects") body = [project];
+  else if (path.endsWith("/default-scope")) body = scope;
+  else if (path.endsWith("/workspaces")) body = [workspace];
+  else if (path.endsWith("/conversations")) body = [conversation];
+  else if (path.endsWith("/messages")) body = messages;
+  else if (path.endsWith("/context")) body = { version: 0, view: { mode: "AUTO", items: [], packIds: [] }, messages: [], packs: [], excludedTurns: 0, estimatedTokens: 0 };
+  else if (path === "/api/tasks") body = [task, older];
+  else if (path === "/api/model-providers") body = [{ id: "provider", name: "本地验收服务", models: [{ id: task.model, name: task.model }], modelSettings: {} }];
+  else if (path.endsWith("/events")) {
+    const after = Number(url.searchParams.get("afterSequence") || 0);
+    if (path.includes(older.id)) {
+      if (historyFailure) { await route.fulfill({ status: 503, json: { error: "fixture" } }); return; }
+      historicalPages.push(after);
+      body = after === 0 ? Array.from({ length: 500 }, (_, i) => event(i + 1, i ? "usage.updated" : "task.started")) : [event(501, "task.completed", { unchanged: true })];
+    } else body = events.filter(item => item.sequence > after);
+  } else if (path.endsWith("/cancel")) { cancelCalls++; task.status = "CANCELLED"; body = task; }
+  else if (path.endsWith("/artifacts") || path.endsWith("/approvals")) body = [];
+  await route.fulfill({ json: body });
+});
+const results = [];
+const record = text => { results.push(text); console.log(`PASS ${text}`); };
+const refresh = async () => { await page.getByTitle("刷新项目与会话").click(); };
+const geometry = () => page.evaluate(() => { const stream = document.querySelector(".conversation-stream"), dock = document.querySelector(".composer-dock"); return { width: document.documentElement.scrollWidth, viewport: innerWidth, streamBottom: stream.getBoundingClientRect().bottom, dockTop: dock.getBoundingClientRect().top, dockBottom: dock.getBoundingClientRect().bottom, height: innerHeight }; });
+try {
+  await page.goto(origin);
+  const timeline = page.locator(`[data-task-id="${task.id}"]`);
+  await timeline.getByText("正在执行：运行命令", { exact: true }).waitFor();
+  assert.equal(await timeline.locator(".execution-entry").count(), 6);
+  assert.equal(await timeline.locator(".execution-entry[open]").count(), 0);
+  assert.equal(await timeline.locator(".activity-spin").count(), 1);
+  assert((await page.locator(".current-activity").innerText()).includes("正在执行：运行命令"));
+  assert.equal(await timeline.locator(".tool-activity").count(), 0);
+  record("real event milestones are visible by default; only the current running action spins");
+  const completed = timeline.locator(".execution-entry").filter({ hasText: "已完成：批量读取文件" });
+  await completed.locator(":scope > summary").click();
+  assert((await completed.locator(".execution-detail").innerText()).includes("src/auth/session.ts"));
+  assert((await completed.locator(".execution-detail").innerText()).includes("执行用时 1.00 s"));
+  await completed.locator(":scope > summary").press("Enter");
+  assert.equal(await completed.getAttribute("open"), null);
+  record("keyboard expansion reveals paired tool input, output and measured elapsed time");
+  await page.getByRole("button", { name: "滚动到最早消息", exact: true }).click();
+  await page.getByText("执行记录暂未加载", { exact: true }).waitFor();
+  historyFailure = false;
+  await page.locator(`[data-task-id="${older.id}"]`).getByRole("button", { name: "重试" }).click();
+  await page.locator(`[data-task-id="${older.id}"]`).getByText("任务已完成", { exact: true }).waitFor();
+  assert.deepEqual(historicalPages, [0, 500]);
+  record("older tasks recover from load failure and fetch all event pages within their own task");
+  await page.getByRole("button", { name: "滚动到最新消息", exact: true }).click();
+  await page.screenshot({ path: resolve(output, "execution-desktop.png") });
+  await page.getByRole("button", { name: "滚动到最早消息", exact: true }).click();
+  const position = await page.locator(".conversation-stream").evaluate(node => node.scrollTop);
+  events.push(event(9, "tool.completed", { tool: "run_command", callId: "test", result: "session.test.ts: 12 tests passed" }), event(10, "verification.completed", { passed: false, output: "集成测试仍有一项失败，尚不能确认修复完成。" }));
+  await refresh();
+  await timeline.getByText("验证未通过", { exact: true }).waitFor();
+  assert(Math.abs(await page.locator(".conversation-stream").evaluate(node => node.scrollTop) - position) < 2);
+  assert.equal(await timeline.locator(".activity-spin").count(), 0);
+  record("new events preserve history reading position and failed verification never appears successful");
+  events.push(event(11, "tool.approval_required", { tool: "apply_patch", callId: "patch", arguments: { patch: "fixture patch" } }));
+  task.status = "WAITING_APPROVAL";
+  await refresh();
+  await timeline.getByText("等待批准：修改文件", { exact: true }).waitFor();
+  assert((await page.locator(".current-activity").innerText()).includes("等待你的批准"));
+  assert.equal(await timeline.locator(".activity-spin").count(), 0);
+  record("approval waits use the backend status and do not animate as active execution");
+  await page.locator(".current-activity-main").click();
+  await page.getByTitle("关闭运行详情").waitFor();
+  await page.getByTitle("关闭运行详情").click();
+  await page.locator(".current-activity-stop").click();
+  assert.equal(cancelCalls, 1);
+  events.push(event(12, "task.cancelled", { reason: "用户停止了本次运行" }));
+  await refresh();
+  await timeline.getByText("任务已停止", { exact: true }).waitFor();
+  assert.equal(await page.locator(".current-activity-stop").count(), 0);
+  assert.equal(await timeline.locator(".activity-spin").count(), 0);
+  record("bottom status opens details and stop calls the actual cancel endpoint");
+  for (const size of [{ width: 390, height: 844 }, { width: 760, height: 480 }, { width: 1440, height: 1000 }]) {
+    await page.setViewportSize(size);
+    const current = await geometry();
+    assert(current.width <= current.viewport + 1, JSON.stringify(current));
+    assert(current.streamBottom <= current.dockTop + 1 && current.dockBottom <= current.height, JSON.stringify(current));
+    const latest = page.getByRole("button", { name: "滚动到最新消息", exact: true });
+    if (await latest.isEnabled()) await latest.click();
+    if (size.width === 390) await timeline.locator(".execution-entry").first().evaluate(node => node.scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: resolve(output, `execution-${size.width}.png`) });
+  }
+  await page.evaluate(() => document.documentElement.dataset.theme = "dark");
+  await page.screenshot({ path: resolve(output, "execution-dark.png") });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  assert.equal(await page.locator(".execution-chevron").first().evaluate(node => getComputedStyle(node).transitionDuration), "0s");
+  assert.deepEqual(errors, []);
+  record("desktop, mobile, short viewport and dark theme keep transcript and composer separate; reduced motion is respected");
+  await writeFile(resolve(output, "verification.json"), JSON.stringify({ source: "local UI fixtures", results, pageErrors: errors }, null, 2));
+} finally { await browser.close(); }

@@ -1,0 +1,13 @@
+{
+  "source": "local UI fixtures",
+  "results": [
+    "real event milestones are visible by default; only the current running action spins",
+    "keyboard expansion reveals paired tool input, output and measured elapsed time",
+    "older tasks recover from load failure and fetch all event pages within their own task",
+    "new events preserve history reading position and failed verification never appears successful",
+    "approval waits use the backend status and do not animate as active execution",
+    "bottom status opens details and stop calls the actual cancel endpoint",
+    "desktop, mobile, short viewport and dark theme keep transcript and composer separate; reduced motion is respected"
+  ],
+  "pageErrors": []
+}

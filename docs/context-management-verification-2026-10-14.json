@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-14",
+  "baseImplementationCommit": "0f677b563a0ecc145f09c2ff63d5bcb0671dcac5",
+  "java": {
+    "total": 93,
+    "passed": 84,
+    "skipped": 9,
+    "failures": 0,
+    "errors": 0
+  },
+  "go": {
+    "fullSuite": "pass",
+    "vet": "pass",
+    "finalRunnerSuite": "pass"
+  },
+  "frontend": {
+    "unitPassed": 22,
+    "contextBrowserChecks": 15,
+    "workbenchBrowserChecks": 14,
+    "webBuild": "pass",
+    "desktopFrontendBuild": "pass",
+    "bundleSizeWarnings": true
+  },
+  "migration": {
+    "engine": "pgvector/pgvector:pg16",
+    "scripts": "V1-V18",
+    "result": "pass",
+    "temporaryContainerRemoved": true
+  },
+  "actualModelCalls": false,
+  "browserData": "local fixtures",
+  "screenshotsVisuallyInspected": [
+    "desktop",
+    "dark",
+    "mobile"
+  ],
+  "logs": [
+    {
+      "name": "context-java-full.log",
+      "sha256": "9701b35691800bdd0dd005e6e8fc7a99c8d5b89acfe27ae19c1799e1774b201d"
+    },
+    {
+      "name": "context-go-full.log",
+      "sha256": "4aa7b0f59f0e9af3f340f1684f4aa3a3a929b04de69fed51437a254d4bd1f3e3"
+    },
+    {
+      "name": "context-runner-final.log",
+      "sha256": "bfcbbfc511e0da276980b64b9daeddd6bc7809a86ccb05d5606d1390ca59fab9"
+    },
+    {
+      "name": "context-browser-tests.log",
+      "sha256": "02e45223d7e852af4b2d36f70d70c215d92f5214f14552fdc41ff084ac402ebf"
+    },
+    {
+      "name": "context-workbench-regression.log",
+      "sha256": "2f4bf5ad6b48e6e513d4ca4d593434cd33ec9816f69645b229762154fa9280d2"
+    },
+    {
+      "name": "context-frontend-tests.log",
+      "sha256": "712b6abff14c48bdd972ac31f7ca631bd67952086302a7cc68dec1ac505993df"
+    },
+    {
+      "name": "context-web-build.log",
+      "sha256": "85a4c22026afbc49036c7a4cf92c0f15f941373ea72469ad0850c46af90ee134"
+    },
+    {
+      "name": "context-desktop-build.log",
+      "sha256": "1710589f61d43612a7160d7bd8a38d22c7770ba1bc76fc37de6decfc0d7db766"
+    },
+    {
+      "name": "context-postgres-migrations.log",
+      "sha256": "72061ddaf0c46d6374228ab2f3f9dd82b2f5634248cc4403ddef897428944c09"
+    }
+  ]
+}
