@@ -1,0 +1,24 @@
+services:
+  model-mock:
+    image: python:3.12-alpine
+    restart: unless-stopped
+    command: ["python", "/app/mock_model.py"]
+    volumes:
+      - ./smoke/mock_model.py:/app/mock_model.py:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  runner:
+    environment:
+      MODEL_BASE_URL: http://model-mock:8000/v1
+      MODEL_API_KEY: smoke-test
+      RUNNER_ALLOW_WRITE: "true"
+      RUNNER_ALLOW_EXEC: "true"
+      JEV_MODE: ${SMOKE_JEV_MODE:-off}
+      JEV_BASE_URL: ${SMOKE_JEV_BASE_URL:-}
+    depends_on:
+      model-mock:
+        condition: service_healthy
