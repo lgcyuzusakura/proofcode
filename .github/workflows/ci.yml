@@ -36,6 +36,29 @@ jobs:
   java:
     name: Java tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: data_test
+          POSTGRES_USER: proofcode
+          POSTGRES_PASSWORD: data-test-only
+        ports:
+          - 15491:5432
+        options: >-
+          --health-cmd "pg_isready -U proofcode -d data_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 16491:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     defaults:
       run:
         working-directory: control-plane
@@ -63,6 +86,8 @@ jobs:
       - name: Run Maven tests
         env:
           PROOFCODE_MCP_INSPECT_TEST_BIN: ${{ github.workspace }}/control-plane/target/proofcode-mcp-inspect
+          PROOFCODE_LIVE_DATA_TEST: "true"
+          PROOFCODE_LIVE_DATA_HOST: 127.0.0.1
         run: mvn --batch-mode --no-transfer-progress test
 
   frontend:
