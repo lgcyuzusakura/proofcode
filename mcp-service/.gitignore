@@ -3,5 +3,5 @@ config.local.json
 .env.*
 node_modules/
 .proofcode/
-knowledge/
+knowledge/*
 !knowledge/.gitkeep
