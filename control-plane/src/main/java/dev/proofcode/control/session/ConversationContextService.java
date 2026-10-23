@@ -19,6 +19,7 @@ public class ConversationContextService {
     private final WorkspaceService scopes;
     private final ObjectMapper json;
     private final dev.proofcode.control.task.TaskRepository tasks;
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
     public ConversationContextService(ConversationRepository conversations,ConversationMessageRepository messages,ContextPackRepository packs,WorkspaceService scopes,ObjectMapper json,dev.proofcode.control.task.TaskRepository tasks){
         this.conversations=conversations;this.messages=messages;this.packs=packs;this.scopes=scopes;this.json=json;this.tasks=tasks;
     }
@@ -39,8 +40,11 @@ public class ConversationContextService {
     public Preview preview(UUID project,UUID workspace,UUID conversation){return project(scopes.requireConversation(project,workspace,conversation),Long.MAX_VALUE,false);}
     @Transactional
     public Preview update(UUID project,UUID workspace,UUID conversation,long expectedVersion,View next){
-        scopes.requireConversation(project,workspace,conversation);
+        var found=scopes.requireConversation(project,workspace,conversation);
+        if(found.isArchived())throw conflict("archived conversations are read-only; restore it before editing context");
         var entity=conversations.lockById(conversation).orElseThrow();
+        entityManager.refresh(entity);
+        if(entity.isArchived())throw conflict("archived conversations are read-only; restore it before editing context");
         if(entity.getContextVersion()!=expectedVersion)throw conflict("context changed; reload before saving");
         validate(entity,next);
         entity.updateContext(write(next));

@@ -31,7 +31,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .icon-button, .rail-toggle, .tiny-button { background: transparent; color: var(--muted); border-color: transparent; }
 .icon-button:hover, .rail-toggle:hover { background: var(--selected); color: var(--ink); }
 .app-body, .app-shell.has-route .app-body { flex: 1; min-height: 0; height: auto; overflow: hidden; }
-.app-shell.has-route .nav-rail { width: var(--rail-width); height: 100%; min-height: 0; padding: 10px 12px 16px; gap: 7px; background: var(--shell); border: 0; overflow-y: auto; }
+.app-shell.has-route .nav-rail { width: var(--rail-width); height: 100%; min-height: 0; padding: 10px 12px 16px; gap: 7px; background: var(--shell); border: 0; overflow-y: auto; transition: none; }
 .app-shell.has-route .nav-rail.collapsed { width: 58px; padding: 10px 8px; }
 .new-task-button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 11px 12px; margin: 0 0 3px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 9px; font-size: 13px; font-weight: 500; cursor: pointer; }
 .new-task-button:hover { border-color: var(--muted); }
@@ -61,6 +61,29 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .tree-conversation { padding: 10px; font-size: 13px; color: var(--muted); border-radius: 7px; }
 .tree-conversation.selected { color: var(--ink); background: var(--selected) !important; border-color: transparent !important; }
 .tree-conversation:hover { background: var(--selected); color: var(--ink); }
+.conversation-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: 2px; }
+.conversation-row.selected { background: transparent !important; border-color: transparent !important; }
+.conversation-row > .tree-conversation { flex: 1; min-width: 0; }
+.conversation-row.is-archived > .tree-conversation { opacity: .78; }
+.conversation-row-menu { position: relative; flex: 0 0 28px; }
+.conversation-row-menu > summary { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); cursor: pointer; list-style: none; }
+.conversation-row-menu > summary::-webkit-details-marker { display: none; }
+.conversation-row-menu > summary:hover, .conversation-row-menu[open] > summary { color: var(--ink); background: var(--selected); }
+.conversation-row-menu > div { position: absolute; z-index: 30; top: 27px; right: 0; width: 146px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px #0002; }
+.conversation-row-menu > div button { width: 100%; min-height: 32px; display: flex; align-items: center; gap: 8px; padding: 5px 8px; color: var(--ink); background: transparent; border: 0; border-radius: 5px; text-align: left; cursor: pointer; font-size: 12px; }
+.conversation-row-menu > div button:hover { background: var(--selected); }
+.conversation-inline-editor { position: relative; z-index: 2; flex: 1 0 100%; min-width: 0; margin: 1px 0 7px 8px; padding: 9px; border-left: 2px solid var(--accent); background: var(--surface); color: var(--ink); }
+.conversation-inline-editor label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 11px; }
+.conversation-inline-editor input { width: 100%; min-width: 0; padding: 7px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 12px; }
+.conversation-inline-editor p { margin: 0 0 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.conversation-inline-editor > small { display: block; margin-top: 6px; color: #b34343; font-size: 11px; line-height: 1.4; }
+:root[data-theme="dark"] .conversation-inline-editor > small { color: #f29a9a; }
+.conversation-inline-editor > div { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.conversation-inline-editor > div button { min-height: 28px; padding: 4px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; }
+.conversation-editor-cancel { color: var(--muted); background: transparent; border: 1px solid var(--line); }
+.conversation-editor-save { color: #fff; background: var(--accent); border: 1px solid var(--accent); }
+.conversation-editor-save:disabled { color: var(--muted); background: var(--soft); border-color: var(--line); }
+.archived-conversation-list > .conversation-row { flex-wrap: wrap; }
 .tree-create-actions button { color: var(--muted); font-size: 11px; }
 .sidebar-more { flex: none; order: 1; }
 .sidebar-more > summary { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 9px 12px; color: var(--muted); cursor: pointer; font-size: 13px; list-style: none; }
@@ -70,6 +93,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .privacy-note { display: none; }
 .nav-rail.collapsed .scope-tree, .nav-rail.collapsed .sidebar-more, .nav-rail.collapsed .sidebar-tasks, .nav-rail.collapsed .sidebar-search, .nav-rail.collapsed .new-task-button span { display: none; }
 .nav-rail.collapsed .new-task-button { justify-content: center; padding: 10px; }
+.plugin-heading h1 { color: var(--ink); }
 .main-content { min-width: 0; min-height: 0; max-width: none; background: var(--shell); }
 .app-shell.has-route .route-overlay { top: 46px; left: var(--rail-width); right: 10px; bottom: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: auto; }
 .chat-route { display: flex; flex-direction: column; min-height: 0; overflow: hidden !important; }
@@ -195,6 +219,10 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .modal, .action-panel { max-height: calc(100dvh - 40px); overflow: auto; }
 .action-panel.provider-panel { width: min(1080px, calc(100vw - 32px)); }
 .provider-settings { grid-template-columns: 190px minmax(0, 1fr); gap: 24px; }
+.provider-probe { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px 12px; border-top: 1px solid var(--line); padding-top: 16px; }
+.provider-probe > .secondary-button { height: 38px; padding: 0 14px; font-size: 12px; }
+.provider-probe > .form-help { grid-column: 1 / -1; }
+@media (max-width: 760px) { .provider-probe { grid-template-columns: minmax(0, 1fr); }.provider-probe > .secondary-button { justify-self: start; } }
 .provider-models { max-height: 250px; }
 .provider-models .settings-section-head span, .provider-models .model-settings-trigger span { border: 0; padding: 0; border-radius: 0; background: transparent; color: inherit; }
 .provider-model-row > label { background: var(--soft); border-color: var(--line); }
@@ -329,3 +357,34 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
   .agent-chat-page .message-row.assistant .message-bubble { padding: 11px 13px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+.archived-conversation-list { margin-top: 7px; color: var(--muted); font-size: 12px; }
+.archived-conversation-list > summary { padding: 7px 8px; cursor: pointer; }
+.archived-conversation-list > summary span { margin-left: 6px; opacity: .8; }
+.archived-conversation-banner { padding: 9px 16px; border-bottom: 1px solid var(--line); color: var(--muted); background: var(--soft); font-size: 12px; line-height: 1.6; }
+
+.conversation-loading { height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--muted); font-size: 13px; }
+
+.mobile-navigation-scrim { display: none; }
+@media (max-width: 760px) {
+  .app-shell.has-route .nav-rail:not(.collapsed) { position: fixed; z-index: 42; top: 46px; bottom: 6px; left: 6px; width: min(300px, calc(100vw - 32px)); height: auto; padding: 12px; background: var(--sidebar); border: 1px solid var(--line); border-radius: 10px; box-shadow: 8px 0 32px #0003; }
+  .nav-rail:not(.collapsed) .scope-tree, .nav-rail:not(.collapsed) .sidebar-more, .nav-rail:not(.collapsed) .sidebar-tasks, .nav-rail:not(.collapsed) .new-task-button span, .nav-rail:not(.collapsed) .nav-item span { display: block !important; }
+  .nav-rail:not(.collapsed) .sidebar-search, .nav-rail:not(.collapsed) .nav-label { display: flex !important; }
+  .nav-rail:not(.collapsed) .new-task-button { justify-content: flex-start; }
+  .mobile-navigation-scrim { display: block; position: fixed; z-index: 41; inset: 46px 0 0; border: 0; background: #0004; }
+}
+
+/* Source references stay compact and independently scroll within the composer. */
+.source-attachment-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 96px; overflow-y: auto; padding: 0 0 9px; }
+.source-attachment { display: flex; align-items: center; min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.source-attachment-preview { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 7px; color: var(--ink); background: transparent; border: 0; font-size: 12px; }
+.source-attachment-preview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-attachment-preview small { flex-shrink: 0; color: var(--muted); }
+.source-attachment .icon-button { width: 26px; height: 26px; flex-shrink: 0; }
+.source-preview-dialog { width: min(850px, calc(100vw - 24px)); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.source-preview-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
+.source-preview-dialog header div { min-width: 0; }
+.source-preview-dialog strong { display: block; overflow-wrap: anywhere; font-size: 14px; }
+.source-preview-dialog small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+.source-preview-dialog pre { padding: 16px; margin: 0; overflow: auto; font-size: 13px; line-height: 1.6; white-space: pre; }
+.source-preview-dialog > p { padding: 16px; }

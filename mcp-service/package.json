@@ -1,0 +1,17 @@
+{
+  "name": "@proofcode/mcp-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "init": "node src/init.mjs",
+    "start": "node --env-file-if-exists=.env src/cli.mjs --config config.local.json",
+    "check": "node --env-file-if-exists=.env src/cli.mjs --config config.local.json --check",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "ajv": "8.20.0"
+  }
+}

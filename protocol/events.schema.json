@@ -14,9 +14,9 @@
     "type": {
       "enum": [
         "task.started", "task.completed", "task.failed", "task.cancelled",
-        "agent.message.delta", "agent.message.completed", "agent.delegated",
+        "agent.message.delta", "agent.message.completed", "agent.delegated", "agent.configuration", "plan.updated",
         "tool.requested", "tool.approval_required", "tool.started", "tool.completed", "tool.failed", "decision.tool_routed", "decision.tool_route_fallback",
-        "context.selected", "checkpoint.created", "recovery.created", "verification.completed", "usage.updated"
+        "context.selected", "checkpoint.created", "recovery.created", "workspace.updated", "verification.completed", "usage.updated"
       ]
     },
     "timestamp": { "type": "string", "format": "date-time" },

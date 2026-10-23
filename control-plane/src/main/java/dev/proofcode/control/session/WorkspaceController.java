@@ -20,6 +20,8 @@ public class WorkspaceController {
     @PostMapping("/{workspaceId}/conversations") public ResponseEntity<ConversationEntity> createConversation(@PathVariable UUID projectId,@PathVariable UUID workspaceId,@Valid @RequestBody CreateConversation request){return ResponseEntity.status(201).body(service.createConversation(projectId,workspaceId,request.title()));}
     @GetMapping("/{workspaceId}/conversations") public List<ConversationEntity> conversations(@PathVariable UUID projectId,@PathVariable UUID workspaceId){return service.listConversations(projectId,workspaceId);}
     @GetMapping("/{workspaceId}/conversations/{conversationId}") public ConversationEntity conversation(@PathVariable UUID projectId,@PathVariable UUID workspaceId,@PathVariable UUID conversationId){return service.requireConversation(projectId,workspaceId,conversationId);}
+    @PatchMapping("/{workspaceId}/conversations/{conversationId}") public ConversationEntity updateConversation(@PathVariable UUID projectId,@PathVariable UUID workspaceId,@PathVariable UUID conversationId,@Valid @RequestBody UpdateConversation request){return service.updateConversation(projectId,workspaceId,conversationId,request.title(),request.archived());}
     public record CreateWorkspace(@NotBlank @Size(max=120) String name,@NotNull WorkspaceEntity.Kind kind){}
     public record CreateConversation(@NotBlank @Size(max=200) String title){}
+    public record UpdateConversation(@Size(max=200) String title,Boolean archived){}
 }

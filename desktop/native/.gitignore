@@ -1,3 +1,7 @@
 build/bin
 node_modules
 frontend/dist
+runtime-assets/*.zip
+runtime-assets/*.old
+mcp-assets/*.zip
+mcp-assets/*.old

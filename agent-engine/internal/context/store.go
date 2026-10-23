@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/durablefile"
 	"io"
 	"os"
 	"path/filepath"
@@ -216,7 +217,7 @@ func atomicPrivateWrite(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	return os.Rename(name, path)
+	return durablefile.Rename(name, path)
 }
 
 func (s *Store) read(dir, id string, max int64) ([]byte, error) {

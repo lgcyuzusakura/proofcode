@@ -10,8 +10,12 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.3.4",
+    "diff": "9.0.0",
+    "docx-preview": "0.3.7",
+    "jszip": "3.10.1",
     "lucide-react": "0.468.0",
     "monaco-editor": "0.52.2",
+    "pdfjs-dist": "5.4.624",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-markdown": "^10.1.0",

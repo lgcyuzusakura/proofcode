@@ -119,3 +119,7 @@ try {
 新增测试覆盖同文件 dirty 多版本明确选版、源码跨回合复用/私有工具严格隔离、manifest/postings/原对象损坏拒绝、重启原文读取/增量解析、Go AST 原始 CRLF 边界与调用引用、非Go回退标记、原文分页/越界/Unicode字节、工具参数 scope 注入拒绝、协议完整、所有用户约束/失败/批准保护和超预算失败、硬Token环境上限、匹配成功重试清除反馈、Runner注册工具、Collector序列化恢复算法与视图证据。
 
 当前没有源历史过期/垃圾回收管理页面、embedding、多语言 Tree-sitter、完整仓库调用图或跨Runner共享索引服务。原文和索引属于私有应用数据，应配置保留/备份策略，禁止放入公开仓库、公开论文附件或普通任务日志。
+
+## 项目记忆检索的小样本回归（2026-10-22）
+
+控制面的项目记忆与上述源码证据检索是不同链路。`AgentModelIntegrationTest.projectMemoryRetrievalMeetsLabeledDeveloperQueryQualityFloor` 新增 6 个手工标注中文开发查询，分别涉及测试优先、长会话阅读、补丁冲突、MCP OAuth、表达偏好与 PostgreSQL 迁移；语料含 6 条目标记忆与 4 条干扰记忆。测试要求 Recall@3 ≥ 0.83、MRR@5 ≥ 0.65，现有测试报告中的 11 项 AgentModel 测试全部通过，无跳过。指标仅作为该固定小样本的回归门槛，不是独立测试集实测报告，不能推广成真实项目 RAG 性能或模型任务成功率。

@@ -1,0 +1,19 @@
+.mcp-oauth-settings{border-top:1px solid #e2e4e8;border-bottom:1px solid #e2e4e8;padding:12px 0;min-width:0}
+.mcp-oauth-settings>summary{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;list-style:none}
+.mcp-oauth-settings>summary::-webkit-details-marker{display:none}
+.mcp-oauth-settings>summary>strong{font-weight:600}
+.mcp-oauth-settings>summary>span{margin-left:auto;color:#737985;font-size:12px}
+.mcp-oauth-settings>section{display:grid;gap:13px;padding-top:16px}
+.agent-platform-body .mcp-oauth-settings>section>label{min-width:0}
+.mcp-oauth-status{display:flex;align-items:center;gap:8px;font-size:13px;color:#737985}
+.mcp-oauth-status.is-connected{color:#287048}
+.mcp-oauth-spinner{animation:mcp-oauth-spin 1.2s linear infinite}
+.mcp-oauth-actions{display:flex;flex-wrap:wrap;gap:8px}
+.mcp-oauth-link{display:inline-flex;align-items:center;gap:7px;width:max-content;max-width:100%;font-size:13px;color:#4257a8;overflow-wrap:anywhere}
+.mcp-oauth-settings [role=alert]{display:flex;gap:7px;align-items:flex-start;overflow-wrap:anywhere}
+.mcp-oauth-settings [role=alert] svg{flex-shrink:0;margin-top:3px}
+@keyframes mcp-oauth-spin{to{transform:rotate(360deg)}}
+[data-theme=dark] .mcp-oauth-settings{border-color:#444852}
+[data-theme=dark] .mcp-oauth-status.is-connected{color:#8dc9a4}
+[data-theme=dark] .mcp-oauth-link{color:#adbcff}
+@media(prefers-reduced-motion:reduce){.mcp-oauth-spinner{animation:none}}

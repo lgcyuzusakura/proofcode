@@ -6,12 +6,25 @@ ProofCode 是面向可验证代码修改的编程 Agent：读取仓库、生成�
 
 核心流程是：**提交目标 → 隔离工作树 → 工具与批准 → 代码补丁 → 测试验证 → 审阅产物 → 应用到原仓库**。
 
+## 2026-10-22 平台与桌面更新
+
+自定义智能体、工具白名单、Skills、MCP HTTP/stdio 与 OAuth、账户偏好、项目记忆、只读 PLAN、执行中补充指令、历史检索和补丁分块审查已进入本次代码发布。对话右侧可并排查看 Markdown、PDF、Word 与项目浏览器，支持拖入文档、独立滚动、调宽和全屏；PDF 缩放和全屏切换保留阅读位置。
+
+Windows 客户端内嵌最新共享界面、源码运行包和 MCP 模板，登录前可配置后端、检查环境、准备部署目录和显式管理 Compose 服务。仍需 WebView2；本机后端需 Docker Desktop，首次构建需网络，不能只填 API Key 单独运行。
+
+[本次更新与验证](docs/update-report-2026-10-22.md) · [下载桌面版和源码](https://github.com/lgcyuzusakura/proofcode/releases/latest) · [平台运行说明](docs/agent-platform-runtime.md)
+
+![聊天与文档并排预览](docs/images/preview-word-20261022.png)
+
+截图使用合成文档和本地接口夹具；真实模型编程质量尚未完成评测。
+
 ## 2026-10-15 功能更新
 
 - **上下文自动／手动选择**：自动沿用普通历史；手动勾选完整问答，支持排除、恢复、搜索、批量选择、撤销和人工摘要替换，切换模式保留手动选择，不额外显示编号轮次。
 - **跨对话交接**：保存、挂载或卸载命名上下文包，在同一工作区带入新对话。来源变化后标记过期；任务创建时固定选择快照，重试与恢复复用原快照。交接的是文本材料，不迁移供应商缓存。
 - **对话与执行动态**：独立滚动和输入区、按需加载历史、向上阅读位置保持；直接展示真实动作、状态和工具耗时，详情可展开，停止按钮调用真实取消接口。不会生成隐藏推理或将未知验证标为通过。
 - **模型与用量**：按模型保存可选的上下文／输入／输出预算、压缩强度和价格区间；默认 128000／16000／2048 Token，另预留 256 Token 协议空间。支持自定输入区间、整档输入／输出／缓存读写单价；未填写价格仍可使用。
+- **协议兼容**：模型服务支持 OpenAI Responses、Chat Completions 与 Anthropic Messages；Anthropic 的 SSE 工具块、缓存读写用量和分页模型目录经过本地模拟服务验证，目录刷新失败不会覆盖旧目录。
 - **运行观测**：首字与总请求耗时、估算 Token/s、已报告的缓存用量与命中比例、Token 总量和估算费用。未报告数据保持未知，速度含传输开销，费用不替代供应商账单。
 - **Windows 桌面**：Wails 使用共享 React 工作台；exe 需要 WebView2 和运行中的后端，尚不是只填写 API Key 的独立单文件服务。
 
@@ -30,11 +43,12 @@ ProofCode 是面向可验证代码修改的编程 Agent：读取仓库、生成�
 
 ## 版本与开发状态
 
-`main` 与 `codex/compact-context-agent-tools` 现在提供截至 2026-10-15 的最新已提交实现。其他分支保留此前的代码快照；各分支是独立快照，不共享旧提交历史。
+`main` 现提供 2026-10-22 智能体平台与桌面工作区更新；`codex/compact-context-agent-tools` 保留 2026-10-15 快照。其他分支保留此前的代码快照；各分支是独立快照，不共享旧提交历史。
 
 | 分支 | 内容范围 |
 | --- | --- |
-| `main` / `codex/compact-context-agent-tools` | 最新工作台、上下文选择、执行动态与模型配置 |
+| `main` | 智能体平台、Skills/MCP、上下文、文档预览与桌面运行管理 |
+| `codex/compact-context-agent-tools` | 2026-10-15 工作台与上下文快照 |
 | `codex/structured-merge-debug-tools` | IDE、合并审查与调试快照 |
 | `codex/project-workspace-bootstrap` | 工程、数据与上下文集成快照 |
 | `codex/visual-data-review-workspace` | 数据与审查界面快照 |
@@ -52,7 +66,7 @@ ProofCode 是面向可验证代码修改的编程 Agent：读取仓库、生成�
 - Go Runner 通过 Artemis AMQP 1.0 领取任务，执行仓库准备、工具和检查点回调。
 - React Web 项目/任务入口、实时事件、批准与取消、任务产物时间线；Windows Wails 桌面界面原型与脱敏配置展示。
 - `proofcode-apply` 在审阅后校验基线 revision 和干净工作区，再应用补丁。
-- 浏览器验证库与 MCP stdio 客户端已存在，尚未接入 Runner 任务主循环。
+- 浏览器验证可按需接入普通代码任务；MCP stdio 与远程 HTTP 工具已接入 Runner，详见本次平台更新。
 
 ## 当前实现分支
 
@@ -107,7 +121,7 @@ docker compose up --build
 
 首次打开网页时注册账户，再用账户名和密码登录。首个账户会认领升级前没有归属的工程；升级时已有唯一账户的，下一次成功登录也会补全认领。多个账户已存在时不自动认领遗留工程。点击「设置」添加模型服务，填写名称、API 地址和密钥，选择 Responses 或 Chat Completions，保存后「读取可用模型」；对话页从目录选择模型，不能手填不存在的模型 ID。已有密钥不会回显，更改服务地址时须重新输入密钥。桌面版还可直接导入本机 Codex 配置。
 
-默认模型服务地址需解析到公共网络；管理员确需内网服务时可设置 `PROOFCODE_PROVIDERS_ALLOW_PRIVATE_HOSTS=true`。API 地址不接受嵌入凭据、查询参数或片段。服务必须提供 OpenAI 格式的 `/models` 目录；仅提供 Anthropic Messages 协议的服务当前不可直接接入。
+默认模型服务地址需解析到公共网络；管理员确需内网服务时可设置 `PROOFCODE_PROVIDERS_ALLOW_PRIVATE_HOSTS=true`。API 地址不接受嵌入凭据、查询参数或片段。服务须提供 `/models` 的 `data` 目录；Anthropic Messages 服务使用原生密钥认证并支持有界分页。设置页可手动验证选定模型的最小工具调用，会发送少量测试文本并可能产生模型费用，不发送项目内容、不执行返回工具；结果只证明该次请求的格式兼容。
 
 端口冲突时，在 `.env` 中覆盖 `PROOFCODE_*_PORT`，例如 `PROOFCODE_WEB_PORT=3010`、`PROOFCODE_CONTROL_PORT=8090`。
 
@@ -129,7 +143,7 @@ docker compose up --build
 .\desktop\stop-desktop.ps1
 ```
 
-原生桌面已接通控制平面 API，并通过持久事件轮询读取真实任务进度；它不会自行启动控制平面、消息队列或 Runner。先启动这些服务，再注册／登录账户并配置模型服务；`DEV_AUTH_TOKEN` 仅用于兼容的开发接入。原生代理默认连接 `http://127.0.0.1:8080`，启动应用前可用 `PROOFCODE_CONTROL_PLANE_URL` 改地址。静态预览只展示 UI，没有原生目录能力或控制平面代理。详细说明见 [桌面入口](desktop/README.md) 和 [原生应用](desktop/native/README.md)。
+原生桌面已接通控制平面 API，并通过持久事件轮询读取真实任务进度。登录前可进入“运行环境与本机服务”，从内置源码运行包准备新目录，或选择已有 Compose 部署；服务启动与停止需显式操作。内置准备会生成 `.env`，宿主仍需安装启动 Docker Desktop，首次服务构建需要网络；新版 EXE 尚未发布。服务就绪后注册／登录账户并配置模型服务；`DEV_AUTH_TOKEN` 仅用于兼容的开发接入。原生代理默认连接 `http://127.0.0.1:8080`，地址优先使用页面保存值，其次 `PROOFCODE_CONTROL_PLANE_URL`，最后默认值。更换地址会退出旧账户，保留工程编辑草稿；保存不自动联网探测。静态预览只展示 UI，没有原生目录能力或控制平面代理。详细说明见 [桌面入口](desktop/README.md) 和 [原生应用](desktop/native/README.md)。
 
 ### 工具批准与运行环境
 

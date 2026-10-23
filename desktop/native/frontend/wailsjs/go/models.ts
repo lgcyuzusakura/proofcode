@@ -110,6 +110,26 @@ export namespace config {
 
 export namespace main {
 
+	export class BundledRuntime {
+	    available: boolean;
+	    release: string;
+	    files: number;
+	    bytes: number;
+	    sha256: string;
+
+	    static createFrom(source: any = {}) {
+	        return new BundledRuntime(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.release = source["release"];
+	        this.files = source["files"];
+	        this.bytes = source["bytes"];
+	        this.sha256 = source["sha256"];
+	    }
+	}
 	export class CommandState {
 	    id: string;
 	    program: string;
@@ -233,6 +253,32 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class McpServiceScaffold {
+	    created: boolean;
+	    name: string;
+	    directory: string;
+	    transport: string;
+	    url: string;
+	    bearer: string;
+	    commands: string;
+	    docker: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new McpServiceScaffold(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.created = source["created"];
+	        this.name = source["name"];
+	        this.directory = source["directory"];
+	        this.transport = source["transport"];
+	        this.url = source["url"];
+	        this.bearer = source["bearer"];
+	        this.commands = source["commands"];
+	        this.docker = source["docker"];
+	    }
 	}
 	export class MergeFile {
 	    path: string;
@@ -414,6 +460,83 @@ export namespace main {
 	        this.body = source["body"];
 	    }
 	}
+	export class RuntimeConnection {
+	    baseUrl: string;
+	    source: string;
+
+	    static createFrom(source: any = {}) {
+	        return new RuntimeConnection(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.baseUrl = source["baseUrl"];
+	        this.source = source["source"];
+	    }
+	}
+	export class RuntimeService {
+	    name: string;
+	    state: string;
+	    health: string;
+
+	    static createFrom(source: any = {}) {
+	        return new RuntimeService(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.state = source["state"];
+	        this.health = source["health"];
+	    }
+	}
+	export class RuntimeManagement {
+	    directory: string;
+	    configured: boolean;
+	    running: boolean;
+	    observed: boolean;
+	    busy: boolean;
+	    phase: string;
+	    message: string;
+	    checkedAt: string;
+	    services: RuntimeService[];
+
+	    static createFrom(source: any = {}) {
+	        return new RuntimeManagement(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.directory = source["directory"];
+	        this.configured = source["configured"];
+	        this.running = source["running"];
+	        this.observed = source["observed"];
+	        this.busy = source["busy"];
+	        this.phase = source["phase"];
+	        this.message = source["message"];
+	        this.checkedAt = source["checkedAt"];
+	        this.services = this.convertValues(source["services"], RuntimeService);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
 	export class ScratchProject {
 	    name: string;
 	    localHandle: string;
@@ -462,6 +585,62 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.manifestHash = source["manifestHash"];
 	        this.files = this.convertValues(source["files"], sourceFile);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace runtimecheck {
+
+	export class Check {
+	    id: string;
+	    name: string;
+	    state: string;
+	    detail: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Check(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.state = source["state"];
+	        this.detail = source["detail"];
+	    }
+	}
+	export class Report {
+	    // Go type: time
+	    checkedAt: any;
+	    checks: Check[];
+
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.checkedAt = this.convertValues(source["checkedAt"], null);
+	        this.checks = this.convertValues(source["checks"], Check);
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

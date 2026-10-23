@@ -38,18 +38,22 @@ await page.route("**/api/**", async route => {
   else if (path.endsWith("/workspaces")) body = [workspace];
   else if (path.endsWith("/conversations")) body = [conversation, secondChat];
   else if (path.endsWith("/messages")) body = path.includes(secondChat.id) ? [] : messages;
+  else if (path.includes("/agent-platform/selection/")) body = { profileId: null };
+  else if (path.includes("/agent-platform/")) body = [];
   else if (path.endsWith("/context")) body = { version: 0, view: { mode: "AUTO", items: [], packIds: [] }, messages: [], packs: [], excludedTurns: 0, estimatedTokens: 0, selectionHash: "fixture", estimateMethod: "fixture" };
   else if (path === "/api/model-providers") body = [provider];
   else if (path === "/api/model-providers/provider-qa" && route.request().method() === "PATCH") { savedProvider = route.request().postDataJSON(); provider = { ...provider, ...savedProvider, hasKey: true }; body = provider; }
   else if (path === "/api/tasks" && route.request().method() === "POST") { submitted = route.request().postDataJSON(); body = { ...task, id: "submitted-task", prompt: submitted.prompt }; }
   else if (path === "/api/tasks") body = url.searchParams.get("conversationId") === secondChat.id ? [] : [task];
   else if (path.endsWith("/events")) body = events.filter(value => value.sequence > Number(url.searchParams.get("afterSequence") || 0));
-  else if (path.endsWith("/artifacts") || path.endsWith("/approvals")) body = [];
+  else if (path.endsWith("/artifacts") || path.endsWith("/approvals") || path.endsWith("/instructions")) body = [];
   else if (path.includes("/source-snapshots")) body = { id: "snapshot-qa" };
   else body = {};
   await route.fulfill({ json: body });
 });
 const results = [];
+const output = resolve(process.env.PROOFCODE_UI_EVIDENCE || "../.proofcode/workbench-qa");
+await mkdir(output, { recursive: true });
 const record = label => { results.push(label); console.log(`PASS ${label}`); };
 const metrics = () => page.locator(".conversation-stream").evaluate(node => {
   const stream = node.getBoundingClientRect(), composer = document.querySelector(".composer-dock").getBoundingClientRect();
@@ -146,9 +150,20 @@ try {
   await page.locator(".run-usage-summary").getByText("100 t/s", { exact: true }).waitFor();
   assert((await page.locator(".run-usage-summary").innerText()).includes("80%"));
   assert((await page.locator(".run-usage-summary").innerText()).includes("0.000000 CNY"));
+  events.push(
+    { sequence: 4, type: "agent.delegated", timestamp, payload: { agentId: "child-qa", kind: "queued", payload: { name: "检查工具配置", status: "queued" } } },
+    { sequence: 5, type: "agent.delegated", timestamp, payload: { agentId: "child-qa", kind: "started", payload: { name: "检查工具配置", status: "running" } } },
+    { sequence: 6, type: "agent.delegated", timestamp, payload: { agentId: "child-qa", kind: "usage.updated", payload: { requestUsageReported: true, requestInputTokens: 40, requestOutputTokens: 10, requestEstimatedCost: 0.001, costCurrency: "CNY" } } },
+    { sequence: 7, type: "agent.delegated", timestamp, payload: { agentId: "child-qa", kind: "completed", payload: { status: "completed", result: "已检查", usage: { inputTokens: 40, outputTokens: 10, reported: true } } } }
+  );
+  await page.getByTitle("刷新项目与会话").click();
+  await page.locator(".run-usage-summary").getByText("10,250", { exact: true }).waitFor();
+  assert((await page.locator(".run-usage-summary").innerText()).includes("0.001000 CNY"));
   await page.getByRole("button", { name: "运行详情", exact: true }).click();
   await page.getByText("1m 上限 · 输入 900k · 输出 32k · 压缩 强力", { exact: true }).waitFor();
   assert((await page.locator(".run-resource-metrics").innerText()).includes("8,000 / 1,000"));
+  await page.locator(".child-task-list").getByText("检查工具配置", { exact: true }).waitFor();
+  assert((await page.locator(".child-task-list").innerText()).includes("已检查"));
   await page.getByTitle("关闭运行详情").click();
   await page.getByRole("button", { name: "模型设置", exact: true }).click();
   await page.getByLabel("上下文最大 Token", { exact: true }).fill("1000000");
@@ -198,8 +213,6 @@ try {
   await page.waitForTimeout(100);
   const latest = page.getByRole("button", { name: "滚动到最新消息", exact: true });
   if (await latest.isEnabled()) await latest.click();
-  const output = resolve(process.env.PROOFCODE_UI_EVIDENCE || "../.proofcode/workbench-qa");
-  await mkdir(output, { recursive: true });
   await page.screenshot({ path: resolve(output, "chat-wide.png") });
   for (const size of [{ width: 962, height: 860 }, { width: 1024, height: 600 }, { width: 390, height: 844 }, { width: 760, height: 480 }]) {
     await page.setViewportSize(size);
@@ -229,7 +242,8 @@ try {
     { sequence: 6, type: "tool.completed", timestamp, payload: { callId: "read", tool: "read_files", result: "已读取 Transcript.tsx 和相关布局样式。" } },
     { sequence: 7, type: "tool.completed", timestamp, payload: { callId: "verify", tool: "run_command", result: "npm test\n22 tests passed" } }
   ];
-  await page.getByTitle("刷新项目与会话").click();
+  // Start this independent fixture history with a fresh event cursor.
+  await page.reload();
   await page.locator(".execution-timeline").waitFor();
   await page.waitForFunction(() => document.querySelectorAll(".execution-entry").length === 3);
   assert.equal(await page.locator(".execution-entry").count(), 3);
@@ -264,4 +278,10 @@ try {
   assert.deepEqual(errors, []);
   record("no browser runtime errors");
   console.log(JSON.stringify({ checks: results.length, evidence: output }));
+} catch (error) {
+  try { await page.screenshot({ path: resolve(output, "failure.png") }); } catch {}
+  let transcript = "";
+  try { transcript = (await page.locator(".conversation-stream").innerText({ timeout: 1000 })).slice(-2500); } catch {}
+  console.error({ errors, url: page.url(), title: await page.title().catch(() => ""), body: (await page.locator("body").innerText().catch(() => "")).slice(-2500), transcript, selectedTask: await page.locator(".sidebar-task.active").allTextContents().catch(() => []) });
+  throw error;
 } finally { await browser.close(); }

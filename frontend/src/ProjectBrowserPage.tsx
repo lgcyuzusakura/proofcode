@@ -3,16 +3,17 @@ import { ArrowLeft, ArrowRight, Code2, ExternalLink, Globe, Hand, Loader2, Mouse
 import { desktopApp } from "./api";
 import type { BrowserState, Project } from "./types";
 
-export function ProjectBrowserPage({ project }: { project: Project }) {
+export function ProjectBrowserPage({ project, embedded = false, active = true, openRequest }: { project: Project; embedded?: boolean; active?: boolean; openRequest?: { url: string; revision: number } }) {
   const [url, setURL] = useState("http://127.0.0.1:3000"), [state, setState] = useState<BrowserState | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [text, setText] = useState(""), [panel, setPanel] = useState("console");
   const lock = useRef(false), generation = useRef(0);
   const handle = project.localHandle, native = !!handle && !!desktopApp()?.ProjectBrowser;
   const commit = (next: BrowserState | null) => { setState(next); if (next?.url) setURL(next.url); };
+  useEffect(() => { commit(null); setError(""); }, [project.id, handle]);
   useEffect(() => {
     const current = ++generation.current;
-    commit(null); setError("");
-    if (!native) return;
+    setBusy(false);
+    if (!native || !active) return;
     const inspect = async () => {
       if (lock.current || document.hidden) return;
       lock.current = true;
@@ -25,7 +26,7 @@ export function ProjectBrowserPage({ project }: { project: Project }) {
     };
     void inspect(); const timer = setInterval(() => void inspect(), 2000);
     return () => { generation.current++; clearInterval(timer); };
-  }, [project.id, handle, native]);
+  }, [project.id, handle, native, active]);
   const action = async (name: string, value = "", x = 0, y = 0) => {
     if (!native || lock.current) return;
     const current = generation.current; lock.current = true; setBusy(true); setError("");
@@ -36,8 +37,16 @@ export function ProjectBrowserPage({ project }: { project: Project }) {
     } catch (cause) { if (current === generation.current) setError(String(cause)); }
     finally { lock.current = false; if (current === generation.current) setBusy(false); }
   };
+  useEffect(() => {
+    if (!openRequest) return;
+    setURL(openRequest.url);
+    if (!native) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const open = () => { if (lock.current) timer = setTimeout(open, 100); else void action("open", openRequest.url); };
+    open(); return () => clearTimeout(timer);
+  }, [openRequest, native]);
   return <section className="developer-page shared-browser-page">
-    <header className="developer-heading"><div><h1><Globe size={22}/> 项目浏览器</h1><p>{project.name}</p></div><div className="browser-session-actions">
+    <header className="developer-heading"><div><h1><Globe size={embedded ? 15 : 22}/> 项目浏览器</h1><p>{project.name}</p></div><div className="browser-session-actions">
       {state && <span className={`browser-control-state ${state.owner === "human" ? "human" : "agent"}`}><span/>{state.owner === "human" ? "人工控制" : "AI 可操作"}</span>}
       <button className="secondary-button" disabled={!state || busy} onClick={() => void action(state?.owner === "human" ? "release" : "takeover")}><Hand size={15}/>{state?.owner === "human" ? "交还 AI" : "接管"}</button>
       <button className="icon-button" title="打开同一浏览器窗口并接管" disabled={!state || busy} onClick={() => void action("show")}><ExternalLink size={17}/></button>

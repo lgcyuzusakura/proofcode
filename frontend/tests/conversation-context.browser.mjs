@@ -43,6 +43,8 @@ await page.route("**/api/**", async route => {
   else if (path.endsWith("/context-packs")) body = packs;
   else if (path.endsWith("/context/fork")) { transfer=request.postDataJSON();forked=true;body=fork; }
   else if (path.endsWith("/context/packs")) { transfer=request.postDataJSON();const pack={id:"pack-fixture",name:transfer.title,sourceConversationId:chat.id,messageCount:transfer.messageIds.length,stale:false};packs.push(pack);body=pack; }
+  else if (path.includes("/agent-platform/selection/")) body = { profileId: null };
+  else if (path.includes("/agent-platform/")) body = [];
   else if (path.endsWith("/context")) {
     if (request.method()==="PATCH") { const change=request.postDataJSON(); assert.equal(change.version,version); view=change.view;version++; }
     body=path.includes(fork.id) ? {...build(),messages:build().messages.filter(input=>transfer.messageIds.includes(input.id)),packs:[{id:"fork-pack",name:fork.title,sourceConversationId:chat.id,messageCount:transfer.messageIds.length,stale:false}]} : build();

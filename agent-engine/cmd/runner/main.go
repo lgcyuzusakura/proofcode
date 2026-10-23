@@ -21,8 +21,10 @@ import (
 	amqp "github.com/Azure/go-amqp"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/agent"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/browser"
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/durablefile"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/event"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/experiment"
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/mcp"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/model"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/tool"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/workspace"
@@ -31,6 +33,8 @@ import (
 )
 
 type taskMessage struct {
+	AgentSnapshotHash    string `json:"agentSnapshotHash,omitempty"`
+	agent                *agentSnapshot
 	ProviderID           string `json:"providerId"`
 	connection           *modelConnection
 	Version              string              `json:"version"`
@@ -41,6 +45,8 @@ type taskMessage struct {
 	SourceKind           string              `json:"sourceKind"`
 	SourceSnapshotID     string              `json:"sourceSnapshotId"`
 	SourceManifestHash   string              `json:"sourceManifestHash"`
+	SourceAttachmentHash string              `json:"sourceAttachmentHash"`
+	sourceAttachments    string
 	ExecutionMode        string              `json:"executionMode"`
 	Branch               string              `json:"branch"`
 	Prompt               string              `json:"prompt"`
@@ -63,6 +69,8 @@ type taskMessage struct {
 }
 
 type workspaceMetadata struct {
+	MCPCatalogHash       string           `json:"mcpCatalogHash,omitempty"`
+	InstructionSequence  int64            `json:"instructionSequence,omitempty"`
 	Repository           string           `json:"repository"`
 	Attempt              int              `json:"attempt"`
 	Handle               worktree.Handle  `json:"handle"`
@@ -221,10 +229,13 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	if task.ExecutionMode == "" {
 		task.ExecutionMode = "CODE"
 	}
-	if task.ExecutionMode != "CODE" && task.ExecutionMode != "CHAT" {
+	if task.ExecutionMode != "CODE" && task.ExecutionMode != "CHAT" && task.ExecutionMode != "PLAN" {
 		return errors.New("executionMode is invalid")
 	}
-	if task.ExecutionMode == "CODE" && task.SourceKind == "REMOTE_REPOSITORY" && !validRepositoryURL(task.Repository) {
+	if task.ExecutionMode == "PLAN" && task.TestCommand != "" {
+		return errors.New("plan mode cannot execute a test command")
+	}
+	if task.ExecutionMode != "CHAT" && task.SourceKind == "REMOTE_REPOSITORY" && !validRepositoryURL(task.Repository) {
 		return errors.New("repositoryUrl must be http or https for a remote project")
 	}
 	if task.SourceKind != "REMOTE_REPOSITORY" && task.SourceKind != "LOCAL_FOLDER" && task.SourceKind != "SCRATCH" {
@@ -270,12 +281,19 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 	if err := r.resolveModel(ctx, &task); err != nil {
 		return err
 	}
+	if err := r.resolveAgent(ctx, &task); err != nil {
+		return err
+	}
+	if err := r.resolveSourceAttachments(ctx, &task); err != nil {
+		return err
+	}
 	if task.ExecutionMode == "CHAT" {
 		if task.ExperimentGroup != "" {
 			return errors.New("chat cannot redefine experiment profiles")
 		}
 		return r.runChat(ctx, task, events)
 	}
+	task.Prompt += task.sourceAttachments
 	configurationHash := r.configurationHash(task)
 
 	base := filepath.Join(r.WorkspaceRoot, task.TaskID, fmt.Sprintf("attempt-%d", task.Attempt))
@@ -396,6 +414,49 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		}
 		request.HistoryMessages = history
 	}
+	if task.ExperimentGroup == "" {
+		task.agent.registerSkills(coordinator.MainTools)
+		task.agent.registerSkills(coordinator.ScoutTools)
+		task.agent.registerSkills(coordinator.VerifierTools)
+		coordinator.MainTools.Register(&tool.Plan{Path: filepath.Join(base, "plan.json"), TaskID: task.TaskID, Events: events})
+		coordinator.Instructions += "\nFor multi-step work, maintain an honest durable plan with update_plan. Completed means verified; describe blocked work explicitly."
+		if task.ExecutionMode == "PLAN" {
+			coordinator.ReadOnly = true
+			coordinator.Instructions = "\nThis is PLAN mode. Inspect the project with read tools, maintain update_plan, and propose a concrete implementation plan. Do not modify project files, run commands, or claim execution."
+		}
+		var configs []mcp.ServerConfig
+		if raw := os.Getenv("RUNNER_MCP_SERVERS"); raw != "" {
+			if err := json.Unmarshal([]byte(raw), &configs); err != nil {
+				return errors.New("invalid RUNNER_MCP_SERVERS configuration")
+			}
+		}
+		if task.ExecutionMode == "PLAN" || (task.agent != nil && task.agent.Profile.ReadOnly) {
+			configs = nil
+		} else {
+			configs, err = selectMCP(configs, task.agent)
+		}
+		if err != nil {
+			return err
+		}
+		runtime, err := mcp.Connect(ctx, configs, ws.Root, coordinator.MainTools)
+		if err != nil {
+			return err
+		}
+		defer runtime.Close()
+		catalogHash := mcpCatalogHash(coordinator.MainTools)
+		if resumed && len(saved.Messages) > 0 && saved.MCPCatalogHash != catalogHash {
+			return errors.New("MCP catalog changed since checkpoint; start a new task")
+		}
+		saved.MCPCatalogHash = catalogHash
+		if task.agent != nil {
+			coordinator.Instructions += task.agent.instructions()
+			coordinator.AllowedTools = task.agent.Profile.AllowedTools
+			coordinator.ReadOnly = task.agent.Profile.ReadOnly || task.ExecutionMode == "PLAN"
+			if err := events.Emit(ctx, task.TaskID, "agent.configuration", map[string]any{"profileId": task.agent.ProfileID, "name": task.agent.ProfileName, "version": task.agent.ProfileVersion, "readOnly": coordinator.ReadOnly, "memories": task.agent.Memories, "personalization": task.agent.Personalization, "skills": task.agent.skillCatalog(), "snapshotHash": task.AgentSnapshotHash}); err != nil {
+				return err
+			}
+		}
+	}
 	if task.ExperimentGroup != "" {
 		collector.Set("profileApplied", true)
 	}
@@ -421,11 +482,16 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		if err = file.Close(); err != nil {
 			return err
 		}
-		return os.Rename(tmp, metadataPath)
+		return durablefile.Rename(tmp, metadataPath)
 	}
 	if saved.InFlightCall != nil {
 		return fmt.Errorf("tool call %s (%s) was interrupted with an unknown outcome; workspace was preserved for review", saved.InFlightCall.ID, saved.InFlightCall.Name)
 	}
+	publishWorkspacePreview := workspacePreviewPublisher(task.TaskID, handle.Base, events, func(call context.Context) (string, error) {
+		ws.RLock()
+		defer ws.RUnlock()
+		return manager.PreviewPatch(call, handle, workspacePreviewLimit)
+	})
 	request.Checkpoint = func(state agent.RunResult) error {
 		saved.Messages = state.Messages
 		saved.Usage = state.Usage
@@ -433,7 +499,8 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		saved.PendingCall = nil
 		saved.RemainingCalls = state.RemainingCalls
 		saved.ApprovalID = ""
-		return writeState()
+		if err := writeState(); err != nil { return err }
+		return publishWorkspacePreview(ctx)
 	}
 	request.MainDone = func(state agent.RunResult) error {
 		saved.MainCompleted = true
@@ -479,6 +546,9 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		}
 	} else if resumed && saved.PendingCall != nil {
 		return errors.New("pending approval must be resolved before restarting")
+	}
+	if task.ExperimentGroup == "" && task.AgentSnapshotHash != "" {
+		request.BeforeStep = r.instructionPoller(task, &saved, writeState)
 	}
 	result, err := coordinator.Run(ctx, request)
 	if err != nil {

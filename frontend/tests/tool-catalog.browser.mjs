@@ -1,0 +1,93 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+const { chromium } = createRequire(import.meta.url)("playwright");
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage(), errors = [], results = [];
+page.on("pageerror", error => errors.push(error.message));
+const project = { id: "project-tools", name: "Tool catalog QA", sourceKind: "REMOTE_REPOSITORY", defaultBranch: "main" };
+const workspace = { id: "workspace-tools", projectId: project.id, name: "工作区", kind: "REMOTE_REPOSITORY", defaultWorkspace: true };
+const conversation = { id: "chat-tools", projectId: project.id, workspaceId: workspace.id, title: "工具目录", defaultConversation: true };
+const scope = { projectId: project.id, workspaceId: workspace.id, conversationId: conversation.id };
+const task = { id: "task-tools", ...scope, prompt: "检查工具", model: "fixture", status: "SUCCEEDED", attempt: 2, createdAt: "2026-10-21T10:00:00Z" };
+const event = (sequence, type, payload, attempt = 2) => ({ sequence, type, payload, attempt, runId: `run-${attempt}`, timestamp: new Date(1000 + sequence * 100).toISOString() });
+const definitions = [{ name: "read_file", description: "Read selected source files", parameters: { type: "object", properties: { path: { type: "string" } } } }, { name: "apply_patch", description: "Apply a reviewed patch", parameters: { type: "object" } }, { name: "mcp__docs__find", description: "Find docs <script>window.catalogInjected = true</script>", parameters: { type: "object", properties: { query: { type: "string", description: "search docs" } }, required: ["query"] } }];
+let events = [event(1, "task.started", { tools: [{ name: "stale-tool" }] }, 1), event(2, "task.started", { tools: definitions, readOnly: true }), event(3, "tool.requested", { tool: "read_file", callId: "read-1", risk: "read", arguments: { path: "main.go" } }), event(4, "tool.started", { tool: "read_file", callId: "read-1" }), event(5, "tool.completed", { tool: "read_file", callId: "read-1", result: "package main" }), event(6, "tool.requested", { tool: "mcp__docs__find", callId: "docs-1", risk: "exec", arguments: { query: "schema" } }), event(7, "tool.started", { tool: "mcp__docs__find", callId: "docs-1" }), event(8, "tool.failed", { tool: "mcp__docs__find", callId: "docs-1", result: "MCP call failed or timed out" })];
+await context.addInitScript(({ scope }) => { localStorage.setItem("proofcode.session", "fixture"); localStorage.setItem("proofcode.selected-scope", JSON.stringify(scope)); }, { scope });
+await page.route("**/api/**", async route => {
+  const path = new URL(route.request().url()).pathname;
+  let body = {};
+  if (path === "/api/auth/me") body = { id: "fixture", username: "fixture" };
+  else if (path === "/api/projects") body = [project];
+  else if (path.endsWith("/default-scope")) body = scope;
+  else if (path.endsWith("/workspaces")) body = [workspace];
+  else if (path.endsWith("/conversations")) body = [conversation];
+  else if (path.endsWith("/agent-platform/selection/chat-tools")) body = { profileId: null };
+  else if (path.includes("/agent-platform/") || path.endsWith("/messages") || path === "/api/model-providers" || /\/(artifacts|approvals|instructions)$/.test(path)) body = [];
+  else if (path === "/api/tasks") body = [task];
+  else if (path.endsWith("/events")) body = events.filter(event => event.sequence > Number(new URL(route.request().url()).searchParams.get("afterSequence") || 0));
+  else if (path.endsWith("/context")) body = { version: 0, view: { mode: "AUTO", items: [], packIds: [] }, messages: [], packs: [], excludedTurns: 0, estimatedTokens: 0, selectionHash: "fixture", estimateMethod: "fixture" };
+  await route.fulfill({ json: body });
+});
+const output = resolve(process.env.PROOFCODE_UI_EVIDENCE || ".proofcode/tool-catalog-qa");
+await mkdir(output, { recursive: true });
+const record = label => { results.push(label); console.log(`PASS ${label}`); };
+try {
+  await page.goto(process.env.PROOFCODE_UI_URL || "http://127.0.0.1:5187");
+  await page.locator(".sidebar-more > summary").click();
+  await page.getByRole("button", { name: "可用工具", exact: true }).click();
+  await page.getByText("显示 3 / 3 个工具，本次运行受只读限制", { exact: true }).waitFor();
+  assert.equal(await page.locator(".runtime-tool-entry").count(), 3);
+  assert.equal(await page.getByText("stale-tool", { exact: true }).count(), 0);
+  record("catalog uses current task attempt and explains read-only restriction");
+
+  await page.getByLabel("搜索可用工具", { exact: true }).fill("修改文件");
+  assert.equal(await page.locator(".runtime-tool-entry").count(), 1);
+  await page.getByLabel("搜索可用工具", { exact: true }).fill("no-match");
+  await page.getByText("没有匹配的工具，调整搜索或筛选条件。", { exact: true }).waitFor();
+  await page.getByLabel("搜索可用工具", { exact: true }).fill("");
+  await page.getByLabel("工具来源", { exact: true }).selectOption("mcp");
+  assert.equal(await page.locator(".runtime-tool-entry").count(), 1);
+  await page.locator(".runtime-tool-entry > summary").click();
+  await page.locator(".runtime-tool-detail > pre").getByText('"query"', { exact: false }).waitFor();
+  assert.equal(await page.evaluate(() => window.catalogInjected), undefined);
+  record("search, empty state, MCP filtering and parameter preview render untrusted descriptions as text");
+
+  await page.getByLabel("工具调用状态", { exact: true }).selectOption("failed");
+  await page.locator(".runtime-tool-call > summary").click();
+  await page.getByText("MCP call failed or timed out", { exact: true }).waitFor();
+  assert((await page.locator(".runtime-tool-call > summary").innerText()).includes("执行"));
+  assert((await page.locator(".runtime-tool-call > summary").innerText()).includes("0.10 s"));
+  await page.getByLabel("工具调用状态", { exact: true }).selectOption("approval");
+  assert.equal(await page.locator(".runtime-tool-entry").count(), 0);
+  await page.getByLabel("工具调用状态", { exact: true }).selectOption("all");
+  record("recorded failure, risk and duration are visible without inventing successful execution");
+
+  await page.setViewportSize({ width: 390, height: 640 });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.getByLabel("搜索可用工具", { exact: true }).focus();
+  await page.keyboard.press("Tab");
+  assert(await page.getByLabel("工具来源", { exact: true }).evaluate(node => node === document.activeElement));
+  await page.screenshot({ path: resolve(output, "tools-narrow-light.png") });
+  await page.getByTitle("切换深色外观").click();
+  await page.screenshot({ path: resolve(output, "tools-narrow-dark.png") });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForFunction(() => document.querySelector(".nav-rail")?.getBoundingClientRect().width >= 250);
+  assert(await page.locator(".plugin-heading h1").evaluate(node => {
+    const luminance = color => color.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, index) => sum + v * [.2126, .7152, .0722][index], 0);
+    const foreground = luminance(getComputedStyle(node).color), background = luminance(getComputedStyle(document.querySelector(".route-overlay")).backgroundColor);
+    return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05) >= 4.5;
+  }), "dark heading must have readable contrast");
+  await page.locator(".runtime-tool-entry > summary").click();
+  await page.screenshot({ path: resolve(output, "tools-wide-dark.png") });
+  assert.deepEqual(errors, []);
+  record("light/dark narrow layouts fit the viewport and keyboard filters remain reachable");
+  await writeFile(resolve(output, "results.json"), JSON.stringify({ results, checks: results.length }, null, 2));
+  console.log(JSON.stringify({ checks: results.length, evidence: output }));
+} catch (error) {
+  await page.screenshot({ path: resolve(output, "failure.png") }).catch(() => {});
+  console.error({ errors, body: (await page.locator("body").innerText().catch(() => "")).slice(-3000) });
+  throw error;
+} finally { await browser.close(); }

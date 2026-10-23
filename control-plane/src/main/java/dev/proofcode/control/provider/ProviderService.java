@@ -27,7 +27,7 @@ public class ProviderService {
         var p=id==null?new ModelProvider(AccountService.requireId()):owned(id);
         if(in.name()==null||in.name().isBlank()||in.name().length()>120)throw new IllegalArgumentException("服务名称需为 1–120 字符");
         String url=validateUrl(in.baseUrl());
-        if(in.wireApi()==null||!Set.of("responses","chat").contains(in.wireApi()))throw new IllegalArgumentException("协议仅支持 responses 或 chat");
+        if(in.wireApi()==null||!Set.of("responses","chat","anthropic").contains(in.wireApi()))throw new IllegalArgumentException("协议仅支持 responses、chat 或 anthropic");
         if(in.apiKey()!=null&&!in.apiKey().isEmpty()){if(in.apiKey().length()>4096||in.apiKey().contains("\n")||in.apiKey().contains("\r"))throw new IllegalArgumentException("API Key 格式无效");p.encryptedKey=secrets.seal(in.apiKey());}
         if(p.encryptedKey==null)throw new IllegalArgumentException("请输入 API Key");
         // Retaining a key while changing its destination could send it to an unintended service.
@@ -42,18 +42,49 @@ public class ProviderService {
         var p=owned(id);
         try{
             validateUrl(p.baseUrl);
-            HttpRequest req=HttpRequest.newBuilder(URI.create(p.baseUrl+"/models")).timeout(Duration.ofSeconds(12)).header("Authorization","Bearer "+secrets.unseal(p.encryptedKey)).header("Accept","application/json").GET().build();
+            Set<String> ids=new TreeSet<>();Set<String> cursors=new HashSet<>();String cursor="";
+            for(int page=0;;page++){
+            if(page>=16)throw new IllegalArgumentException("模型目录超过 16 页，原目录未修改");
+            String query=cursor.isEmpty()?"":"?after_id="+java.net.URLEncoder.encode(cursor,java.nio.charset.StandardCharsets.UTF_8);
+            var builder=HttpRequest.newBuilder(URI.create(p.baseUrl+"/models"+query)).timeout(Duration.ofSeconds(12)).header("Accept","application/json");
+            if("anthropic".equals(p.wireApi))builder.header("x-api-key",secrets.unseal(p.encryptedKey)).header("anthropic-version","2023-06-01");
+            else builder.header("Authorization","Bearer "+secrets.unseal(p.encryptedKey));
+            HttpRequest req=builder.GET().build();
             var response=client.send(req,HttpResponse.BodyHandlers.ofInputStream());
             byte[] body;try(var stream=response.body()){body=stream.readNBytes((1<<20)+1);}
             if(response.statusCode()<200||response.statusCode()>=300)throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"模型列表读取失败，服务返回 HTTP "+response.statusCode());
             if(body.length>1<<20)throw new IllegalArgumentException("模型列表超过 1 MiB");
-            JsonNode node=json.readTree(body);if(node==null||!node.path("data").isArray())throw new IllegalArgumentException("服务未返回 OpenAI 格式的 data 模型列表");
-            Set<String> ids=new TreeSet<>();for(var item:node.get("data")){String model=item.path("id").asText("");if(!model.isBlank()&&model.length()<=200&&!model.chars().anyMatch(Character::isISOControl))ids.add(model);if(ids.size()>1000)throw new IllegalArgumentException("模型列表超过 1000 个");}
+            JsonNode node=json.readTree(body);if(node==null||!node.path("data").isArray())throw new IllegalArgumentException("服务未返回 data 模型列表");
+            for(var item:node.get("data")){String model=item.path("id").asText("");if(!model.isBlank()&&model.length()<=200&&!model.chars().anyMatch(Character::isISOControl))ids.add(model);if(ids.size()>1000)throw new IllegalArgumentException("模型列表超过 1000 个");}
+            if(!"anthropic".equals(p.wireApi)||!node.path("has_more").asBoolean(false))break;
+            cursor=node.path("last_id").asText("");
+            if(cursor.isBlank()||cursor.length()>200||cursor.chars().anyMatch(Character::isISOControl)||!cursors.add(cursor))throw new IllegalArgumentException("模型目录分页游标无效，原目录未修改");
+            }
             if(ids.isEmpty())throw new IllegalArgumentException("服务没有返回可用模型，请确认地址和权限");
             p.modelsJson=encode(ids);p.catalogAt=Instant.now();return view(providers.saveAndFlush(p));
         }catch(ResponseStatusException|IllegalArgumentException e){throw e;}catch(InterruptedException e){Thread.currentThread().interrupt();throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"模型列表请求被中断");}catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"无法读取模型列表，请检查 API 地址、密钥及网络");}
     }
     @Transactional public void delete(UUID id){providers.delete(owned(id));}
+    public ProbeResult probe(UUID id,String model){
+        var p=owned(id);validateUrl(p.baseUrl);
+        if(model==null||!models(p).contains(model))throw new IllegalArgumentException("请先从服务目录中选择模型");
+        long start=System.nanoTime();
+        try{
+            var builder=HttpRequest.newBuilder(URI.create(p.baseUrl+ProviderProbe.endpoint(p.wireApi))).timeout(Duration.ofSeconds(20)).header("Content-Type","application/json").header("Accept","application/json");
+            if("anthropic".equals(p.wireApi))builder.header("x-api-key",secrets.unseal(p.encryptedKey)).header("anthropic-version","2023-06-01");else builder.header("Authorization","Bearer "+secrets.unseal(p.encryptedKey));
+            var response=ProviderProbe.send(client,builder.POST(HttpRequest.BodyPublishers.ofString(encode(ProviderProbe.payload(p.wireApi,model)))).build());
+            byte[] body=response.body();
+            long elapsed=(System.nanoTime()-start)/1000000;
+            if(response.statusCode()/100!=2)return new ProbeResult(false,model,p.wireApi,response.statusCode(),ProviderProbe.failure(response.statusCode()),elapsed);
+            boolean valid=body.length<=256<<10&&ProviderProbe.valid(p.wireApi,json.readTree(body),json);
+            return new ProbeResult(valid,model,p.wireApi,response.statusCode(),valid?"tool_call_validated":"tool_protocol",elapsed);
+        }catch(InterruptedException e){Thread.currentThread().interrupt();return new ProbeResult(false,model,p.wireApi,0,"interrupted",(System.nanoTime()-start)/1000000);}
+        catch(java.util.concurrent.TimeoutException e){return new ProbeResult(false,model,p.wireApi,0,"timeout",(System.nanoTime()-start)/1000000);}
+        catch(java.util.concurrent.ExecutionException e){return new ProbeResult(false,model,p.wireApi,0,e.getCause() instanceof java.net.http.HttpTimeoutException?"timeout":e.getCause() instanceof IllegalArgumentException?"response_limit":"connection",(System.nanoTime()-start)/1000000);}
+        catch(java.net.http.HttpTimeoutException e){return new ProbeResult(false,model,p.wireApi,0,"timeout",(System.nanoTime()-start)/1000000);}
+        catch(com.fasterxml.jackson.core.JsonProcessingException e){return new ProbeResult(false,model,p.wireApi,200,"tool_protocol",(System.nanoTime()-start)/1000000);}
+        catch(Exception e){return new ProbeResult(false,model,p.wireApi,0,"connection",(System.nanoTime()-start)/1000000);}
+    }
     public void bind(TaskEntity task,UUID id){
         if(AccountService.currentId()==null&&id==null)return; // Existing fixture/runner default configuration.
         if(id==null)throw new IllegalArgumentException("请先配置模型服务并选择模型");
@@ -83,4 +114,5 @@ public class ProviderService {
     public record View(UUID id,String name,String baseUrl,String wireApi,boolean hasKey,List<Model> models,Map<String,String> aliases,Instant catalogAt,long version,Map<String,ModelSettings> modelSettings){}
     public record Model(String id,String name){}
     public record Connection(String baseUrl,String apiKey,String wireApi,ModelSettings settings){}
+    public record ProbeResult(boolean success,String model,String protocol,int httpStatus,String outcome,long durationMs){}
 }

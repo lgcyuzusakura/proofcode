@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type teamProvider struct {
@@ -183,12 +185,28 @@ func TestTeamRealToolsMessagesIsolationLimitsAndRecovery(t *testing.T) {
 			t.Fatal("recursive child capability")
 		}
 	}
+	team.Close()
+	var queued, started, completedEvent int64
 	for _, e := range memory.Events {
 		if e.Type != event.AgentDelegated {
 			t.Fatal("child events contaminated main stream")
 		}
+		payload, ok := e.Payload["kind"].(string)
+		if !ok {
+			t.Fatalf("delegated event missing kind: %+v", e)
+		}
+		switch payload {
+		case "queued":
+			queued = e.Sequence
+		case "started":
+			started = e.Sequence
+		case "completed":
+			completedEvent = e.Sequence
+		}
 	}
-	team.Close()
+	if queued == 0 || started <= queued || completedEvent <= started {
+		t.Fatalf("child lifecycle events are missing or out of order: queued=%d started=%d completed=%d", queued, started, completedEvent)
+	}
 	recovered, err := OpenTeam(context.Background(), p, tool.NewRegistry(), nil, "task", "model", path)
 	if err != nil {
 		t.Fatal(err)
@@ -212,26 +230,38 @@ func TestTeamRealToolsMessagesIsolationLimitsAndRecovery(t *testing.T) {
 	}
 }
 
-type blockProvider struct{ entered chan struct{} }
+type blockProvider struct {
+	entered chan string
+	active  atomic.Int32
+	maximum atomic.Int32
+}
 
-func (p blockProvider) Chat(ctx context.Context, r model.Request, d func(string)) (model.Response, error) {
+func (p *blockProvider) Chat(ctx context.Context, r model.Request, d func(string)) (model.Response, error) {
+	active := p.active.Add(1)
+	defer p.active.Add(-1)
+	for maximum := p.maximum.Load(); active > maximum; maximum = p.maximum.Load() {
+		if p.maximum.CompareAndSwap(maximum, active) {
+			break
+		}
+	}
 	select {
-	case p.entered <- struct{}{}:
+	case p.entered <- r.Messages[len(r.Messages)-1].Content:
 	default:
 	}
 	<-ctx.Done()
 	return model.Response{}, ctx.Err()
 }
-func TestTeamConcurrencyOneCancelAndSpawnLimit(t *testing.T) {
-	entered := make(chan struct{}, 4)
-	team, err := OpenTeam(context.Background(), blockProvider{entered}, tool.NewRegistry(), nil, "task", "model", filepath.Join(t.TempDir(), "team.json"))
+func TestTeamConcurrencyTwoCancelAndSpawnLimit(t *testing.T) {
+	provider := &blockProvider{entered: make(chan string, 4)}
+	path := filepath.Join(t.TempDir(), "team.json")
+	team, err := OpenTeam(context.Background(), provider, tool.NewRegistry(), nil, "task", "model", path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer team.Close()
 	children := []ChildTask{}
 	for i := 0; i < 4; i++ {
-		c, err := team.spawn("read", "inspect")
+		c, err := team.spawn("read", "inspect "+string(rune('1'+i)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -240,17 +270,58 @@ func TestTeamConcurrencyOneCancelAndSpawnLimit(t *testing.T) {
 	if _, err = team.spawn("fifth", "inspect"); err == nil {
 		t.Fatal("spawn limit bypassed")
 	}
-	<-entered
+	var firstPrompt string
+	for i := 0; i < childConcurrency; i++ {
+		select {
+		case prompt := <-provider.entered:
+			firstPrompt = prompt
+		case <-time.After(5 * time.Second):
+			t.Fatal("two children did not start concurrently")
+		}
+	}
 	select {
-	case <-entered:
-		t.Fatal("concurrency exceeded one")
-	default:
+	case <-provider.entered:
+		t.Fatal("third child started before a slot was released")
+	case <-time.After(100 * time.Millisecond):
+	}
+	for _, child := range children {
+		if child.Prompt == firstPrompt {
+			raw, _ := json.Marshal(map[string]any{"agentId": child.ID})
+			if r := (teamTool{team: team, actor: "main", operation: "cancel_agent"}).Execute(context.Background(), raw); r.IsError {
+				t.Fatal(r)
+			}
+		}
+	}
+	select {
+	case <-provider.entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("queued child did not start after cancellation")
+	}
+	if provider.maximum.Load() != childConcurrency {
+		t.Fatalf("maximum active children = %d, want %d", provider.maximum.Load(), childConcurrency)
 	}
 	for _, child := range children {
 		raw, _ := json.Marshal(map[string]any{"agentId": child.ID})
 		r := (teamTool{team: team, actor: "main", operation: "cancel_agent"}).Execute(context.Background(), raw)
 		if r.IsError {
 			t.Fatal(r)
+		}
+	}
+	team.Close()
+	if provider.active.Load() != 0 {
+		t.Fatal("provider still running after Close")
+	}
+	if _, err := team.spawn("late", "inspect"); err == nil {
+		t.Fatal("closed team accepted a new child")
+	}
+	restored, err := OpenTeam(context.Background(), provider, tool.NewRegistry(), nil, "task", "model", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	for _, child := range restored.state.Children {
+		if child.Status != "cancelled" {
+			t.Fatalf("cancelled outcome did not survive reopen: %+v", child)
 		}
 	}
 }

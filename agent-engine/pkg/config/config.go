@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const MaxTotalTokens = 128000
@@ -111,8 +112,8 @@ func LoadDirectory(dir string) (ModelConfig, error) {
 	if c.WireAPI == "" {
 		c.WireAPI = "responses"
 	}
-	if c.WireAPI != "responses" && c.WireAPI != "chat" {
-		return c, errors.New("仅支持 responses 或 chat wire_api")
+	if c.WireAPI != "responses" && c.WireAPI != "chat" && c.WireAPI != "anthropic" {
+		return c, errors.New("仅支持 responses、chat 或 anthropic wire_api")
 	}
 	if c.APIKey == "" && c.EnvKey != "" {
 		c.APIKey = os.Getenv(c.EnvKey)
@@ -162,40 +163,71 @@ func EstimateTokens(values ...string) int {
 	return n
 }
 func (c ModelConfig) Models(ctx context.Context) ([]string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 	client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	req, err := http.NewRequestWithContext(ctx, "GET", strings.TrimRight(c.BaseURL, "/")+"/models", nil)
-	if err != nil {
-		return nil, errors.New("模型列表地址无效")
-	}
-	req.Header.Set("Authorization", "Bearer "+c.APIKey)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, errors.New("无法连接 provider 模型列表")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("模型列表返回 HTTP %d", resp.StatusCode)
-	}
-	b, err := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
-	if err != nil || len(b) > 1<<20 {
-		return nil, errors.New("模型列表超过限制")
-	}
-	var catalog struct {
-		Data []struct {
-			ID string `json:"id"`
-		} `json:"data"`
-	}
-	if json.Unmarshal(b, &catalog) != nil {
-		return nil, errors.New("模型列表格式无效")
-	}
 	values := []string{}
-	seen := map[string]bool{}
-	for _, m := range catalog.Data {
-		if m.ID != "" && len(m.ID) <= 200 && !seen[m.ID] {
-			values = append(values, m.ID)
-			seen[m.ID] = true
+	seen, cursors := map[string]bool{}, map[string]bool{}
+	cursor := ""
+	for page := 0; page < 16; page++ {
+		query := ""
+		if cursor != "" {
+			query = "?after_id=" + url.QueryEscape(cursor)
 		}
+		req, err := http.NewRequestWithContext(ctx, "GET", strings.TrimRight(c.BaseURL, "/")+"/models"+query, nil)
+		if err != nil {
+			return nil, errors.New("模型列表地址无效")
+		}
+		if c.WireAPI == "anthropic" {
+			req.Header.Set("x-api-key", c.APIKey)
+			req.Header.Set("anthropic-version", "2023-06-01")
+		} else {
+			req.Header.Set("Authorization", "Bearer "+c.APIKey)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, errors.New("无法连接 provider 模型列表")
+		}
+		if resp.StatusCode != 200 {
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("模型列表返回 HTTP %d", resp.StatusCode)
+		}
+		b, err := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
+		_ = resp.Body.Close()
+		if err != nil || len(b) > 1<<20 {
+			return nil, errors.New("模型列表超过限制")
+		}
+		var catalog struct {
+			Data []struct {
+				ID string `json:"id"`
+			} `json:"data"`
+			HasMore bool   `json:"has_more"`
+			LastID  string `json:"last_id"`
+		}
+		if json.Unmarshal(b, &catalog) != nil || catalog.Data == nil {
+			return nil, errors.New("模型列表格式无效")
+		}
+		for _, m := range catalog.Data {
+			if m.ID != "" && len(m.ID) <= 200 && !strings.ContainsFunc(m.ID, unicode.IsControl) && !seen[m.ID] {
+				values = append(values, m.ID)
+				seen[m.ID] = true
+				if len(values) > 1000 {
+					return nil, errors.New("模型列表超过 1000 个")
+				}
+			}
+		}
+		if c.WireAPI != "anthropic" || !catalog.HasMore {
+			sort.Strings(values)
+			return values, nil
+		}
+		cursor = catalog.LastID
+		if cursor == "" || len(cursor) > 200 || strings.ContainsFunc(cursor, unicode.IsControl) || cursors[cursor] {
+			return nil, errors.New("模型目录分页游标无效")
+		}
+		cursors[cursor] = true
 	}
-	sort.Strings(values)
-	return values, nil
+	return nil, errors.New("模型目录超过 16 页")
 }

@@ -98,3 +98,13 @@ test("authentication errors identify expired account sessions without exposing r
   bridge({ ProxyRequest: async () => ({ status: 404, body: "project not found" }) });
   await assert.rejects(api("/api/projects"), error => error.status === 404 && error.message === "404 project not found");
 });
+
+test("native API forwards OAuth PUT configuration with the account session", async () => {
+  let request;
+  bridge({ ProxyRequest: async (...args) => { request = args; return { status: 200, body: '{"configured":true,"serverVersion":8}' }; } });
+  saved.set("proofcode.session", "fixture-session");
+  const path = "/api/projects/project/mcp-servers/server/oauth?version=7";
+  const body = JSON.stringify({ clientId: "desktop-client", clientSecret: "fixture-secret", scope: "docs.read", clearClientSecret: false });
+  assert.deepEqual(await api(path, { method: "PUT", body }), { configured: true, serverVersion: 8 });
+  assert.deepEqual(request, [path, "PUT", body, "Bearer fixture-session", ""]);
+});

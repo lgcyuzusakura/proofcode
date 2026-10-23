@@ -8,6 +8,10 @@ import dev.proofcode.control.experiment.ExperimentProfile;
 @Entity
 @Table(name="tasks")
 public class TaskEntity {
+	@Column(name="agent_snapshot",columnDefinition="text") private String agentSnapshot;
+	@com.fasterxml.jackson.annotation.JsonIgnore public String getAgentSnapshot(){return agentSnapshot;}
+	public void captureAgent(String value){if(agentSnapshot==null)agentSnapshot=value;}
+	public String getAgentSnapshotHash(){return agentSnapshot==null?null:dev.proofcode.control.session.ConversationContextService.hash(agentSnapshot);}
     @Id private UUID id;
     @Column(name="provider_id") private UUID providerId;
     @Column(name="provider_snapshot",columnDefinition="text") private String providerSnapshot;
@@ -15,6 +19,10 @@ public class TaskEntity {
     @com.fasterxml.jackson.annotation.JsonIgnore public String getContextSnapshot(){return contextSnapshot;}
     public void captureContext(String snapshot){if(contextSnapshot==null)contextSnapshot=snapshot;}
     public String getContextSelectionHash(){return contextSnapshot==null?null:dev.proofcode.control.session.ConversationContextService.hash(contextSnapshot);}
+    @Column(name="source_attachment_snapshot",columnDefinition="text") private String sourceAttachmentSnapshot;
+    @com.fasterxml.jackson.annotation.JsonIgnore public String getSourceAttachmentSnapshot(){return sourceAttachmentSnapshot;}
+    public void captureSourceAttachments(String snapshot){if(sourceAttachmentSnapshot==null)sourceAttachmentSnapshot=snapshot;}
+    public String getSourceAttachmentHash(){return sourceAttachmentSnapshot==null||sourceAttachmentSnapshot.isEmpty()?null:dev.proofcode.control.session.ConversationContextService.hash(sourceAttachmentSnapshot);}
     public UUID getProviderId(){return providerId;}
     @com.fasterxml.jackson.annotation.JsonIgnore public String getProviderSnapshot(){return providerSnapshot;}
     public void bindProvider(UUID id,String snapshot){providerId=id;providerSnapshot=snapshot;}

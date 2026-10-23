@@ -5,11 +5,16 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, ChevronsDown, Search, X } f
 const positions = new Map<string, { top: number; pinned: boolean }>();
 const bottomThreshold = 48;
 
-export function Transcript({ sessionKey, children }: { sessionKey: string; children: ReactNode }) {
+export type MessageLocation = { id: string; revision: number };
+
+export function Transcript({ sessionKey, children, location }: { sessionKey: string; children: ReactNode; location?: MessageLocation }) {
   const viewport = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
   const restoring = useRef(false);
+  const cancelRestore = useRef(() => {});
+  const revealed = useRef("");
+  const highlight = useRef<{ node: HTMLElement; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [edges, setEdges] = useState({ top: true, bottom: true });
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
@@ -55,22 +60,23 @@ export function Transcript({ sessionKey, children }: { sessionKey: string; child
     const observer = new ResizeObserver(resize);
     observer.observe(body);
     observer.observe(node);
-    const cancelRestore = () => { restoreTop = null; restoring.current = false; };
-    node.addEventListener("wheel", cancelRestore, { passive: true });
-    node.addEventListener("pointerdown", cancelRestore);
-    node.addEventListener("keydown", cancelRestore);
+    const cancel = () => { restoreTop = null; restoring.current = false; };
+    cancelRestore.current = cancel;
+    node.addEventListener("wheel", cancel, { passive: true });
+    node.addEventListener("pointerdown", cancel);
+    node.addEventListener("keydown", cancel);
     return () => {
       observer.disconnect();
-      node.removeEventListener("wheel", cancelRestore);
-      node.removeEventListener("pointerdown", cancelRestore);
-      node.removeEventListener("keydown", cancelRestore);
+      node.removeEventListener("wheel", cancel);
+      node.removeEventListener("pointerdown", cancel);
+      node.removeEventListener("keydown", cancel);
     };
   }, [sessionKey]);
 
   const go = (end: "top" | "bottom") => {
     const node = viewport.current;
     if (!node) return;
-    restoring.current = false;
+    cancelRestore.current();
     pinned.current = end === "bottom";
     node.scrollTop = end === "bottom" ? node.scrollHeight : 0;
     remember();
@@ -81,12 +87,32 @@ export function Transcript({ sessionKey, children }: { sessionKey: string; child
     const node = viewport.current;
     const match = matches.current[index];
     if (!node || !match) return;
-    restoring.current = false;
+    cancelRestore.current();
     pinned.current = false;
     node.scrollTop += match.getBoundingClientRect().top - node.getBoundingClientRect().top - 12;
     setMatchState(old => ({ ...old, index }));
     remember();
   };
+
+  useLayoutEffect(() => {
+    const key = `${sessionKey}:${location?.revision}:${location?.id}`;
+    if (!location?.id || revealed.current === key) return;
+    const node = viewport.current;
+    const target = content.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(location.id)}"]`);
+    if (!node || !target) return;
+    // Source navigation supersedes both a saved position and follow-to-bottom.
+    // Scroll only this viewport: scrollIntoView could move the entire workbench.
+    cancelRestore.current();pinned.current = false;revealed.current = key;
+    node.scrollTop += target.getBoundingClientRect().top - node.getBoundingClientRect().top - Math.max(12, (node.clientHeight - target.offsetHeight) / 2);
+    remember();target.tabIndex = -1;target.focus({ preventScroll: true });
+    if (highlight.current) { clearTimeout(highlight.current.timer);delete highlight.current.node.dataset.searchHighlight; }
+    target.dataset.searchHighlight = "true";
+    highlight.current = { node: target, timer: setTimeout(() => { delete target.dataset.searchHighlight;highlight.current = null; }, 5000) };
+  }, [location?.id, location?.revision, sessionKey, children]);
+
+  useLayoutEffect(() => () => {
+    if (highlight.current) { clearTimeout(highlight.current.timer);delete highlight.current.node.dataset.searchHighlight;highlight.current = null; }
+  }, [sessionKey]);
 
   useLayoutEffect(() => {
     const rows = Array.from(content.current?.querySelectorAll<HTMLElement>(".message-row") || []);

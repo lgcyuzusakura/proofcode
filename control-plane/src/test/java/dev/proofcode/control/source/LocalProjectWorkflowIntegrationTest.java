@@ -174,6 +174,64 @@ class LocalProjectWorkflowIntegrationTest {
         assertEquals("CANCELLED", restored.get(1).getStatus());
     }
 
+    @Test
+    void attachmentsUseSavedUtf8BytesAndCheckWorkspaceHashAndRanges() {
+        UUID project=localProject();var scope=scopes.resolve(project,null,null);
+        var archive=archive("src/订单.go","first\r\n第二行\r\n```\r\nlast\r\n");
+        var source=sources.create(project,scope.workspaceId(),archive);String hash=archive.files().get(0).sha256();
+        var selection=new SourceSnapshotService.Attachment(source.getId(),"src/订单.go",hash,2,3);
+        String snapshot=sources.snapshotAttachments(project,scope.workspaceId(),List.of(selection));
+        assertTrue(snapshot.contains("lines=\"2-3\""));assertTrue(snapshot.contains("````\n第二行\n```\n````"));
+        assertFalse(snapshot.contains("first"));assertFalse(snapshot.contains("last"));
+        assertThrows(IllegalArgumentException.class,()->sources.snapshotAttachments(project,scope.workspaceId(),List.of(selection,selection)));
+        assertThrows(IllegalArgumentException.class,()->sources.snapshotAttachments(project,scope.workspaceId(),List.of(new SourceSnapshotService.Attachment(source.getId(),selection.path(),"0".repeat(64),2,3))));
+        for(var range:List.of(new int[]{0,1},new int[]{3,2},new int[]{7,7},new int[]{1,6})) {
+            assertThrows(IllegalArgumentException.class,()->sources.snapshotAttachments(project,scope.workspaceId(),List.of(new SourceSnapshotService.Attachment(source.getId(),selection.path(),hash,range[0],range[1]))));
+        }
+        var other=scopes.createWorkspace(project,"Other",WorkspaceEntity.Kind.LOCAL_FOLDER);
+        assertEquals(HttpStatus.NOT_FOUND,assertThrows(ResponseStatusException.class,()->sources.snapshotAttachments(project,other.getId(),List.of(selection))).getStatusCode());
+        var binary=archive("binary.txt", "text\0binary");var binarySource=sources.create(project,scope.workspaceId(),binary);
+        assertThrows(IllegalArgumentException.class,()->sources.snapshotAttachments(project,scope.workspaceId(),List.of(new SourceSnapshotService.Attachment(binarySource.getId(),"binary.txt",binary.files().get(0).sha256(),null,null))));
+    }
+
+    @Test
+    void attachmentLimitsIncludeBodyAndEncodedFences() {
+        UUID project=localProject();var scope=scopes.resolve(project,null,null);
+        for(String text:List.of("x".repeat(32769),"`".repeat(23000),"line\n".repeat(301))) {
+            var archive=archive("large.txt",text);var source=sources.create(project,scope.workspaceId(),archive);
+            assertThrows(IllegalArgumentException.class,()->sources.snapshotAttachments(project,scope.workspaceId(),List.of(new SourceSnapshotService.Attachment(source.getId(),"large.txt",archive.files().get(0).sha256(),null,null))));
+        }
+        var archive=archive("two.txt","a".repeat(25000)+"\n"+"b".repeat(25000));var source=sources.create(project,scope.workspaceId(),archive);
+        var hash=archive.files().get(0).sha256();
+        assertThrows(IllegalArgumentException.class,()->sources.snapshotAttachments(project,scope.workspaceId(),List.of(new SourceSnapshotService.Attachment(source.getId(),"two.txt",hash,1,1),new SourceSnapshotService.Attachment(source.getId(),"two.txt",hash,2,2))));
+    }
+
+    @Test
+    void attachmentSnapshotsAreImmutableIdempotentAndRequireLiveRunnerLease() throws Exception {
+        UUID project=localProject();var scope=scopes.resolve(project,null,null);
+        var archive=archive("file.txt","before\nafter");var source=sources.create(project,scope.workspaceId(),archive);
+        var selected=List.of(new SourceSnapshotService.Attachment(source.getId(),"file.txt",archive.files().get(0).sha256(),1,1));
+        String key=UUID.randomUUID().toString();
+        var created=tasks.createWithProvider(project,"Explain","fixture",key,scope.workspaceId(),scope.conversationId(),null,null,null,null,"CHAT",null,null,selected);
+        var task=created.task();UUID id=task.getId();String snapshot=task.getSourceAttachmentSnapshot();String hash=task.getSourceAttachmentHash();
+        assertEquals("Explain",task.getPrompt());assertTrue(snapshot.contains("before"));assertFalse(snapshot.contains("after"));
+        assertFalse(tasks.createWithProvider(project,"Explain","fixture",key,scope.workspaceId(),scope.conversationId(),null,null,null,null,"CHAT",null,null,selected).created());
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,()->tasks.createWithProvider(project,"Explain","fixture",key,scope.workspaceId(),scope.conversationId(),null,null,null,null,"CHAT",null,null,List.of())).getStatusCode());
+        UUID runner=UUID.randomUUID();
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,()->sourceController.attachments(id,1,runner)).getStatusCode());
+        task=taskRepository.findById(task.getId()).orElseThrow();assertTrue(task.claim(runner,java.time.Instant.now().minusSeconds(60)));taskRepository.saveAndFlush(task);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,()->sourceController.attachments(id,1,runner)).getStatusCode());
+        task=taskRepository.findById(id).orElseThrow();assertTrue(task.claim(runner,java.time.Instant.now()));taskRepository.saveAndFlush(task);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,()->sourceController.attachments(id,1,UUID.randomUUID())).getStatusCode());
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,()->sourceController.attachments(id,2,runner)).getStatusCode());
+        var response=sourceController.attachments(id,1,runner);assertEquals(snapshot,response.getBody());assertEquals(hash,response.getHeaders().getFirst("X-Source-Attachment-Hash"));assertEquals("no-store",response.getHeaders().getCacheControl());
+        tasks.cancel(id);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,()->sourceController.attachments(id,1,runner)).getStatusCode());
+        var retry=tasks.retry(id);assertEquals(snapshot,retry.getSourceAttachmentSnapshot());assertEquals(hash,retry.getSourceAttachmentHash());
+        var queued=outbox.findAll().stream().filter(value->value.getAggregateId().equals(id)).findFirst().orElseThrow();
+        var payload=json.readTree(queued.getPayload());assertEquals(hash,payload.path("sourceAttachmentHash").asText());assertFalse(payload.toString().contains("<proofcode-source"));
+    }
+
     private UUID localProject() {
         String bootstrap = UUID.randomUUID().toString();
         return projects.create(new ProjectController.CreateProject("本机工程", null, "main", "LOCAL_FOLDER",

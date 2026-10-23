@@ -63,7 +63,7 @@ func (r *runner) prepareLocalSource(ctx context.Context, task taskMessage, desti
 	return nil
 }
 func (r *runner) saveSourceResult(ctx context.Context, task taskMessage, root string) error {
-	if task.SourceKind == "REMOTE_REPOSITORY" {
+	if task.SourceKind == "REMOTE_REPOSITORY" || task.ExecutionMode == "PLAN" {
 		return nil
 	}
 	archive, err := source.Capture(ctx, root)

@@ -18,7 +18,7 @@
 
 ## 按需协作
 
-普通代码任务为主 Agent 注册 `spawn_agent`、`list_agents`、`send_message`、`read_agent_messages`、`wait_agent`、`cancel_agent`。子任务只有读取和消息能力，不能再创建子任务。每个主任务最多 4 个子任务、子任务并发 1，每个最多 6 个步骤；主任务可以在子任务调查时继续运行。
+普通代码任务为主 Agent 注册 `spawn_agent`、`list_agents`、`send_message`、`read_agent_messages`、`wait_agent`、`cancel_agent`。子任务只有读取和消息能力，不能再创建子任务。每个主任务最多 4 个子任务、子任务并发 2，每个最多 6 个步骤；主任务可以在子任务调查时继续运行。
 
 每个子任务使用独立历史、约 12k 输入预算、1,024 输出上限和私有 transcript 引用。大文件观察可压缩后回取，不复制完整父历史。工具调用时再次检查实际参数的风险，阻止动态工具切换到写入或执行。消息长度、收件人与任务作用域有校验；重启把未完成子任务标为 interrupted，不自动重放模型调用。主任务和子任务用量分别显示；当前没有统一的费用金额硬预算。
 

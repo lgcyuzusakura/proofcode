@@ -49,7 +49,20 @@ jobs:
           java-version: "17"
           cache: maven
           cache-dependency-path: control-plane/pom.xml
+      - name: Set up Go for the MCP integration helper
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: agent-engine/go.mod
+          cache: true
+          cache-dependency-path: agent-engine/go.sum
+      - name: Build MCP integration helper
+        working-directory: agent-engine
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o ../control-plane/target/proofcode-mcp-inspect ./cmd/proofcode-mcp-inspect
       - name: Run Maven tests
+        env:
+          PROOFCODE_MCP_INSPECT_TEST_BIN: ${{ github.workspace }}/control-plane/target/proofcode-mcp-inspect
         run: mvn --batch-mode --no-transfer-progress test
 
   frontend:
@@ -98,6 +111,12 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
+      - name: Prepare embedded runtime and MCP templates
+        working-directory: .
+        shell: pwsh
+        run: |
+          ./desktop/prepare-runtime-bundle.ps1
+          ./desktop/prepare-mcp-template.ps1
       - name: Test native project operations
         env:
           # Use the runner's Chrome to avoid Edge's first-run DevTools Welcome panel.

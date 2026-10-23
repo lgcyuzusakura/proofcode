@@ -103,6 +103,27 @@ class TaskWorkflowIntegrationTest {
     }
 
     @Test
+    void persistsBoundedWorkspacePreviewAndRejectsCorruptChecksum() throws Exception {
+        UUID projectId=UUID.randomUUID();
+        projects.save(new ProjectEntity(projectId,"preview","https://example.com/preview.git","main",Instant.now()));
+        UUID taskId=service.create(projectId,"Preview workspace changes","test-model").getId();
+        UUID runner=UUID.randomUUID();
+        assertEquals(202,leases.claim(taskId,new RunnerLeaseController.LeaseRequest(runner,1)).getStatusCode().value());
+        assertEquals(202,ingestion.ingest(taskId,event(taskId,runner,"preview-run",1,"task.started",json.createObjectNode())).getStatusCode().value());
+        String patch="diff --git a/file.txt b/file.txt\n+new\n";
+        String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(patch.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        ObjectNode payload=json.createObjectNode().put("state","ready").put("patch",patch).put("sha256",hash).put("base","abc").put("limitBytes",128<<10);
+        assertEquals(202,ingestion.ingest(taskId,event(taskId,runner,"preview-run",2,"workspace.updated",payload)).getStatusCode().value());
+        var saved=events.findTop500ByTaskIdOrderBySequenceAsc(taskId);
+        assertEquals("workspace.updated",saved.get(1).getType());
+        assertEquals(patch,json.readTree(saved.get(1).getPayload()).path("patch").asText());
+        ObjectNode invalid=payload.deepCopy().put("sha256","0".repeat(64));
+        assertThrows(IllegalArgumentException.class,()->ingestion.ingest(taskId,event(taskId,runner,"preview-run",3,"workspace.updated",invalid)));
+        ObjectNode oversized=json.createObjectNode().put("state","ready").put("patch","x".repeat((128<<10)+1)).put("sha256","0".repeat(64));
+        assertThrows(IllegalArgumentException.class,()->ingestion.ingest(taskId,event(taskId,runner,"preview-run",4,"workspace.updated",oversized)));
+    }
+
+    @Test
     void storesRecoveryPatchOutsideEventStream() throws Exception {
         UUID projectId=UUID.randomUUID();
         projects.save(new ProjectEntity(projectId,"recovery","https://example.com/repo.git","main",Instant.now()));
@@ -263,6 +284,10 @@ class TaskWorkflowIntegrationTest {
 
     private InternalEventController.RunnerEvent event(UUID taskId,String runId,long sequence,String type,ObjectNode payload) {
         return event(taskId,runId,1,sequence,type,payload);
+    }
+
+    private InternalEventController.RunnerEvent event(UUID taskId,UUID runnerId,String runId,long sequence,String type,ObjectNode payload) {
+        return event(taskId,runnerId,runId,1,sequence,type,payload);
     }
 
     private InternalEventController.RunnerEvent event(UUID taskId,String runId,int attempt,long sequence,String type,ObjectNode payload) {

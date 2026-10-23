@@ -9,7 +9,9 @@ $env:PROOFCODE_CONTROL_PLANE_URL = "http://127.0.0.1:8080"
 .\desktop\start-native.ps1
 ```
 
-地址来自原生进程环境变量，默认 `http://127.0.0.1:8080`。在界面设置中填写访问令牌；模型 API key 仍由 Runner 配置。API 绑定限制路径、方法、头部及消息大小。
+登录前的“运行环境与本机服务”可保存后端根地址，默认 `http://127.0.0.1:8080`；本机保存值优先于 `PROOFCODE_CONTROL_PLANE_URL`。更换地址先退出旧账户，保留编辑草稿；保存不发送探测请求，代理禁止重定向。登录后在模型设置中配置模型服务及 API key。API 绑定限制路径、方法、头部及消息大小。
+
+本机服务管理可从内置源码运行包准备新的 `ProofCode-runtime` 目录与随机本机配置，也可选择已有 Compose 目录。校验六个服务、配置文件 hash 与同名容器归属后才允许启动/停止；停止保留数据卷，状态来自实际 Docker 查询。需要 Docker Desktop、Git 和首次构建网络；准备不自动启动服务，新版 EXE 尚未发布。详见[运行管理及边界](../../docs/agent-platform-runtime.md)。
 
 本机路径仅保存在用户配置目录 `ProofCode/projects.json`。`BootstrapScratchProject` 使用 Windows Known Folder 获取真实桌面；`CaptureProjectSource` 尊重 `.gitignore`，包括非 Git 工程，且不会在用户目录创建 `.git`。
 
@@ -23,7 +25,7 @@ $env:PROOFCODE_CONTROL_PLANE_URL = "http://127.0.0.1:8080"
 
 ## Building
 
-在仓库根目录运行 `.\desktop\build-native.ps1`，或在本目录运行 `wails build -clean`。构建结果位于被 Git 忽略的 `build/bin/`。
+在仓库根目录运行 `.\desktop\build-native.ps1`，脚本先准备仅含部署源码的内嵌运行包，再执行 Wails 构建。直接使用 `wails build -clean` 前，需在仓库根运行 `.\desktop\prepare-runtime-bundle.ps1`；没有 ZIP 时开发版仍可构建，但只能选择已有部署目录。构建结果位于被 Git 忽略的 `build/bin/`，运行包不会收集 Git 历史、论文或用户配置。
 
 ```powershell
 Push-Location frontend

@@ -135,6 +135,59 @@ func TestPatchApplicationPreservesGitIndexAndRejectsConcurrentChanges(t *testing
 		t.Fatal("allowed private file creation")
 	}
 }
+
+func TestPatchApplicationUsesFreshSnapshotAndPreservesOtherSavedChanges(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("Git required")
+	}
+	app := localTestApp(t)
+	project, err := app.registerDirectory(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, content := range map[string]string{"agent.txt": "before\n", "user.txt": "original\n"} {
+		if err = os.WriteFile(filepath.Join(project.Path, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old, err := app.CaptureProjectSource(project.LocalHandle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(project.Path, "user.txt"), []byte("saved user work\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	current, err := app.CaptureProjectSource(project.LocalHandle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch := "diff --git a/agent.txt b/agent.txt\n--- a/agent.txt\n+++ b/agent.txt\n@@ -1 +1 @@\n-before\n+agent result\n"
+	if _, err = app.ApplyProjectPatch(project.LocalHandle, old.ManifestHash, patch); err == nil {
+		t.Fatal("accepted stale review snapshot")
+	}
+	if _, err = app.ApplyProjectPatch(project.LocalHandle, current.ManifestHash, patch); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"agent.txt": "agent result\n", "user.txt": "saved user work\n"} {
+		got, readErr := os.ReadFile(filepath.Join(project.Path, name))
+		if readErr != nil || string(got) != want {
+			t.Fatalf("%s: got %q, err %v; want %q", name, got, readErr, want)
+		}
+	}
+	conflicting := "diff --git a/agent.txt b/agent.txt\n--- a/agent.txt\n+++ b/agent.txt\n@@ -1 +1 @@\n-before\n+conflicting result\n"
+	latest, err := app.CaptureProjectSource(project.LocalHandle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = app.ApplyProjectPatch(project.LocalHandle, latest.ManifestHash, conflicting); err == nil {
+		t.Fatal("accepted patch against changed target")
+	}
+	got, err := os.ReadFile(filepath.Join(project.Path, "agent.txt"))
+	if err != nil || string(got) != "agent result\n" {
+		t.Fatalf("conflicting patch changed target: %q, err %v", got, err)
+	}
+}
+
 func TestInterruptedPatchRollsBackRecognizedChanges(t *testing.T) {
 	app := localTestApp(t)
 	project, err := app.registerDirectory(t.TempDir())

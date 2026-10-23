@@ -8,15 +8,25 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"regexp"
 	"sync"
 	"sync/atomic"
 )
 
 type ServerConfig struct {
-	Name    string            `json:"name"`
-	Command string            `json:"command"`
-	Args    []string          `json:"args"`
-	Env     map[string]string `json:"env,omitempty"`
+	Name              string                                       `json:"name"`
+	Command           string                                       `json:"command"`
+	Args              []string                                     `json:"args"`
+	Env               map[string]string                            `json:"env,omitempty"`
+	Directory         string                                       `json:"-"`
+	URL               string                                       `json:"url,omitempty"`
+	Bearer            string                                       `json:"bearer,omitempty"`
+	OAuthGrantID      string                                       `json:"oauthGrantId,omitempty"`
+	OAuthExpiresAt    int64                                        `json:"oauthExpiresAt,omitempty"`
+	OAuthRefresh      func(context.Context) (string, int64, error) `json:"-"`
+	HeaderName        string                                       `json:"headerName,omitempty"`
+	HeaderValue       string                                       `json:"headerValue,omitempty"`
+	AllowPrivateHosts bool                                         `json:"-"`
 }
 type ToolDefinition struct {
 	Name        string         `json:"name"`
@@ -33,6 +43,7 @@ type Client struct {
 	done      chan struct{}
 	closeOnce sync.Once
 	doneOnce  sync.Once
+	cancel    context.CancelFunc
 }
 type response struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -49,6 +60,7 @@ func Start(ctx context.Context, config ServerConfig) (*Client, error) {
 		return nil, errors.New("MCP command is required")
 	}
 	cmd := exec.CommandContext(ctx, config.Command, config.Args...)
+	cmd.Dir = config.Directory
 	if len(config.Env) > 0 {
 		environment := cmd.Environ()
 		for key, value := range config.Env {
@@ -74,19 +86,58 @@ func Start(ctx context.Context, config ServerConfig) (*Client, error) {
 		_ = client.Close()
 		return nil, err
 	}
-	_ = client.notify("notifications/initialized", map[string]any{})
+	if err := client.notify("notifications/initialized", map[string]any{}); err != nil {
+		_ = client.Close()
+		return nil, err
+	}
 	return client, nil
 }
 
 func (c *Client) ListTools(ctx context.Context) ([]ToolDefinition, error) {
-	var result struct {
-		Tools []ToolDefinition `json:"tools"`
-	}
-	if err := c.call(ctx, "tools/list", map[string]any{}, &result); err != nil {
-		return nil, err
-	}
-	return result.Tools, nil
+	return listTools(ctx, c.call)
 }
+
+func listTools(ctx context.Context, call func(context.Context, string, any, any) error) ([]ToolDefinition, error) {
+	var tools []ToolDefinition
+	cursor := ""
+	seen := map[string]bool{}
+	names := map[string]bool{}
+	for page := 0; page < 32; page++ {
+		var result struct {
+			Tools      []ToolDefinition `json:"tools"`
+			NextCursor string           `json:"nextCursor"`
+		}
+		params := map[string]any{}
+		if cursor != "" {
+			params["cursor"] = cursor
+		}
+		if err := call(ctx, "tools/list", params, &result); err != nil {
+			return nil, err
+		}
+		for _, definition := range result.Tools {
+			if !toolName.MatchString(definition.Name) || names[definition.Name] || definition.InputSchema == nil {
+				return nil, errors.New("invalid or duplicate MCP tool definition")
+			}
+			names[definition.Name] = true
+			tools = append(tools, definition)
+		}
+		if len(tools) > 256 {
+			return nil, errors.New("MCP tool catalog exceeds 256 entries")
+		}
+		if result.NextCursor == "" {
+			return tools, nil
+		}
+		if seen[result.NextCursor] {
+			return nil, errors.New("MCP pagination did not advance")
+		}
+		seen[result.NextCursor] = true
+		cursor = result.NextCursor
+	}
+	return nil, errors.New("MCP pagination exceeds 32 pages")
+}
+
+var toolName = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
+
 func (c *Client) CallTool(ctx context.Context, name string, args map[string]any) (json.RawMessage, error) {
 	var result json.RawMessage
 	if err := c.call(ctx, "tools/call", map[string]any{"name": name, "arguments": args}, &result); err != nil {
@@ -97,11 +148,14 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]any)
 func (c *Client) Close() error {
 	var err error
 	c.closeOnce.Do(func() {
+		if c.cancel != nil {
+			c.cancel()
+		}
 		c.finish()
 		_ = c.stdin.Close()
 		if c.command.Process != nil {
 			err = c.command.Process.Kill()
-			_, _ = c.command.Process.Wait()
+			_ = c.command.Wait()
 		}
 	})
 	return err
@@ -118,9 +172,7 @@ func (c *Client) call(ctx context.Context, method string, params any, target any
 	if err != nil {
 		return err
 	}
-	c.writeMu.Lock()
-	_, err = c.stdin.Write(append(encoded, '\n'))
-	c.writeMu.Unlock()
+	err = c.write(ctx, append(encoded, '\n'))
 	if err != nil {
 		return err
 	}
@@ -131,6 +183,35 @@ func (c *Client) call(ctx context.Context, method string, params any, target any
 		}
 		return json.Unmarshal(value.Result, target)
 	case <-ctx.Done():
+		// The notification is best effort; cancellation never waits for a blocked pipe.
+		go func() {
+			_ = c.notify("notifications/cancelled", map[string]any{"requestId": id, "reason": "request cancelled"})
+		}()
+		return ctx.Err()
+	case <-c.done:
+		return errors.New("MCP server stopped")
+	}
+}
+
+// A server that stops reading stdin must not make a task uncancellable. Closing
+// the client on a blocked write releases the pipe and all pending RPC waiters.
+func (c *Client) write(ctx context.Context, data []byte) error {
+	finished := make(chan error, 1)
+	go func() {
+		c.writeMu.Lock()
+		defer c.writeMu.Unlock()
+		if err := ctx.Err(); err != nil {
+			finished <- err
+			return
+		}
+		_, err := c.stdin.Write(data)
+		finished <- err
+	}()
+	select {
+	case err := <-finished:
+		return err
+	case <-ctx.Done():
+		_ = c.Close()
 		return ctx.Err()
 	case <-c.done:
 		return errors.New("MCP server stopped")
@@ -159,7 +240,10 @@ func (c *Client) read(reader io.Reader) {
 		wait := c.pending[value.ID]
 		c.pendingMu.Unlock()
 		if wait != nil {
-			wait <- value
+			select {
+			case wait <- value:
+			default:
+			}
 		}
 	}
 }

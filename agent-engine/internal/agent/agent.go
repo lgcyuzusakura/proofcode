@@ -38,7 +38,7 @@ type AutomaticApproval struct {
 }
 
 func (a AutomaticApproval) Approve(_ context.Context, _ string, risk tool.Risk, name string, _ json.RawMessage) (bool, error) {
-	if name == "data_execute" {
+	if name == "data_execute" || strings.HasPrefix(name, "mcp__") {
 		return false, nil
 	}
 	switch risk {
@@ -60,6 +60,7 @@ type RunRequest struct {
 	Model                 string
 	MaxSteps              int
 	Temperature           *float64
+	BeforeStep            func(context.Context, RunResult) ([]model.Message, error)
 	PrepareMessages       func(context.Context, int, []model.Message) ([]model.Message, error)
 	SuppressTaskLifecycle bool
 	InitialMessages       []model.Message
@@ -270,6 +271,13 @@ func (a *Agent) Run(ctx context.Context, request RunRequest) (RunResult, error) 
 				_ = a.Events.Emit(context.Background(), request.TaskID, event.TaskCancelled, map[string]any{"reason": err.Error()})
 			}
 			return RunResult{Messages: messages, Usage: total}, err
+		}
+		if request.BeforeStep != nil {
+			var err error
+			messages, err = request.BeforeStep(ctx, RunResult{Messages: messages, Usage: total})
+			if err != nil {
+				return RunResult{Messages: messages, Usage: total}, err
+			}
 		}
 		allDefinitions := a.Tools.Definitions()
 		view := cloneMessages(messages)

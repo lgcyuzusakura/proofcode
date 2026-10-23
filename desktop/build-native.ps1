@@ -4,6 +4,8 @@ $goRoot = if ($env:PROOFCODE_GO_ROOT) { $env:PROOFCODE_GO_ROOT } else { Join-Pat
 $wailsBin = if ($env:PROOFCODE_WAILS_BIN) { $env:PROOFCODE_WAILS_BIN } else { Join-Path $root ".tools\bin" }
 $env:PATH = (Join-Path $goRoot "bin") + ";" + $wailsBin + ";" + $env:PATH
 if (-not $env:GOPROXY) { $env:GOPROXY = "https://goproxy.cn,direct" }
+& (Join-Path $PSScriptRoot 'prepare-runtime-bundle.ps1')
+& (Join-Path $PSScriptRoot 'prepare-mcp-template.ps1')
 Push-Location (Join-Path $PSScriptRoot "native")
 try {
     & (Join-Path $wailsBin "wails.exe") build -clean

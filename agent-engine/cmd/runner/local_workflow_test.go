@@ -34,6 +34,7 @@ func scopedLocalTask() taskMessage {
 }
 
 func TestChatRestoresHistoryWithoutCreatingAnExecutionWorkspace(t *testing.T) {
+	attachment := "\n<proofcode-source>ATTACHED_SOURCE_ONCE</proofcode-source>"
 	var mu sync.Mutex
 	var input map[string]any
 	var emitted []event.Event
@@ -44,6 +45,12 @@ func TestChatRestoresHistoryWithoutCreatingAnExecutionWorkspace(t *testing.T) {
 		case strings.HasSuffix(request.URL.Path, "/conversation"):
 			w.Header().Set("X-Context-Selection-Hash", "fixture-selection")
 			_ = json.NewEncoder(w).Encode([]map[string]string{{"role": "user", "content": "Use Java 17"}, {"role": "assistant", "content": "Agreed"}})
+		case strings.HasSuffix(request.URL.Path, "/source-attachments"):
+			if request.URL.Query().Get("runnerId") == "" || request.URL.Query().Get("attempt") != "1" {
+				t.Error("attachment lease identity missing")
+			}
+			w.Header().Set("X-Source-Attachment-Hash", hashString(attachment))
+			fmt.Fprint(w, attachment)
 		case strings.HasSuffix(request.URL.Path, "/events"):
 			var value event.Event
 			if err := json.NewDecoder(request.Body).Decode(&value); err != nil {
@@ -76,6 +83,7 @@ func TestChatRestoresHistoryWithoutCreatingAnExecutionWorkspace(t *testing.T) {
 	task := scopedLocalTask()
 	task.ExecutionMode, task.Prompt = "CHAT", "Continue the plan"
 	task.ContextSelectionHash = "fixture-selection"
+	task.SourceAttachmentHash = hashString(attachment)
 	if err := r.runTask(context.Background(), task); err != nil {
 		t.Fatal(err)
 	}
@@ -88,6 +96,9 @@ func TestChatRestoresHistoryWithoutCreatingAnExecutionWorkspace(t *testing.T) {
 		t.Fatalf("chat received execution tools: %+v", tools)
 	}
 	encoded, _ := json.Marshal(input["messages"])
+	if strings.Count(string(encoded), "ATTACHED_SOURCE_ONCE") != 1 {
+		t.Fatalf("CHAT must inject source attachment exactly once: %s", encoded)
+	}
 	for _, required := range []string{"Use Java 17", "Agreed", "Continue the plan"} {
 		if !strings.Contains(string(encoded), required) {
 			t.Fatalf("history omitted %s: %s", required, encoded)

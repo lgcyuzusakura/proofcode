@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.proofcode.control.websocket.TaskSocketHandler;
 import java.time.Instant;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,13 +91,26 @@ public class InternalEventController {
     private String text(JsonNode value,String field){JsonNode node=value.get(field);return node==null||node.isNull()?null:node.asText();}
     private boolean validType(String type){return switch(type){
         case "task.started","task.completed","task.failed","task.cancelled","agent.message.delta","agent.message.completed",
-             "agent.delegated","tool.requested","tool.approval_required","tool.started","tool.completed","tool.failed",
+             "agent.delegated","agent.configuration","plan.updated","tool.requested","tool.approval_required","tool.started","tool.completed","tool.failed",
              "decision.tool_routed","decision.tool_route_fallback","context.selected","checkpoint.created",
-             "recovery.created","verification.completed","usage.updated" -> true;
+             "recovery.created","workspace.updated","verification.completed","usage.updated" -> true;
         default -> false;
     };}
     private void validateEventPayload(RunnerEvent value){
         JsonNode payload=value.payload();
+        if("workspace.updated".equals(value.type())){
+            String state=text(payload,"state");
+            if(!java.util.Set.of("ready","oversized","unavailable").contains(state==null?"":state)) throw new IllegalArgumentException("invalid workspace preview state");
+            if("ready".equals(state)){
+                JsonNode patch=payload.path("patch");
+                if(!patch.isTextual()||patch.textValue().getBytes(StandardCharsets.UTF_8).length>128<<10) throw new IllegalArgumentException("workspace preview exceeds 128 KiB");
+                String hash=text(payload,"sha256");
+                try {
+                    String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(patch.textValue().getBytes(StandardCharsets.UTF_8)));
+                    if(hash==null||!hash.equals(actual)) throw new IllegalArgumentException("workspace preview checksum mismatch");
+                } catch(NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+            }else if(payload.has("patch")||payload.has("sha256")) throw new IllegalArgumentException("unavailable preview cannot contain a patch");
+        }
         if("tool.approval_required".equals(value.type())){
             String callId=text(payload,"callId");
             String tool=text(payload,"tool");

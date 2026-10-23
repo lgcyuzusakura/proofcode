@@ -34,6 +34,8 @@ await page.route("**/api/**", async route => {
   else if (path.endsWith("/workspaces")) body = [workspace];
   else if (path.endsWith("/conversations")) body = [conversation];
   else if (path.endsWith("/messages")) body = messages;
+  else if (path.includes("/agent-platform/selection/")) body = { profileId: null };
+  else if (path.includes("/agent-platform/")) body = [];
   else if (path.endsWith("/context")) body = { version: 0, view: { mode: "AUTO", items: [], packIds: [] }, messages: [], packs: [], excludedTurns: 0, estimatedTokens: 0 };
   else if (path === "/api/tasks") body = [task, older];
   else if (path === "/api/model-providers") body = [{ id: "provider", name: "本地验收服务", models: [{ id: task.model, name: task.model }], modelSettings: {} }];

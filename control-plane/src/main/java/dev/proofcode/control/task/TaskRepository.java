@@ -3,6 +3,7 @@ import java.util.List;import java.util.Optional;import java.util.UUID;import jak
 public interface TaskRepository extends JpaRepository<TaskEntity,UUID>{
     List<TaskEntity> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
     List<TaskEntity> findByProjectIdAndConversationIdOrderByCreatedAtDesc(UUID projectId,UUID conversationId);
+    boolean existsByConversationIdAndStatusIn(UUID conversationId, java.util.Collection<TaskStatus> statuses);
     List<TaskEntity> findByExperimentIdOrderByCreatedAtAsc(UUID experimentId);
     Optional<TaskEntity> findByProjectIdAndIdempotencyKey(UUID projectId,String idempotencyKey);
     boolean existsByProjectIdAndWorkspaceIdAndExecutionModeAndExperimentIdIsNullAndStatusIn(UUID projectId,UUID workspaceId,String executionMode,List<TaskStatus> statuses);

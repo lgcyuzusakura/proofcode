@@ -31,6 +31,7 @@ var revisionPattern = regexp.MustCompile(`(?i)^(?:[0-9a-f]{40}|[0-9a-f]{64})$`)
 func (r *runner) configurationHash(task taskMessage) string {
 	task.Resume, task.ApprovalID, task.Decision = false, "", ""
 	return experiment.Fingerprint(struct {
+		MCPConfigurationHash                                                   string
 		Task                                                                   taskMessage
 		ModelURL, JevURL, JevModel, JevMode                                    string
 		Settings                                                               *model.Settings
@@ -39,7 +40,7 @@ func (r *runner) configurationHash(task taskMessage) string {
 		Commands                                                               tool.CommandPolicy
 		BrowserEnabled, BrowserExecutable, BrowserNoSandbox                    string
 		RetrievalAlgorithm, Index, Compression, ContextCapacity, OutputReserve string
-	}{task, r.modelProvider(task).BaseURL + "|" + r.modelProvider(task).WireAPI, r.JevBaseURL, r.JevModel, r.JevMode, r.modelProvider(task).Settings, r.JevThreshold, r.AllowWrite, r.AllowExec, r.CommandPolicy, os.Getenv("RUNNER_BROWSER_ENABLED") + "|" + os.Getenv("RUNNER_BROWSER_MODE"), os.Getenv("RUNNER_BROWSER_EXECUTABLE"), os.Getenv("RUNNER_BROWSER_NO_SANDBOX"), codecontext.AlgorithmVersion, codecontext.IndexVersion, codecontext.CompressionVersion, os.Getenv("PROOFCODE_MODEL_CONTEXT_TOKENS"), os.Getenv("PROOFCODE_OUTPUT_RESERVE_TOKENS")})
+	}{mcpConfigurationHash(os.Getenv("RUNNER_MCP_SERVERS")), task, r.modelProvider(task).BaseURL + "|" + r.modelProvider(task).WireAPI, r.JevBaseURL, r.JevModel, r.JevMode, r.modelProvider(task).Settings, r.JevThreshold, r.AllowWrite, r.AllowExec, r.CommandPolicy, os.Getenv("RUNNER_BROWSER_ENABLED") + "|" + os.Getenv("RUNNER_BROWSER_MODE"), os.Getenv("RUNNER_BROWSER_EXECUTABLE"), os.Getenv("RUNNER_BROWSER_NO_SANDBOX"), codecontext.AlgorithmVersion, codecontext.IndexVersion, codecontext.CompressionVersion, os.Getenv("PROOFCODE_MODEL_CONTEXT_TOKENS"), os.Getenv("PROOFCODE_OUTPUT_RESERVE_TOKENS")})
 }
 
 func (r *runner) execution(task taskMessage, ws *workspace.Workspace, events *event.SequencedSink) (*agent.Coordinator, agent.CoordinateRequest, error) {
@@ -121,7 +122,7 @@ func (r *runner) execution(task taskMessage, ws *workspace.Workspace, events *ev
 	if isExperiment {
 		prompt += benchmarkInstructions
 	}
-	request := agent.CoordinateRequest{TaskID: task.TaskID, Prompt: prompt, MaxSteps: task.MaxSteps, Temperature: task.Temperature, PrepareMessages: durableExperimentView(viewTask, ws.Root, events, contextStore, mainTools.Definitions()), SuppressTaskComplete: true}
+	request := agent.CoordinateRequest{TaskID: task.TaskID, Prompt: prompt, MaxSteps: task.MaxSteps, Temperature: task.Temperature, PrepareMessages: durableExperimentView(viewTask, ws.Root, events, contextStore, nil, func() []model.ToolDefinition { return coordinator.MainTools.Definitions() }), SuppressTaskComplete: true}
 	return coordinator, request, nil
 }
 
@@ -207,13 +208,17 @@ func experimentView(task taskMessage, root string, events *event.SequencedSink) 
 	return durableExperimentView(task, root, events, store, nil)
 }
 
-func durableExperimentView(task taskMessage, root string, events *event.SequencedSink, store *codecontext.Store, definitions []model.ToolDefinition) func(context.Context, int, []model.Message) ([]model.Message, error) {
+func durableExperimentView(task taskMessage, root string, events *event.SequencedSink, store *codecontext.Store, definitions []model.ToolDefinition, sources ...func() []model.ToolDefinition) func(context.Context, int, []model.Message) ([]model.Message, error) {
 	profile := task.ExperimentProfile
 	if profile == nil || (!profile.RAGEnabled && !profile.ContextCompressionEnabled) {
 		return nil
 	}
 	retriever := newContextRetriever(task, root, store)
 	return func(ctx context.Context, step int, messages []model.Message) ([]model.Message, error) {
+		activeDefinitions := definitions
+		if len(sources) > 0 {
+			activeDefinitions = sources[0]()
+		}
 		view := append([]model.Message(nil), messages...)
 		if profile.RAGEnabled {
 			feedback := ""
@@ -253,9 +258,9 @@ func durableExperimentView(task taskMessage, root string, events *event.Sequence
 			if configured != nil {
 				budget = agent.ConfiguredInputBudget(*configured, true)
 			}
-			compressed, report, compressionErr := codecontext.CompressDurable(ctx, store, contextScope(task), view, definitions, budget)
+			compressed, report, compressionErr := codecontext.CompressDurable(ctx, store, contextScope(task), view, activeDefinitions, budget)
 			if compressionErr != nil && configured != nil {
-				compressed, report, compressionErr = codecontext.CompressDurable(ctx, store, contextScope(task), view, definitions, agent.ConfiguredInputBudget(*configured, false))
+				compressed, report, compressionErr = codecontext.CompressDurable(ctx, store, contextScope(task), view, activeDefinitions, agent.ConfiguredInputBudget(*configured, false))
 			}
 			payload := map[string]any{"kind": "compression", "step": step, "report": report, "profileVersion": profile.Version, "retrievalAlgorithmVersion": codecontext.AlgorithmVersion, "indexVersion": codecontext.IndexVersion, "compressionAlgorithmVersion": codecontext.CompressionVersion}
 			encoded, _ := json.Marshal(report)

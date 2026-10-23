@@ -1,0 +1,7 @@
+config.local.json
+.env
+.env.*
+node_modules/
+.proofcode/
+knowledge/
+!knowledge/.gitkeep

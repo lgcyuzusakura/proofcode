@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	sharedconfig "github.com/proofcode-dev/proofcode/agent-engine/pkg/config"
+	"github.com/proofcode-dev/proofcode/agent-engine/pkg/runtimecheck"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	pathpkg "path"
 	"strings"
 	"sync"
@@ -17,18 +17,28 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	projectMu   sync.Mutex
-	desktopRoot string
-	registryDir string
-	commands    map[string]*commandRun
-	browserMu   sync.Mutex
-	browser     *browserRun
-	browsers    map[string]*browserRun
-	broker      *browserBroker
-	merges      map[string]*mergeRun
-	protocolMu  sync.Mutex
-	protocols   map[string]*protocolRun
+	ctx                    context.Context
+	projectMu              sync.Mutex
+	runtimeMu              sync.Mutex
+	runtimeRunner          composeCommand
+	runtimeDockerRunner    runtimeDockerCommand
+	runtimeState           RuntimeManagement
+	runtimeCancel          context.CancelFunc
+	runtimeClosed          bool
+	runtimeBundleData      []byte
+	mcpTemplateData        []byte
+	mcpScaffoldMu          sync.Mutex
+	runtimeDirectoryPicker func(context.Context, string) (string, error)
+	desktopRoot            string
+	registryDir            string
+	commands               map[string]*commandRun
+	browserMu              sync.Mutex
+	browser                *browserRun
+	browsers               map[string]*browserRun
+	broker                 *browserBroker
+	merges                 map[string]*mergeRun
+	protocolMu             sync.Mutex
+	protocols              map[string]*protocolRun
 }
 
 // ProxyResponse is the control-plane response exposed to the local frontend.
@@ -79,7 +89,7 @@ func (a *App) ProxyRequest(path, method, body, authorization, idempotencyKey str
 		return ProxyResponse{}, fmt.Errorf("proxy path is invalid")
 	}
 	method = strings.ToUpper(strings.TrimSpace(method))
-	if method != http.MethodGet && method != http.MethodPost && method != http.MethodPatch {
+	if method != http.MethodGet && method != http.MethodPost && method != http.MethodPatch && method != http.MethodPut {
 		return ProxyResponse{}, fmt.Errorf("proxy method is not allowed")
 	}
 	if len(body) > 20<<20 {
@@ -91,16 +101,11 @@ func (a *App) ProxyRequest(path, method, body, authorization, idempotencyKey str
 	if strings.ContainsAny(idempotencyKey, "\r\n") || len(idempotencyKey) > 200 {
 		return ProxyResponse{}, fmt.Errorf("idempotency key is invalid")
 	}
-	base := strings.TrimRight(os.Getenv("PROOFCODE_CONTROL_PLANE_URL"), "/")
-	if base == "" {
-		base = "http://127.0.0.1:8080"
+	connection, err := a.GetRuntimeConnection()
+	if err != nil {
+		return ProxyResponse{}, err
 	}
-	controlURL, err := url.Parse(base)
-	if err != nil || (controlURL.Scheme != "http" && controlURL.Scheme != "https") || controlURL.Host == "" ||
-		(controlURL.Path != "" && controlURL.Path != "/") || controlURL.RawQuery != "" || controlURL.Fragment != "" || controlURL.User != nil {
-		return ProxyResponse{}, fmt.Errorf("control-plane URL is invalid")
-	}
-	target := strings.TrimRight(controlURL.String(), "/") + parsedPath.RequestURI()
+	target := connection.BaseURL + parsedPath.RequestURI()
 	request, err := http.NewRequestWithContext(context.Background(), method, target, strings.NewReader(body))
 	if err != nil {
 		return ProxyResponse{}, fmt.Errorf("create control-plane request: %w", err)
@@ -114,10 +119,10 @@ func (a *App) ProxyRequest(path, method, body, authorization, idempotencyKey str
 	if idempotencyKey != "" {
 		request.Header.Set("Idempotency-Key", idempotencyKey)
 	}
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(request)
 	if err != nil {
-		return ProxyResponse{}, fmt.Errorf("control-plane request: %w", err)
+		return ProxyResponse{}, fmt.Errorf("无法连接 ProofCode 后端，请检查运行环境中的地址与服务状态")
 	}
 	defer response.Body.Close()
 	const maxResponseBytes = 32 << 20
@@ -146,6 +151,25 @@ func (a *App) GetModelList() ([]string, error) {
 	return c.Models(context.Background())
 }
 
+// CheckRuntime reports local development dependencies and the configured
+// control-plane health without returning process output or credentials.
+func (a *App) CheckRuntime() runtimecheck.Report {
+	connection, err := a.GetRuntimeConnection()
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	report := (runtimecheck.Doctor{BaseURL: connection.BaseURL}).Check(ctx)
+	if err != nil {
+		for index := range report.Checks {
+			if report.Checks[index].ID == "control-plane" {
+				report.Checks[index].Detail = "后端地址配置无法读取，请在运行环境页重新保存。"
+			}
+		}
+	}
+	return report
+}
+
 // ImportCodexProvider sends credentials to the configured control plane without exposing them to the WebView.
 func (a *App) ImportCodexProvider(session string) (map[string]any, error) {
 	if session == "" {
@@ -171,6 +195,8 @@ func (a *App) ImportCodexProvider(session string) (map[string]any, error) {
 	}
 	// Only the provider's redacted DTO is returned to the frontend.
 	var value map[string]any
-	if err = json.Unmarshal([]byte(response.Body), &value); err != nil { return nil, fmt.Errorf("控制面返回了无效服务配置") }
+	if err = json.Unmarshal([]byte(response.Body), &value); err != nil {
+		return nil, fmt.Errorf("控制面返回了无效服务配置")
+	}
 	return value, nil
 }

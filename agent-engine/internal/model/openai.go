@@ -72,6 +72,9 @@ func (p *OpenAICompatible) Chat(ctx context.Context, request Request, onDelta fu
 	if p.WireAPI == "responses" {
 		return p.responses(ctx, request, delta)
 	}
+	if p.WireAPI == "anthropic" {
+		return p.anthropic(ctx, request, delta)
+	}
 	return p.chat(ctx, request, delta)
 }
 func (p *OpenAICompatible) chat(ctx context.Context, request Request, onDelta func(string)) (Response, error) {

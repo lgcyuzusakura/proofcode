@@ -68,7 +68,8 @@ services:
 
   control-plane:
     build:
-      context: ./control-plane
+      context: .
+      dockerfile: control-plane/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/proofcode
       SPRING_DATASOURCE_USERNAME: proofcode

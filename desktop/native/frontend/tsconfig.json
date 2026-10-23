@@ -45,6 +45,21 @@
       ],
       "remark-gfm": [
         "node_modules/remark-gfm/index.d.ts"
+      ],
+      "diff": [
+        "node_modules/diff"
+      ],
+      "docx-preview": [
+        "node_modules/docx-preview"
+      ],
+      "jszip": [
+        "node_modules/jszip"
+      ],
+      "pdfjs-dist": [
+        "node_modules/pdfjs-dist"
+      ],
+      "pdfjs-dist/*": [
+        "node_modules/pdfjs-dist/*"
       ]
     }
   },

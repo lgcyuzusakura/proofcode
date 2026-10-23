@@ -26,6 +26,7 @@ const (
 	ContextSelected    Type = "context.selected"
 	CheckpointCreated  Type = "checkpoint.created"
 	RecoveryCreated    Type = "recovery.created"
+	WorkspaceUpdated   Type = "workspace.updated"
 	VerificationDone   Type = "verification.completed"
 	UsageUpdated       Type = "usage.updated"
 )

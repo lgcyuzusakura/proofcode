@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	codecontext "github.com/proofcode-dev/proofcode/agent-engine/internal/context"
+	"github.com/proofcode-dev/proofcode/agent-engine/internal/durablefile"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/event"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/model"
 	"github.com/proofcode-dev/proofcode/agent-engine/internal/tool"
@@ -21,6 +22,7 @@ import (
 
 const childInputTokens = 12000
 const childOutputTokens = 1024
+const childConcurrency = 2
 
 func childInputBudget() codecontext.InputBudget {
 	return codecontext.InputBudget{ContextTokens: childInputTokens + childOutputTokens + 256, OutputReserve: childOutputTokens, OverheadTokens: 256}
@@ -55,6 +57,7 @@ type Team struct {
 	slot                  chan struct{}
 	provider              model.Provider
 	reads                 *tool.Registry
+	store                 *codecontext.Store
 	events                *event.SequencedSink
 	taskID, modelID, path string
 	state                 teamState
@@ -66,7 +69,7 @@ func OpenTeam(ctx context.Context, provider model.Provider, reads *tool.Registry
 		return nil, errors.New("child team dependencies are incomplete")
 	}
 	childCtx, cancel := context.WithCancel(ctx)
-	t := &Team{ctx: childCtx, cancel: cancel, slot: make(chan struct{}, 1), provider: provider, reads: reads, events: events, taskID: taskID, modelID: modelID, path: path, cancels: map[string]context.CancelFunc{}, state: teamState{TaskID: taskID, ModelID: modelID, Children: []ChildTask{}, Messages: []TeamMessage{}}}
+	t := &Team{ctx: childCtx, cancel: cancel, slot: make(chan struct{}, childConcurrency), provider: provider, reads: reads, events: events, taskID: taskID, modelID: modelID, path: path, cancels: map[string]context.CancelFunc{}, state: teamState{TaskID: taskID, ModelID: modelID, Children: []ChildTask{}, Messages: []TeamMessage{}}}
 	b, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		cancel()
@@ -88,6 +91,11 @@ func OpenTeam(ctx context.Context, provider model.Provider, reads *tool.Registry
 				c.Error = "Runner interrupted; use a new explicit child task. No model calls replayed."
 			}
 		}
+	}
+	t.store, err = codecontext.OpenStore(filepath.Join(filepath.Dir(path), "child-context"))
+	if err != nil {
+		cancel()
+		return nil, err
 	}
 	if err = t.saveLocked(); err != nil {
 		cancel()
@@ -118,9 +126,15 @@ func (t *Team) saveLocked() error {
 	if err != nil {
 		return err
 	}
-	return os.Rename(t.path+".tmp", t.path)
+	return durablefile.Rename(t.path+".tmp", t.path)
 }
-func (t *Team) Close() { t.cancel(); t.wg.Wait() }
+func (t *Team) Close() {
+	// Serialize cancellation with spawn's WaitGroup.Add before waiting.
+	t.mu.Lock()
+	t.cancel()
+	t.mu.Unlock()
+	t.wg.Wait()
+}
 func (t *Team) Tools(actor string) []tool.Tool {
 	ops := []string{"list_agents", "send_message", "read_agent_messages"}
 	if actor == "main" {
@@ -140,18 +154,21 @@ func (t *Team) emit(id, kind string, payload map[string]any) error {
 }
 func (t *Team) spawn(name, prompt string) (ChildTask, error) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 	if t.ctx.Err() != nil {
+		t.mu.Unlock()
 		return ChildTask{}, t.ctx.Err()
 	}
 	if len(t.state.Children) >= 4 {
+		t.mu.Unlock()
 		return ChildTask{}, errors.New("maximum 4 child tasks per main task")
 	}
 	if len(name) == 0 || len(name) > 80 || len(prompt) == 0 || len(prompt) > 8000 {
+		t.mu.Unlock()
 		return ChildTask{}, errors.New("child name/prompt exceeds bounds")
 	}
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
+		t.mu.Unlock()
 		return ChildTask{}, err
 	}
 	id := "agent-" + hex.EncodeToString(b)
@@ -159,11 +176,14 @@ func (t *Team) spawn(name, prompt string) (ChildTask, error) {
 	t.state.Children = append(t.state.Children, child)
 	if err := t.saveLocked(); err != nil {
 		t.state.Children = t.state.Children[:len(t.state.Children)-1]
+		t.mu.Unlock()
 		return ChildTask{}, err
 	}
 	ctx, cancel := context.WithCancel(t.ctx)
 	t.cancels[id] = cancel
 	t.wg.Add(1)
+	t.mu.Unlock()
+	_ = t.emit(id, "queued", map[string]any{"name": name, "status": "queued"})
 	go t.run(ctx, id)
 	return child, nil
 }
@@ -182,6 +202,10 @@ func (t *Team) run(ctx context.Context, id string) {
 		defer func() { <-t.slot }()
 	case <-ctx.Done():
 		t.finish(id, RunResult{}, ctx.Err())
+		return
+	}
+	if err := ctx.Err(); err != nil {
+		t.finish(id, RunResult{}, err)
 		return
 	}
 	t.mu.Lock()
@@ -213,11 +237,7 @@ func (t *Team) run(ctx context.Context, id string) {
 	// Each child stores its own exact transcript outside the source worktree.
 	// Source references from the parent's retriever remain readable through the
 	// inherited scoped reader; other children's private logs are never exposed.
-	store, err := codecontext.OpenStore(filepath.Join(filepath.Dir(t.path), "child-context"))
-	if err != nil {
-		t.finish(id, RunResult{}, err)
-		return
-	}
+	store := t.store
 	scope := codecontext.Scope{ProjectID: t.taskID, WorkspaceID: t.taskID, ConversationID: id, TaskID: id, AttemptID: "1"}
 	inheritedReader, _ := t.reads.Get("context_read")
 	registry.Register(childContextReader{primary: codecontext.ReadTool{Store: store, Scope: scope}, inherited: inheritedReader})
@@ -356,7 +376,7 @@ type teamTool struct {
 }
 
 func (t teamTool) Definition() model.ToolDefinition {
-	return model.ToolDefinition{Name: t.operation, Description: map[string]string{"spawn_agent": "Create an on-demand read-only child task with an independent compact context. Max 4 children, concurrency 1, 6 steps and 1024 output tokens per call. Explicitly give only required context; main applies any edits.", "list_agents": "List this task's children, statuses, bounded results and usage.", "send_message": "Send a bounded message to main or a known child in the same task. Does not restart completed children.", "read_agent_messages": "Read your own task mailbox after a sequence cursor (up to 20 messages).", "wait_agent": "Wait for one child, up to 20 seconds; returns current status without auto-retry.", "cancel_agent": "Cancel a child in this task."}[t.operation], Parameters: map[string]any{"type": "object", "properties": map[string]any{"agentId": map[string]any{"type": "string"}, "name": map[string]any{"type": "string"}, "prompt": map[string]any{"type": "string"}, "message": map[string]any{"type": "string"}, "after": map[string]any{"type": "integer", "minimum": 0}, "timeoutMs": map[string]any{"type": "integer", "minimum": 0, "maximum": 20000}}, "additionalProperties": false}}
+	return model.ToolDefinition{Name: t.operation, Description: map[string]string{"spawn_agent": fmt.Sprintf("Create an on-demand read-only child task with an independent compact context. Max 4 children, concurrency %d, 6 steps and 1024 output tokens per call. Explicitly give only required context; main applies any edits.", childConcurrency), "list_agents": "List this task's children, statuses, bounded results and usage.", "send_message": "Send a bounded message to main or a known child in the same task. Does not restart completed children.", "read_agent_messages": "Read your own task mailbox after a sequence cursor (up to 20 messages).", "wait_agent": "Wait for one child, up to 20 seconds; returns current status without auto-retry.", "cancel_agent": "Cancel a child in this task."}[t.operation], Parameters: map[string]any{"type": "object", "properties": map[string]any{"agentId": map[string]any{"type": "string"}, "name": map[string]any{"type": "string"}, "prompt": map[string]any{"type": "string"}, "message": map[string]any{"type": "string"}, "after": map[string]any{"type": "integer", "minimum": 0}, "timeoutMs": map[string]any{"type": "integer", "minimum": 0, "maximum": 20000}}, "additionalProperties": false}}
 }
 func (teamTool) Risk(json.RawMessage) tool.Risk { return tool.RiskRead }
 func (t teamTool) Execute(ctx context.Context, raw json.RawMessage) tool.Result {

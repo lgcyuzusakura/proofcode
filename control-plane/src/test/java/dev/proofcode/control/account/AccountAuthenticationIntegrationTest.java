@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AccountAuthenticationIntegrationTest {
     @MockBean JmsTemplate jms; @MockBean StringRedisTemplate redis; @MockBean TaskSocketHandler sockets;
     @Autowired TestRestTemplate http; @LocalServerPort int port;
+    @Autowired dev.proofcode.control.task.TaskService tasks;
     private String url(String path){return "http://localhost:"+port+path;}
     @Test void registrationIssuesOpaqueSessionAndLogoutRevokesIt(){
         var created=http.postForEntity(url("/api/auth/register"),new AccountController.Credentials("test-user-22","password-long-enough"),AccountService.Login.class);
@@ -40,5 +41,16 @@ class AccountAuthenticationIntegrationTest {
         HttpHeaders other=new HttpHeaders();other.setBearerAuth(second);
         assertEquals("[]",http.exchange(url("/api/projects"),HttpMethod.GET,new HttpEntity<>(other),String.class).getBody());
         assertEquals(HttpStatus.NOT_FOUND,http.exchange(url("/api/projects/"+id+"/workspaces"),HttpMethod.GET,new HttpEntity<>(other),String.class).getStatusCode());
+        var task=tasks.createWithOutcome(java.util.UUID.fromString(id),"inspect","fixture",null,null,null,null,null,null,null,"PLAN",null).task();
+        var path="/api/tasks/"+task.getId()+"/instructions";
+        assertEquals(HttpStatus.FORBIDDEN,http.getForEntity(url(path),String.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND,http.exchange(url(path),HttpMethod.GET,new HttpEntity<>(other),String.class).getStatusCode());
+        String instruction="{\"content\":\"inspect auth tests\",\"clientKey\":\"scope-check\",\"attempt\":1}";
+        other.setContentType(MediaType.APPLICATION_JSON);
+        assertEquals(HttpStatus.NOT_FOUND,http.exchange(url(path),HttpMethod.POST,new HttpEntity<>(instruction,other),String.class).getStatusCode());
+        assertEquals("[]",http.exchange(url(path),HttpMethod.GET,new HttpEntity<>(owner),String.class).getBody());
+        assertEquals(HttpStatus.OK,http.exchange(url(path),HttpMethod.POST,new HttpEntity<>(instruction,owner),String.class).getStatusCode());
+        assertTrue(http.exchange(url(path),HttpMethod.GET,new HttpEntity<>(owner),String.class).getBody().contains("inspect auth tests"));
+        assertEquals(HttpStatus.FORBIDDEN,http.exchange(url("/internal/tasks/"+task.getId()+"/instructions?runnerId="+java.util.UUID.randomUUID()+"&attempt=1"),HttpMethod.GET,new HttpEntity<>(owner),String.class).getStatusCode());
     }
 }

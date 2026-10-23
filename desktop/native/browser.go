@@ -257,6 +257,7 @@ func (a *App) projectBrowser(handle, action, value, selector string, x, y int, a
 	return state, nil
 }
 func (a *App) shutdown(ctx context.Context) {
+	a.closeRuntimeOperations()
 	a.browserMu.Lock()
 	a.stopBrowserBroker()
 	for _, run := range a.browsers {

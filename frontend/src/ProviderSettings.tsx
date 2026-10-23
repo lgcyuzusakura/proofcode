@@ -13,7 +13,7 @@ export function ProviderSettings() {
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [wireApi, setWireApi] = useState<"responses" | "chat">("chat");
+  const [wireApi, setWireApi] = useState<ModelProvider["wireApi"]>("chat");
   const [aliases, setAliases] = useState<Record<string, string>>({});
   const [modelSettings, setModelSettings] = useState<Record<string, ModelSettings>>({});
   const [settingsModel, setSettingsModel] = useState("");
@@ -58,6 +58,16 @@ export function ProviderSettings() {
     setBusy(true); setError("");
     try { const value = await bridge(token()); update(value); edit(value); setNotice("本机 Codex 配置已导入，密钥由桌面端直接发送到控制面。请读取可用模型。"); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
+  const probe = async () => {
+    if (!selected || dirty || !settingsModel) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await post<{ success: boolean; outcome: string; durationMs: number; httpStatus: number }>(`/api/model-providers/${selected.id}/probe`, { model: settingsModel });
+      const reasons: Record<string, string> = { authentication: "密钥认证失败", permission_or_policy: "服务拒绝访问或策略拦截", rate_or_overload: "服务限流或繁忙", request_or_context: "服务不接受测试请求", endpoint_or_model: "接口或模型不存在", provider: "服务返回错误", tool_protocol: "返回内容未通过工具调用格式检查", timeout: "请求超时", interrupted: "请求中断", connection: "服务连接失败", response_limit: "服务响应超过测试大小限制" };
+      if (result.success) setNotice(`${settingsModel} 的最小工具调用测试通过，用时 ${result.durationMs} ms。未执行工具。`);
+      else setError(`测试未通过：${reasons[result.outcome] || "服务响应无效"}${result.httpStatus ? `（HTTP ${result.httpStatus}）` : ""}。`);
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  };
   return <div className="provider-settings">
     <div className="provider-list">
       {providers.map(p => <button key={p.id} disabled={busy} className={selected?.id === p.id ? "active" : ""} onClick={() => edit(p)}><strong>{p.name}</strong><small>{p.models.length} 个模型 · {p.wireApi}</small></button>)}
@@ -68,10 +78,12 @@ export function ProviderSettings() {
       <label>服务名称<input disabled={busy} maxLength={120} value={name} onChange={e => setName(e.target.value)} placeholder="例如 DeepSeek / Kimi / 自定义服务"/></label>
       <label>API Base URL<input disabled={busy} value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="https://api.example.com/v1"/></label>
       <label>API Key<input disabled={busy} type="password" autoComplete="new-password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={selected?.hasKey ? "已保存，留空表示保留" : "输入服务的 API Key"}/></label>
-      <label>协议<select disabled={busy} value={wireApi} onChange={e => setWireApi(e.target.value as "responses" | "chat")}><option value="responses">Responses</option><option value="chat">Chat Completions</option></select></label>
+      <label>协议<select disabled={busy} value={wireApi} onChange={e => setWireApi(e.target.value as ModelProvider["wireApi"])}><option value="responses">Responses</option><option value="chat">Chat Completions</option><option value="anthropic">Anthropic Messages</option></select></label>
+      {wireApi === "anthropic" && <p className="form-help">填写以 /v1 结尾的服务地址。使用 Messages 协议与 API Key 认证；模型从该服务的目录读取。</p>}
       <p className="form-help">保存后读取服务的可用模型。API Key 加密存储在控制面，页面不会回显。</p>
       <div className="panel-actions"><button className="primary-button" disabled={busy || !name.trim() || !baseUrl.trim() || (!selected && !apiKey)} onClick={() => void save()}>{busy ? <Loader2 size={14}/> : <Check size={14}/>}保存服务</button>{selected && <><button className="secondary-button" disabled={busy || dirty} onClick={() => void refresh()}><RefreshCw size={14}/>读取可用模型</button><button className="icon-button" aria-label="删除模型服务" title="删除模型服务" disabled={busy} onClick={() => void remove()}><Trash2 size={14}/></button></>}</div>
       {dirty && <p className="form-help">配置已修改，请先保存，再读取可用模型。</p>}
+      {selected && selected.models.length > 0 && <div className="provider-probe"><label>测试模型<select disabled={busy} value={settingsModel} onChange={e => setSettingsModel(e.target.value)}>{selected.models.map(model => <option key={model.id} value={model.id}>{aliases[model.id] || model.name}</option>)}</select></label><button type="button" className="secondary-button" disabled={busy || dirty || !settingsModel} onClick={() => void probe()}>验证工具调用</button><p className="form-help">发送少量测试文本，可能产生模型费用；不发送项目内容，不执行工具。结果只验证这一次调用。</p></div>}
       {notice && <div className="capsule-success"><Check size={15}/>{notice}</div>}
       {error && <div className="capsule-error"><XCircle size={15}/>{error}</div>}
       {selected && <div className="provider-models"><div className="settings-section-head"><div><strong>模型运行参数</strong><span>每个模型单独保存上下文、输出上限、压缩与计价</span></div></div>{selected.models.length === 0 && <p className="form-help">先读取可用模型，才能为模型添加配置。</p>}{selected.models.map(m => <div className="provider-model-row" key={m.id}><label><code>{m.id}</code><input disabled={busy} maxLength={120} aria-label={`${m.id} 显示名称`} value={aliases[m.id] || ""} onChange={e => setAliases(old => ({ ...old, [m.id]: e.target.value }))} placeholder="模型显示名称"/></label><button type="button" className={`model-settings-trigger ${settingsModel === m.id ? "active" : ""}`} disabled={busy} onClick={() => { setSettingsModel(m.id); if (!modelSettings[m.id]) setModelSettings(old => ({ ...old, [m.id]: defaultSettings() })); }}><span>{modelSettings[m.id] ? `${prettyTokens(modelSettings[m.id].contextTokens ?? 128000)} · ${{gentle:"轻度",balanced:"均衡",aggressive:"强力"}[modelSettings[m.id].compression]}` : "设置参数"}</span><ChevronDown size={14}/></button></div>)}</div>}

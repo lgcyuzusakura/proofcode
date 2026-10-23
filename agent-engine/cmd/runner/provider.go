@@ -37,7 +37,7 @@ func (r *runner) resolveModel(ctx context.Context, task *taskMessage) error {
 		return errors.New("invalid model connection response")
 	}
 	u, err := url.Parse(value.BaseURL)
-	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || value.APIKey == "" || (value.WireAPI != "chat" && value.WireAPI != "responses") {
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || value.APIKey == "" || (value.WireAPI != "chat" && value.WireAPI != "responses" && value.WireAPI != "anthropic") {
 		return errors.New("invalid model connection configuration")
 	}
 	if value.Settings != nil {

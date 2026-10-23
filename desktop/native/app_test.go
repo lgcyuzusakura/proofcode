@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,15 +38,15 @@ func TestProxyRequestForwardsAuthenticatedAPIRequest(t *testing.T) {
 func TestProxyRequestRejectsNonAPIAndUnsafeInputs(t *testing.T) {
 	app := &App{}
 	for _, test := range []struct {
-		name string
-		path string
+		name   string
+		path   string
 		method string
-		body string
-		auth string
+		body   string
+		auth   string
 	}{
 		{name: "internal path", path: "/internal/tasks/1", method: http.MethodGet},
 		{name: "path traversal", path: "/api/../internal", method: http.MethodGet},
-		{name: "unsupported method", path: "/api/projects", method: http.MethodPut},
+		{name: "unsupported method", path: "/api/projects", method: http.MethodDelete},
 		{name: "header injection", path: "/api/projects", method: http.MethodGet, auth: "Bearer ok\r\nX-Leak: yes"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -54,6 +55,29 @@ func TestProxyRequestRejectsNonAPIAndUnsafeInputs(t *testing.T) {
 				t.Fatal("expected proxy validation error")
 			}
 		})
+	}
+}
+
+func TestProxyRequestSavesOAuthConfigurationUsingPut(t *testing.T) {
+	const path = "/api/projects/project/mcp-servers/server/oauth"
+	const payload = `{"clientId":"desktop-client","clientSecret":"fixture-secret","scope":"docs.read","clearClientSecret":false}`
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil || request.Method != http.MethodPut || request.URL.Path != path || request.URL.Query().Get("version") != "7" || string(body) != payload {
+			t.Errorf("OAuth configuration request did not survive the desktop bridge")
+		}
+		if request.Header.Get("Authorization") != "Bearer fixture-session" || request.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("OAuth request headers did not survive the desktop bridge")
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"configured":true,"hasClientSecret":true,"serverVersion":8}`))
+	}))
+	defer server.Close()
+	t.Setenv("PROOFCODE_CONTROL_PLANE_URL", server.URL)
+	app := &App{registryDir: t.TempDir()}
+	response, err := app.ProxyRequest(path+"?version=7", "put", payload, "Bearer fixture-session", "")
+	if err != nil || response.Status != http.StatusOK || strings.Contains(response.Body, "fixture-secret") || !strings.Contains(response.Body, `"serverVersion":8`) {
+		t.Fatalf("OAuth save through desktop proxy failed: status %d, error %v", response.Status, err)
 	}
 }
 

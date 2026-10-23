@@ -1,11 +1,15 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Activity, Bot, CheckCircle2, ChevronDown, CircleDot, Code2, Globe, Database, FolderGit2, Gauge, GitBranch, Layers3, Loader2, Menu, MessageSquare, Moon, Sun, Plus, RefreshCw, Search, Settings2, ShieldCheck, Sparkles, Workflow, Wrench, X, XCircle } from "lucide-react";
+import { Activity, Archive, Bot, CheckCircle2, ChevronDown, CircleDot, Code2, Globe, Database, FolderGit2, Gauge, GitBranch, Layers3, Loader2, Menu, MessageSquare, Moon, Sun, PanelRightOpen, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Search, Settings2, ShieldCheck, Sparkles, Workflow, Wrench, X, XCircle } from "lucide-react";
 import { ApiError, api, authRequest, createScratchProject, desktopApp, pendingBootstrap, post, registerProject, scopedPath, token } from "./api";
 import { ActionPanel, AgentWorkspace, StatusBadge, ToolchainPage, ToolUsagePage } from "./TaskViews";
 import type { PanelKind } from "./TaskViews";
 import type { Conversation, ConversationMessage, ExecutionMode, LocalProject, Project, Scope, Task, TaskApproval, TaskArtifact, TaskEvent, Workspace } from "./types";
 import { DataWorkbench } from "./DataWorkbench";
-import { IDEPage, GitPage, BrowserPage, ReviewPage } from "./DeveloperPages";
+import { IDEPage, GitPage, ReviewPage } from "./DeveloperPages";
+import { HistorySearch, type HistoryHit } from "./HistorySearch";
+import { addSourceAttachment } from "./SourceAttachments";
+import { RuntimeEnvironment } from "./RuntimeEnvironment";
+import { PreviewWorkspace, type PreviewRequest } from "./PreviewWorkspace";
 
 const blankProject: Project = { id: "", name: "新工程对话", defaultBranch: "main", sourceKind: "SCRATCH" };
 const savedScopeKey = "proofcode.selected-scope";
@@ -19,6 +23,7 @@ const isActiveTask = (task: Task) => ["QUEUED", "RUNNING", "VERIFYING", "WAITING
 
 function WorkspaceShell() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [initializing, setInitializing] = useState(true);
   const [project, setProject] = useState<Project>(blankProject);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [conversationTree, setConversationTree] = useState<Record<string, Conversation[]>>({});
@@ -36,12 +41,41 @@ function WorkspaceShell() {
   const [showWorkspaceForm, setShowWorkspaceForm] = useState(false);
   const [notice, setNotice] = useState("");
   const [activeNav, setActiveNav] = useState("工作台");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewRequest, setPreviewRequest] = useState<PreviewRequest | null>(null);
+  const previewRevision = useRef(0);
+  const openPreviewFile = (file: File) => { if (!beforeNavigation()) return; setPreviewRequest({ revision: ++previewRevision.current, file }); setPreviewOpen(true); setActiveNav("工作台"); };
+  useEffect(() => { setPreviewOpen(false); setPreviewRequest(null); }, [project.id]);
   const [query, setQuery] = useState("");
+  const [showHistory, setShowHistory] = useState(false), [historyRevision, setHistoryRevision] = useState(0), [historyMessage, setHistoryMessage] = useState("");
   const [theme, setTheme] = useState(() => localStorage.getItem("proofcode.theme") === "dark" ? "dark" : "light");
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("proofcode.theme", theme); }, [theme]);
   const [backendOnline, setBackendOnline] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const [collapsed, setCollapsed] = useState(() => window.matchMedia("(max-width:760px)").matches);
+  const desktopCollapsed = useRef(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width:760px)");
+    const resize = () => { setCollapsed(current => { if (media.matches) { desktopCollapsed.current = current; return true; } return desktopCollapsed.current; }); };
+    media.addEventListener("change", resize);
+    return () => media.removeEventListener("change", resize);
+  }, []);
+  useEffect(() => {
+    if (collapsed || !window.matchMedia("(max-width:760px)").matches) return;
+    const nav = document.getElementById("workspace-navigation");
+    const previous = document.activeElement as HTMLElement | null;
+    nav?.querySelector<HTMLElement>("button")?.focus();
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setCollapsed(true); }
+      if (event.key !== "Tab") return;
+      const nodes = [...(nav?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),summary,[tabindex="0"]') || [])].filter(node => node.getClientRects().length);
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (first && event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (last && !event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", keys);
+    return () => { window.removeEventListener("keydown", keys); if (previous?.isConnected) previous.focus({preventScroll:true}); };
+  }, [collapsed]);
   const [openPanel, setOpenPanel] = useState<PanelKind | null>(null);
   const [scopeLoading, setScopeLoading] = useState(false);
   const [creatingConversation, setCreatingConversation] = useState(false);
@@ -69,6 +103,7 @@ function WorkspaceShell() {
   const beforeNavigation = () => window.dispatchEvent(new Event("proofcode:before-navigation", {cancelable:true}));
   const chooseProject = (next: Project) => {
     if (!beforeNavigation()) return;
+    setHistoryMessage("");
     scopeGeneration.current++;
     projectRef.current = next;
     scopeRef.current = { projectId: next.id };
@@ -79,10 +114,13 @@ function WorkspaceShell() {
   const chooseConversation = (nextWorkspace: Workspace, nextConversation: Conversation) => {
     if (!beforeNavigation()) return;
     if (nextConversation.projectId !== projectRef.current.id || nextConversation.workspaceId !== nextWorkspace.id) return;
+    if (scopeRef.current.workspaceId === nextWorkspace.id && scopeRef.current.conversationId === nextConversation.id) { setActiveNav("工作台"); if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true); return; }
+    setHistoryMessage("");
     scopeGeneration.current++;
     scopeRef.current = { projectId: projectRef.current.id, workspaceId: nextWorkspace.id, conversationId: nextConversation.id };
     setWorkspace(nextWorkspace); setConversation(nextConversation); clearRun();
     localStorage.setItem(savedScopeKey, JSON.stringify(scopeRef.current)); setActiveNav("工作台");
+    if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true);
   };
   const refreshLocals = async () => {
     try { const values = await desktopApp()?.ListLocalProjects?.(); if (values) setLocalProjects(values); } catch { /* Remote projects remain available. */ }
@@ -131,7 +169,7 @@ function WorkspaceShell() {
       if (currentRequest()) setMessages(values.sort((a, b) => a.sequence - b.sequence));
     } catch (cause) { if (currentRequest()) setNotice(`会话恢复失败：${String(cause)}`); }
   };
-  useEffect(() => { void loadProjects(); void refreshLocals(); }, []);
+  useEffect(() => { void loadProjects().finally(() => setInitializing(false)); void refreshLocals(); }, []);
   useEffect(() => {
     const reload = () => {
       setNotice("");
@@ -175,7 +213,7 @@ function WorkspaceShell() {
     void loadTasks(scope); void loadMessages(scope);
     const poll = setInterval(() => { void loadMessages(scope); }, 4000);
     return () => clearInterval(poll);
-  }, [conversation?.id]);
+  }, [conversation?.id, historyRevision]);
   useEffect(() => {
     if (!task) { setEvents([]); setArtifacts([]); setApprovals([]); return; }
     let active = true;
@@ -224,7 +262,8 @@ function WorkspaceShell() {
     refreshRelated(); void sync(); if (!desktopApp()?.ProxyRequest) connect();
     const poll = setInterval(() => { void sync(); refreshRelated(); if (!socket || socket.readyState !== WebSocket.OPEN) void loadTasks(scope); }, desktopApp()?.ProxyRequest ? 3000 : 5000);
     return () => { active = false; clearInterval(poll); if (reconnectTimer) clearTimeout(reconnectTimer); socket?.close(); };
-  }, [task?.id]);
+  }, [task?.id, historyRevision]);
+
 
   const addProject = (value: Project) => { setProjects((old) => [value, ...old.filter((item) => item.id !== value.id)]); chooseProject(value); setActiveNav("工作台"); void refreshLocals(); };
   const ensureProject = async (title: string) => {
@@ -243,21 +282,21 @@ function WorkspaceShell() {
     if (generation === scopeGeneration.current && projectRef.current.id === value.id) { scopeRef.current = resolved; localStorage.setItem(savedScopeKey, JSON.stringify(resolved)); }
     return resolved;
   };
-  const createTask = async (prompt: string, model: string, executionMode: ExecutionMode = "CODE", providerId = "") => {
+  const createTask = async (prompt: string, model: string, executionMode: ExecutionMode = "CODE", providerId = "", sourceAttachments: import("./types").SourceAttachment[] = []) => {
     try {
       const value = await ensureProject(prompt);
       const resolved = await ensureScope(value);
       const generation = scopeGeneration.current;
-      const identity = JSON.stringify([resolved, prompt, model, executionMode, providerId]);
+      const identity = JSON.stringify([resolved, prompt, model, executionMode, providerId, sourceAttachments]);
       if (submission.current?.identity !== identity) submission.current = { identity, key: crypto.randomUUID() };
       const pending = submission.current;
-      if (executionMode === "CODE" && value.sourceKind === "LOCAL_FOLDER" && !pending.sourceSnapshotId) {
+      if (executionMode !== "CHAT" && value.sourceKind === "LOCAL_FOLDER" && !pending.sourceSnapshotId) {
         if (!value.localHandle || !desktopApp()?.CaptureProjectSource) throw new Error("本机源码只能在已绑定此工程目录的桌面端执行");
         const capture = await desktopApp()!.CaptureProjectSource!(value.localHandle);
         const uploaded = await post<{ id: string }>(`${scopedPath(value.id)}/sources`, { workspaceId: resolved.workspaceId, ...capture });
         pending.sourceSnapshotId = uploaded.id;
       }
-      const created = await post<Task>("/api/tasks", { ...resolved, prompt, model, executionMode, providerId: providerId || null, sourceSnapshotId: pending.sourceSnapshotId || null }, pending.key);
+      const created = await post<Task>("/api/tasks", { ...resolved, prompt, model, executionMode, providerId: providerId || null, sourceSnapshotId: pending.sourceSnapshotId || null, sourceAttachments }, pending.key);
       submission.current = null;
       if (generation === scopeGeneration.current && scopeEquals(scopeRef.current, resolved)) { setTasks((old) => [created, ...old.filter((item) => item.id !== created.id)]); setTask(created); void loadMessages(resolved); setBackendOnline(true); setNotice(""); }
       return true;
@@ -275,8 +314,17 @@ function WorkspaceShell() {
       chooseConversation(currentWorkspace, created);
     } catch (cause) { setNotice(`新建对话失败：${String(cause)}`); } finally { setCreatingConversation(false); }
   };
+  const updateConversation = async (target: Conversation, update: { title?: string; archived?: boolean }): Promise<boolean> => {
+    try {
+      const value = await api<Conversation>(`${scopedPath(target.projectId)}/workspaces/${target.workspaceId}/conversations/${target.id}`, { method: "PATCH", body: JSON.stringify(update) });
+      if (projectRef.current.id === target.projectId) setConversationTree(old => ({ ...old, [target.workspaceId]: (old[target.workspaceId] || []).map(item => item.id === value.id ? value : item) }));
+      const currentScope = scopeRef.current;
+      if (currentScope.projectId === value.projectId && currentScope.workspaceId === value.workspaceId && currentScope.conversationId === value.id) setConversation(value);
+      return true;
+    } catch (cause) { setNotice(cause instanceof ApiError && cause.status === 409 ? cause.message : `更新对话失败：${String(cause)}`); return false; }
+  };
   const mutateTask = async (action: "retry" | "cancel", selectedId = task?.id) => {
-    if (!selectedId) return; const scope = { ...scopeRef.current }, generation = scopeGeneration.current;
+    if (!selectedId || (action === "retry" && conversation?.archivedAt)) return; const scope = { ...scopeRef.current }, generation = scopeGeneration.current;
     try { await api(`/api/tasks/${selectedId}/${action}`, { method: "POST" }); if (generation !== scopeGeneration.current) return; await loadTasks(scope); await loadMessages(scope); } catch (cause) { if (generation === scopeGeneration.current && scopeEquals(scopeRef.current, scope)) setNotice(String(cause)); }
   };
   const decideApproval = async (approvalId: string, approved: boolean) => {
@@ -287,41 +335,75 @@ function WorkspaceShell() {
       setApprovals((old) => old.map((item) => item.id === value.id ? value : item)); await loadTasks(scope);
     } catch (cause) { if (generation === scopeGeneration.current && scopeEquals(scopeRef.current, scope)) setNotice(String(cause)); }
   };
-  const navigate = (label: string, taskId?: string) => { if (!beforeNavigation()) return; if (taskId) { const selected = tasks.find(value => value.id === taskId); if (selected) setTask(selected); } setActiveNav(label); setOpenPanel(null); if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true); };
+  const navigate = (label: string, taskId?: string) => { if (!beforeNavigation()) return; if (label === "浏览器") { setPreviewRequest({ revision: ++previewRevision.current }); setPreviewOpen(true); label = "工作台"; } setHistoryMessage(""); if (taskId) { const selected = tasks.find(value => value.id === taskId); if (selected) setTask(selected); } setActiveNav(label); setOpenPanel(null); if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true); };
+  const openHistory = async (hit: HistoryHit, signal: AbortSignal): Promise<boolean> => {
+    if (!beforeNavigation()) return false;
+    const generation = scopeGeneration.current;
+    const target = projects.find(value => value.id === hit.projectId);
+    if (!target) throw new Error("工程已不可用，请刷新项目列表后搜索。");
+    const [nextWorkspaces, nextConversations, nextTasks] = await Promise.all([
+      api<Workspace[]>(`${scopedPath(hit.projectId)}/workspaces`, { signal }),
+      api<Conversation[]>(`${scopedPath(hit.projectId)}/workspaces/${hit.workspaceId}/conversations`, { signal }),
+      api<Task[]>(`/api/tasks?projectId=${hit.projectId}&conversationId=${hit.conversationId}`, { signal })
+    ]);
+    if (signal.aborted || generation !== scopeGeneration.current) return false;
+    const nextWorkspace = nextWorkspaces.find(value => value.id === hit.workspaceId && value.projectId === hit.projectId);
+    const nextConversation = nextConversations.find(value => value.id === hit.conversationId && value.projectId === hit.projectId && value.workspaceId === hit.workspaceId);
+    const nextTask = hit.taskId ? nextTasks.find(value => value.id === hit.taskId && value.projectId === hit.projectId && value.conversationId === hit.conversationId) : nextTasks[0];
+    if (!nextWorkspace || !nextConversation || (hit.taskId && !nextTask)) throw new Error("搜索来源已变化，请重新搜索。");
+    scopeGeneration.current++;clearRun();projectRef.current = target;
+    scopeRef.current = { projectId: target.id, workspaceId: nextWorkspace.id, conversationId: nextConversation.id };
+    localStorage.setItem(savedScopeKey, JSON.stringify(scopeRef.current));
+    setProject(target);setWorkspace(nextWorkspace);setConversation(nextConversation);setWorkspaces(nextWorkspaces);
+    setConversationTree(old => ({ ...(project.id === target.id ? old : {}), [nextWorkspace.id]: nextConversations }));
+    setTasks(nextTasks);setTask(nextTask || null);setQuery("");setActiveNav("工作台");setOpenPanel(null);setHistoryMessage(hit.messageId || "");setHistoryRevision(value => value + 1);
+    if (window.matchMedia("(max-width:760px)").matches) setCollapsed(true);
+    return true;
+  };
   const local = localProjects.find((value) => value.localHandle === project.localHandle);
   const filteredTasks = tasks.filter((value) => value.prompt.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const totals = { active: tasks.filter(isActiveTask).length, succeeded: tasks.filter((value) => value.status === "SUCCEEDED").length, completed: tasks.filter((value) => ["SUCCEEDED", "FAILED", "CANCELLED"].includes(value.status)).length };
 
   return <div className={`app-shell has-route ${collapsed ? "tree-collapsed" : ""}`}>
-    <header className="topbar"><div className="top-left"><button className="rail-toggle" title={collapsed ? "展开导航" : "收起导航"} onClick={() => setCollapsed((value) => !value)}><Menu size={17}/></button><div className="brand-mark">P</div><div className="brand-copy"><strong>ProofCode</strong><span>可验证编程工作台</span></div><div className="workspace-picker"><span className="workspace-dot"/>{project.name}<ChevronDown size={14}/></div></div><div className="top-right"><span className={`connection ${backendOnline ? "online" : "local"}`}><span/>{backendOnline ? "服务已连接" : authRequired ? "需要登录" : "服务未连接"}</span><button className="icon-button" title="刷新项目与会话" onClick={() => { void loadProjects(); void loadTasks(); void loadMessages(); setTreeRevision((value) => value + 1); }}><RefreshCw size={16}/></button><button className="icon-button theme-toggle" title={theme === "light" ? "切换深色外观" : "切换浅色外观"} onClick={() => setTheme(value => value === "light" ? "dark" : "light")}>{theme === "light" ? <Moon size={16}/> : <Sun size={16}/>}</button><button className="avatar" title="账户" onClick={() => setOpenPanel("账户")}>A</button></div></header>
-    <div className={`app-body ${collapsed ? "rail-collapsed" : ""}`}><aside className={`nav-rail ${collapsed ? "collapsed" : ""}`}>
+    <header className="topbar"><div className="top-left"><button className="rail-toggle" aria-expanded={!collapsed} aria-controls="workspace-navigation" title={collapsed ? "展开导航" : "收起导航"} onClick={() => setCollapsed((value) => !value)}><Menu size={17}/></button><div className="brand-mark">P</div><div className="brand-copy"><strong>ProofCode</strong><span>可验证编程工作台</span></div><div className="workspace-picker"><span className="workspace-dot"/>{project.name}<ChevronDown size={14}/></div></div><div className="top-right"><span className={`connection ${backendOnline ? "online" : "local"}`}><span/>{backendOnline ? "服务已连接" : authRequired ? "需要登录" : "服务未连接"}</span><button className="icon-button" title="刷新项目与会话" onClick={() => { void loadProjects(); void loadTasks(); void loadMessages(); setTreeRevision((value) => value + 1); }}><RefreshCw size={16}/></button><button className="icon-button theme-toggle" title={theme === "light" ? "切换深色外观" : "切换浅色外观"} onClick={() => setTheme(value => value === "light" ? "dark" : "light")}>{theme === "light" ? <Moon size={16}/> : <Sun size={16}/>}</button><button className="avatar" title="账户" onClick={() => setOpenPanel("账户")}>A</button></div></header>
+    <div className={`app-body ${collapsed ? "rail-collapsed" : ""}`}><aside id="workspace-navigation" aria-label="工程与对话导航" className={`nav-rail ${collapsed ? "collapsed" : ""}`}>
       <button className="new-task-button" title="新建对话" disabled={creatingConversation} onClick={() => { navigate("工作台"); void newConversation(); }}><Plus size={16}/><span>新建对话</span></button>
-      <div className="sidebar-search"><Search size={15}/><input value={query} onChange={event => setQuery(event.target.value)} aria-label="搜索工程、对话和任务" placeholder="搜索对话、任务…"/></div><div className="nav-group sidebar-home"><NavButton icon={<MessageSquare size={16}/>} label="对话" active={activeNav === "工作台"} onClick={() => navigate("工作台")}/></div>
+      <div className="sidebar-search"><Search size={15}/><input value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") setShowHistory(true); }} aria-label="搜索工程、对话和任务" placeholder="筛选列表，回车搜索历史"/><button type="button" aria-label="搜索所有对话内容" onClick={() => setShowHistory(true)}>全文</button></div><div className="nav-group sidebar-home"><NavButton icon={<MessageSquare size={16}/>} label="对话" active={activeNav === "工作台"} onClick={() => navigate("工作台")}/></div>
       <div className="sidebar-tasks"><div className="nav-label">当前对话的任务 <span>{tasks.length}</span></div><div className="sidebar-task-list">{filteredTasks.map(value => <button className={`sidebar-task ${task?.id === value.id ? "active" : ""}`} key={value.id} title={value.prompt} onClick={() => { if (beforeNavigation()) { setTask(value); navigate("工作台"); } }}><CircleDot size={13}/><span>{value.prompt}</span></button>)}{!filteredTasks.length && <p className="sidebar-empty">{query ? "没有匹配的任务" : "从一条消息开始"}</p>}</div></div>
       <details className="sidebar-more"><summary>更多工具 <ChevronDown size={12}/></summary><div className="nav-group"><NavButton icon={<Layers3 size={16}/>} label="运行概览" active={activeNav === "概览"} onClick={() => navigate("概览")}/><NavButton icon={<Database size={16}/>} label="数据库与缓存" active={activeNav === "数据"} onClick={() => navigate("数据")}/><NavButton icon={<Workflow size={16}/>} label="执行记录" active={activeNav === "执行链"} onClick={() => navigate("执行链")}/><NavButton icon={<Wrench size={16}/>} label="可用工具" active={activeNav === "插件"} onClick={() => navigate("插件")}/></div></details>
-      <div className="scope-tree"><div className="nav-label project-label">工程 / 对话<button className="tiny-button" title="连接或新建工程" onClick={() => setShowProjectForm(true)}><Plus size={14}/></button></div><button className={`tree-blank ${!project.id ? "selected" : ""}`} onClick={() => { chooseProject(blankProject); navigate("工作台"); }}><Plus size={14}/><span>新建独立工程对话</span></button>{projects.map((value) => <div className="project-tree" key={value.id}><button className={`mini-project ${project.id === value.id ? "selected" : ""}`} onClick={() => chooseProject(value)}><FolderGit2 size={14}/><span>{value.name}</span></button>{value.id === project.id && <div className="workspace-tree">{scopeLoading && <small className="scope-loading"><Loader2 size={12}/>加载工作区</small>}{workspaces.map((item) => <div key={item.id}><div className={`tree-workspace ${workspace?.id === item.id ? "current" : ""}`}><GitBranch size={12}/><span>{item.name}</span></div>{(conversationTree[item.id] || []).filter(chat => !query || chat.title.toLocaleLowerCase().includes(query.toLocaleLowerCase()) || value.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())).map((chat) => <button className={`tree-conversation ${conversation?.id === chat.id ? "selected" : ""}`} key={chat.id} title={chat.title} onClick={() => chooseConversation(item, chat)}><MessageSquare size={12}/><span>{chat.title === "Legacy" ? "默认对话" : chat.title}</span></button>)}</div>)}<div className="tree-create-actions"><button onClick={() => void newConversation()} disabled={creatingConversation}><Plus size={12}/>新对话</button><button onClick={() => setShowWorkspaceForm(true)}><GitBranch size={12}/>工作区</button></div></div>}</div>)}</div>
-      <div className="nav-bottom"><NavButton icon={<Settings2 size={16}/>} label="设置" onClick={() => setOpenPanel("Agent 设置")}/><div className="privacy-note"><ShieldCheck size={14}/><span>工程隔离 · 数据审批<br/>持久会话与操作审计</span></div></div>
+      <div className="scope-tree"><div className="nav-label project-label">工程 / 对话<button className="tiny-button" title="连接或新建工程" onClick={() => setShowProjectForm(true)}><Plus size={14}/></button></div><button className={`tree-blank ${!project.id ? "selected" : ""}`} onClick={() => { chooseProject(blankProject); navigate("工作台"); }}><Plus size={14}/><span>新建独立工程对话</span></button>{projects.map((value) => <div className="project-tree" key={value.id}><button className={`mini-project ${project.id === value.id ? "selected" : ""}`} onClick={() => chooseProject(value)}><FolderGit2 size={14}/><span>{value.name}</span></button>{value.id === project.id && <div className="workspace-tree">{scopeLoading && <small className="scope-loading"><Loader2 size={12}/>加载工作区</small>}{workspaces.map((item) => {const chats=(conversationTree[item.id]||[]).filter(chat=>!query||chat.title.toLocaleLowerCase().includes(query.toLocaleLowerCase())||value.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));const current=chats.filter(chat=>!chat.archivedAt);const archived=chats.filter(chat=>chat.archivedAt);return <div key={item.id}><div className={`tree-workspace ${workspace?.id === item.id ? "current" : ""}`}><GitBranch size={12}/><span>{item.name}</span></div>{current.map(chat=><ConversationRow key={chat.id} conversation={chat} selected={conversation?.id===chat.id} onSelect={()=>chooseConversation(item,chat)} onRename={title=>updateConversation(chat,{title})} onArchive={()=>updateConversation(chat,{archived:true})} onRestore={()=>updateConversation(chat,{archived:false})}/>)}{!!archived.length&&<details className="archived-conversation-list" open={archived.some(chat => chat.id === conversation?.id) || undefined}><summary>已归档 <span>{archived.length}</span></summary>{archived.map(chat=><ConversationRow key={chat.id} conversation={chat} selected={conversation?.id===chat.id} onSelect={()=>chooseConversation(item,chat)} onRename={title=>updateConversation(chat,{title})} onArchive={()=>updateConversation(chat,{archived:true})} onRestore={()=>updateConversation(chat,{archived:false})}/>)}</details>}</div>})}<div className="tree-create-actions"><button onClick={() => void newConversation()} disabled={creatingConversation}><Plus size={12}/>新对话</button><button onClick={() => setShowWorkspaceForm(true)}><GitBranch size={12}/>工作区</button></div></div>}</div>)}</div>
+      <div className="nav-bottom"><NavButton icon={<Wrench size={16}/>} label="运行环境" active={activeNav === "运行环境"} onClick={() => navigate("运行环境")}/><NavButton icon={<Settings2 size={16}/>} label="设置" onClick={() => setOpenPanel("Agent 设置")}/><div className="privacy-note"><ShieldCheck size={14}/><span>工程隔离 · 数据审批<br/>持久会话与操作审计</span></div></div>
     </aside></div>
-    <div className={`route-overlay ${activeNav === "工作台" ? "chat-route" : ""}`}><div className="workspace-toolbar"><div className="workspace-context" title={local?.path || project.name}><strong>{activeNav === "工作台" ? (conversation?.title === "Legacy" ? "默认对话" : conversation?.title || "新对话") : activeNav === "代码" ? "项目文件" : activeNav}</strong><span><FolderGit2 size={12}/>{project.name}<span className="workspace-subcontext">/ {workspace?.name || "自动工程"}</span></span></div><div className="workspace-tabs" aria-label="工作区视图">{[{ label: "工作台", name: "对话", icon: <MessageSquare size={14}/> }, { label: "代码", name: "文件", icon: <Code2 size={14}/> }, { label: "Git", name: "Git", icon: <GitBranch size={14}/> }, { label: "审查", name: "审查", icon: <ShieldCheck size={14}/> }, { label: "浏览器", name: "浏览器", icon: <Globe size={14}/> }].map(item => <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} aria-pressed={activeNav === item.label} onClick={() => navigate(item.label)}>{item.icon}<span>{item.name}</span></button>)}{activeNav === "工作台" && <button type="button" className="detail-toggle" onClick={() => window.dispatchEvent(new Event("proofcode:toggle-run-details"))}><Activity size={15}/><span>运行详情</span></button>}</div></div>
-      {activeNav === "工作台" && <AgentWorkspace key={`${project.id}:${conversation?.id || "new"}`} project={project} conversation={conversation} messages={messages} task={task} tasks={tasks} events={runDataTaskId === task?.id ? events : []} artifacts={runDataTaskId === task?.id ? artifacts : []} approvals={runDataTaskId === task?.id ? approvals : []} onCreated={createTask} onSelectTask={setTask} onApprove={decideApproval} onCancel={(id?: string) => void mutateTask("cancel", id)} onRetry={() => void mutateTask("retry")} onNavigate={navigate} onNotice={setNotice} onContextFork={created => { if (!workspace || created.projectId !== project.id || created.workspaceId !== workspace.id) return; setConversationTree(old => ({ ...old, [workspace.id]: [...(old[workspace.id] || []), created] })); chooseConversation(workspace, created); }}/>}
-      {activeNav === "代码" && <IDEPage key={project.id} project={project} task={task}/>}
+    {!collapsed && <button className="mobile-navigation-scrim" aria-label="关闭导航" onClick={() => setCollapsed(true)}/>}
+    <div className={`route-overlay ${activeNav === "工作台" ? "chat-route" : ""}`}><div className="workspace-toolbar"><div className="workspace-context" title={local?.path || project.name}><strong>{activeNav === "工作台" ? (conversation?.title === "Legacy" ? "默认对话" : conversation?.title || "新对话") : activeNav === "代码" ? "项目文件" : activeNav === "插件" ? "可用工具" : activeNav}</strong><span><FolderGit2 size={12}/>{project.name}<span className="workspace-subcontext">/ {workspace?.name || "自动工程"}</span></span></div><div className="workspace-tabs" aria-label="工作区视图">{[{ label: "工作台", name: "对话", icon: <MessageSquare size={14}/> }, { label: "代码", name: "文件", icon: <Code2 size={14}/> }, { label: "Git", name: "Git", icon: <GitBranch size={14}/> }, { label: "审查", name: "审查", icon: <ShieldCheck size={14}/> }, { label: "浏览器", name: "浏览器", icon: <Globe size={14}/> }].map(item => <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} aria-pressed={activeNav === item.label} onClick={() => navigate(item.label)}>{item.icon}<span>{item.name}</span></button>)}{activeNav === "工作台" && <button type="button" title="文档与浏览器预览" aria-label="文档与浏览器预览" aria-pressed={previewOpen} onClick={() => setPreviewOpen(value => !value)}><PanelRightOpen size={15}/><span>预览</span></button>}{activeNav === "工作台" && <button type="button" className="detail-toggle" onClick={() => window.dispatchEvent(new Event("proofcode:toggle-run-details"))}><Activity size={15}/><span>运行详情</span></button>}</div></div>
+      <PreviewWorkspace key={project.id || "new"} project={project} visible={activeNav === "工作台"} open={previewOpen} onOpenChange={setPreviewOpen} request={previewRequest}>
+      {activeNav === "工作台" && (initializing || (!!project.id && !conversation) ? <div className="conversation-loading" role="status"><Loader2 size={20}/><span>{initializing ? "正在恢复工程…" : scopeLoading ? "正在读取对话…" : "对话未能加载，请重试。"}</span>{!initializing && !scopeLoading && <button type="button" className="secondary-button" onClick={() => setTreeRevision(value => value + 1)}>重新加载对话</button>}</div> : <AgentWorkspace historyLocation={{ id: historyMessage, revision: historyRevision }} key={`${project.id}:${conversation?.id || "new"}`} project={project} conversation={conversation} messages={messages} task={task} tasks={tasks} events={runDataTaskId === task?.id ? events : []} artifacts={runDataTaskId === task?.id ? artifacts : []} approvals={runDataTaskId === task?.id ? approvals : []} onCreated={createTask} onSelectTask={setTask} onApprove={decideApproval} onCancel={(id?: string) => void mutateTask("cancel", id)} onRetry={() => void mutateTask("retry")} onNavigate={navigate} onNotice={setNotice} onContextFork={created => { if (!workspace || created.projectId !== project.id || created.workspaceId !== workspace.id) return; setConversationTree(old => ({ ...old, [workspace.id]: [...(old[workspace.id] || []), created] })); chooseConversation(workspace, created); }}/>) }
+      {activeNav === "代码" && <IDEPage key={`${project.id}:${conversation?.id}`} project={project} task={task} workspaceId={workspace?.id} onPreview={openPreviewFile} onAttach={conversation && !conversation.archivedAt ? attachment => {
+        if (!scopeEquals(scopeRef.current, {projectId:project.id,workspaceId:workspace?.id,conversationId:conversation.id})) throw new Error("对话已切换，请在目标对话重新附加文件。");
+        addSourceAttachment(project.id, conversation.id, attachment);
+        setActiveNav("工作台"); setNotice("源码快照已附加，可查看或移除后发送。");
+      } : undefined}/>}
       {activeNav === "Git" && <GitPage key={project.id} project={project}/>}
-      {activeNav === "浏览器" && <BrowserPage key={project.id} project={project}/>}
-      {activeNav === "审查" && <ReviewPage key={`${project.id}:${task?.id || "empty"}`} project={project} task={task} tasks={tasks} artifacts={runDataTaskId === task?.id ? artifacts : []} events={runDataTaskId === task?.id ? events : []} approvals={runDataTaskId === task?.id ? approvals : []} onSelect={setTask} onApprove={decideApproval} onCancel={(id?: string) => void mutateTask("cancel", id)} onRetry={() => void mutateTask("retry")}/>}
+      {activeNav === "审查" && <ReviewPage onOpenEditor={()=>navigate("代码")} key={`${project.id}:${task?.id || "empty"}`} project={project} task={task} tasks={tasks} artifacts={runDataTaskId === task?.id ? artifacts : []} events={runDataTaskId === task?.id ? events : []} approvals={runDataTaskId === task?.id ? approvals : []} onSelect={setTask} onApprove={decideApproval} onCancel={(id?: string) => void mutateTask("cancel", id)} onRetry={() => void mutateTask("retry")} retryDisabled={!!conversation?.archivedAt}/>}
       {activeNav === "数据" && (project.id ? <DataWorkbench key={project.id} project={project} onNotice={setNotice}/> : <section className="data-empty-page"><Database size={35}/><h1>为工程连接数据库与缓存</h1><p>先选择工程，或直接开始新对话自动创建独立工程。</p><button className="primary-button" onClick={() => setShowProjectForm(true)}><Plus size={15}/>新建工程</button></section>)}
       {activeNav === "执行链" && <ToolchainPage task={task} events={runDataTaskId === task?.id ? events : []}/>}{activeNav === "插件" && <ToolUsagePage task={task} events={runDataTaskId === task?.id ? events : []}/>}
+      {activeNav === "运行环境" && <RuntimeEnvironment/>}
       {activeNav === "概览" && <section className="overview-page"><div className="page-heading"><div><div className="breadcrumb">{workspace?.name} / {conversation?.title}</div><h1>运行概览</h1><p>当前对话的持久任务与执行记录。</p></div><button className="secondary-button" onClick={() => setOpenPanel("运行统计")}><Gauge size={15}/>运行统计</button></div><div className="metric-grid"><Metric icon={<Activity size={17}/>} label="活跃任务" value={totals.active}/><Metric icon={<CheckCircle2 size={17}/>} label="已完成" value={totals.succeeded}/><Metric icon={<ShieldCheck size={17}/>} label="成功率" value={totals.completed ? `${Math.round(totals.succeeded / totals.completed * 100)}%` : "--"}/><Metric icon={<Sparkles size={17}/>} label="持久消息" value={messages.length}/></div><div className="overview-tasks">{filteredTasks.map((value) => <button key={value.id} className="overview-task" onClick={() => { setTask(value); navigate("工作台"); }}><span><strong>{value.prompt}</strong><small>{value.executionMode === "CHAT" ? "普通聊天" : "代码任务"} · {value.model} · {new Date(value.createdAt).toLocaleString()}</small></span><StatusBadge status={value.status}/></button>)}{!filteredTasks.length && <div className="empty-state">当前对话还没有任务</div>}</div></section>}
+      </PreviewWorkspace>
     </div>
     {showProjectForm && <ProjectForm onClose={() => setShowProjectForm(false)} onCreated={(value) => { addProject(value); setShowProjectForm(false); }}/>} {showWorkspaceForm && project.id && <WorkspaceForm project={project} onClose={() => setShowWorkspaceForm(false)} onCreated={() => { setShowWorkspaceForm(false); setTreeRevision((value) => value + 1); }}/>} {openPanel && <ActionPanel kind={openPanel} tasks={tasks} events={runDataTaskId === task?.id ? events : []} artifacts={runDataTaskId === task?.id ? artifacts : []} onClose={() => setOpenPanel(null)}/>}
+    {showHistory && <HistorySearch projects={projects} currentProjectId={project.id} initialQuery={query} onClose={() => setShowHistory(false)} onOpen={openHistory}/>}
     {retainedBootstrap && !project.id && <div className="bootstrap-retry"><CircleDot size={14}/>上次工程注册未完成；再次发送会继续同一工程。</div>}{notice && <div className="toast" role="status"><XCircle size={16}/><span>{notice}</span><button aria-label="关闭提示" onClick={() => setNotice("")}><X size={14}/></button></div>}
   </div>;
 }
 
 function LoginPage() {
+  const [showRuntime, setShowRuntime] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const submit = async (event: FormEvent) => { event.preventDefault(); setBusy(true); setError(""); try { await authRequest(`/api/auth/${mode}`, { username, password }); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } finally { setBusy(false); } };
-  return <main className="auth-page"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">P</span><div><strong>ProofCode</strong><small>可验证编程工作台</small></div></div><h1>{mode === "login" ? "登录工作区" : "创建账户"}</h1><p className="panel-description">账户用于隔离工程、模型服务与任务记录。</p><form onSubmit={(event) => void submit(event)}><label>账户名<input required minLength={3} maxLength={64} autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="例如 dev-team" /></label><label>密码<input required minLength={8} maxLength={72} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 8 位" /></label>{error && <div className="capsule-error"><XCircle size={15}/>{error}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? <Loader2 size={15}/> : <ShieldCheck size={15}/>} {mode === "login" ? "登录" : "注册并登录"}</button></form><button className="link-button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "首次使用？创建账户" : "已有账户？返回登录"}</button></section></main>;
+  if (showRuntime) return <main className="auth-runtime-page"><button className="secondary-button" onClick={() => setShowRuntime(false)}>返回登录</button><RuntimeEnvironment/></main>;
+  return <main className="auth-page"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">P</span><div><strong>ProofCode</strong><small>可验证编程工作台</small></div></div><h1>{mode === "login" ? "登录工作区" : "创建账户"}</h1><p className="panel-description">账户用于隔离工程、模型服务与任务记录。</p><form onSubmit={(event) => void submit(event)}><label>账户名<input required minLength={3} maxLength={64} autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="例如 dev-team" /></label><label>密码<input required minLength={8} maxLength={72} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 8 位" /></label>{error && <div className="capsule-error"><XCircle size={15}/>{error}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? <Loader2 size={15}/> : <ShieldCheck size={15}/>} {mode === "login" ? "登录" : "注册并登录"}</button></form><button className="link-button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "首次使用？创建账户" : "已有账户？返回登录"}</button>{desktopApp()?.CheckRuntime && <button className="link-button auth-runtime-entry" onClick={() => setShowRuntime(true)}>运行环境与本机服务</button>}</section></main>;
 }
 export function WorkspaceApp() {
   const [authenticated, setAuthenticated] = useState(Boolean(token()));
@@ -332,6 +414,39 @@ export function WorkspaceApp() {
 }
 function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void }) { return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick} title={label}>{icon}<span>{label}</span></button>; }
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) { return <div className="metric-card"><div className="metric-icon blue">{icon}</div><div><span>{label}</span><strong>{value}</strong><small>当前对话</small></div></div>; }
+function ConversationRow({ conversation, selected, onSelect, onRename, onArchive, onRestore }: { conversation: Conversation; selected: boolean; onSelect: () => void; onRename: (title: string) => Promise<boolean>; onArchive: () => Promise<boolean>; onRestore: () => Promise<boolean> }) {
+  const [editor, setEditor] = useState<"rename" | "archive" | "restore" | null>(null);
+  const [title, setTitle] = useState(conversation.title);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const menu = useRef<HTMLDetailsElement>(null);
+  const openEditor = (value: "rename" | "archive" | "restore") => { setEditor(value); setError(""); if (menu.current) menu.current.open = false; };
+  const cancel = () => { if (busy) return; setEditor(null); setError(""); setTitle(conversation.title); menu.current?.querySelector("summary")?.focus(); };
+  useEffect(() => { if (editor === "rename") { setTitle(conversation.title); titleInput.current?.focus(); titleInput.current?.select(); } }, [editor, conversation.title]);
+  useEffect(() => { setTitle(conversation.title); }, [conversation.title]);
+  const run = async () => {
+    if (busy) return;
+    if (editor === "rename" && !title.trim()) { setError("请输入对话名称。"); titleInput.current?.focus(); return; }
+    setBusy(true); setError("");
+    try {
+      const succeeded = editor === "rename" ? await onRename(title.trim()) : editor === "archive" ? await onArchive() : editor === "restore" ? await onRestore() : false;
+      if (succeeded) { setEditor(null); setError(""); menu.current?.querySelector("summary")?.focus(); } else setError("未能保存，请查看提示后重试；输入已保留。");
+    } catch { setError("未能保存，请重试；输入已保留。"); } finally { setBusy(false); }
+  };
+  return <div className={`conversation-row ${selected ? "selected" : ""} ${conversation.archivedAt ? "is-archived" : ""}`}>
+    <button className={`tree-conversation ${selected ? "selected" : ""}`} title={conversation.title} onClick={onSelect}><MessageSquare size={12}/><span>{conversation.title === "Legacy" ? "默认对话" : conversation.title}</span></button>
+    <details ref={menu} className="conversation-row-menu"><summary aria-disabled={busy} onClick={event => { if (busy) event.preventDefault(); }} aria-label={`对话操作：${conversation.title}`} title="对话操作"><MoreHorizontal size={14}/></summary><div role="group" aria-label={`${conversation.title} 的操作`}>
+      <button type="button" onClick={() => { openEditor("rename"); }}><Pencil size={13}/>重命名</button>
+      {conversation.archivedAt ? <button type="button" onClick={() => { openEditor("restore"); }}><RotateCcw size={13}/>恢复对话</button> : !conversation.defaultConversation && <button type="button" onClick={() => { openEditor("archive"); }}><Archive size={13}/>归档</button>}
+    </div></details>
+    {editor && <div className="conversation-inline-editor" role="group" aria-label={editor === "rename" ? "重命名对话" : editor === "archive" ? "确认归档对话" : "确认恢复对话"}>
+      {editor === "rename" ? <><label htmlFor={`conversation-title-${conversation.id}`}>对话名称</label><input ref={titleInput} id={`conversation-title-${conversation.id}`} value={title} maxLength={200} disabled={busy} onChange={event => setTitle(event.target.value)} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); cancel(); } if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); void run(); } }}/></> : <p>{editor === "archive" ? "保留消息与运行记录，并从当前列表收起。" : "恢复后可继续聊天和修改上下文。"}</p>}
+      {error && <small role="alert">{error}</small>}
+      <div><button type="button" className="conversation-editor-cancel" disabled={busy} onClick={cancel}>取消</button><button type="button" className="conversation-editor-save" disabled={busy || (editor === "rename" && !title.trim())} onClick={() => void run()}>{busy ? "保存中…" : editor === "rename" ? "保存名称" : editor === "archive" ? "确认归档" : "恢复对话"}</button></div>
+    </div>}
+  </div>;
+}
 function ProjectForm({ onClose, onCreated }: { onClose: () => void; onCreated: (project: Project) => void }) {
   const [name, setName] = useState(""); const [url, setUrl] = useState(""); const [branch, setBranch] = useState("main");
   const [sourceKind, setSourceKind] = useState<"REMOTE_REPOSITORY" | "LOCAL_FOLDER" | "SCRATCH">("SCRATCH");

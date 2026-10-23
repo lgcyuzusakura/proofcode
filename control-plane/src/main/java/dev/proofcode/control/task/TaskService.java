@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class TaskService {
+	@org.springframework.beans.factory.annotation.Autowired private dev.proofcode.control.agentplatform.AgentPlatformService agentPlatform;
     private final TaskRepository tasks; private final ProjectRepository projects; private final OutboxRepository outbox; private final TaskApprovalRepository approvals; private final ObjectMapper json; private final String queue; private final WorkspaceService scopes; private final ExperimentRepository experiments; private final DataOperationService dataOperations;
     @org.springframework.beans.factory.annotation.Autowired private dev.proofcode.control.provider.ProviderService providers;
     private final SourceSnapshotService sources;private final ConversationMessageService messages;
@@ -44,6 +45,11 @@ public class TaskService {
     }
     @Transactional
     public CreateResult createWithProvider(UUID projectId,String prompt,String model,String idempotencyKey,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId,UUID providerId){
+        return createWithProvider(projectId,prompt,model,idempotencyKey,workspaceId,conversationId,sourceRevision,maxSteps,testCommand,temperature,executionMode,sourceSnapshotId,providerId,java.util.List.of());
+    }
+    public String attachmentSnapshot(UUID projectId,UUID workspaceId,java.util.List<dev.proofcode.control.source.SourceSnapshotService.Attachment> attachments){return sources.snapshotAttachments(projectId,workspaceId,attachments);}
+    @Transactional
+    public CreateResult createWithProvider(UUID projectId,String prompt,String model,String idempotencyKey,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId,UUID providerId,java.util.List<dev.proofcode.control.source.SourceSnapshotService.Attachment> sourceAttachments){
         validateExecution(sourceRevision,maxSteps,testCommand,temperature);
         String mode=normalizeMode(executionMode);
         var scope=scopes.resolve(projectId,workspaceId,conversationId);
@@ -51,7 +57,8 @@ public class TaskService {
             var existing=tasks.findByProjectIdAndIdempotencyKey(projectId,idempotencyKey);
             if(existing.isPresent()){
                 TaskEntity task=existing.get();
-                if(!java.util.Objects.equals(task.getProviderId(),providerId)||!matches(task,prompt,model,scope.workspaceId(),scope.conversationId(),sourceRevision,maxSteps,testCommand,temperature)||!task.getExecutionMode().equals(mode)||(sourceSnapshotId!=null&&!java.util.Objects.equals(task.getSourceSnapshotId(),sourceSnapshotId))){
+                String attachmentSnapshot=attachmentSnapshot(projectId,scope.workspaceId(),sourceAttachments);
+                if(!java.util.Objects.equals(task.getSourceAttachmentSnapshot(),attachmentSnapshot)||!java.util.Objects.equals(task.getProviderId(),providerId)||!matches(task,prompt,model,scope.workspaceId(),scope.conversationId(),sourceRevision,maxSteps,testCommand,temperature)||!task.getExecutionMode().equals(mode)||(sourceSnapshotId!=null&&!java.util.Objects.equals(task.getSourceSnapshotId(),sourceSnapshotId))){
                     throw new ResponseStatusException(HttpStatus.CONFLICT,"idempotency key already belongs to another request");
                 }
                 return new CreateResult(task,false);
@@ -59,15 +66,18 @@ public class TaskService {
         }
         ProjectEntity project=projects.findById(projectId).orElseThrow();
         requireScratchIdle(project,scope.workspaceId(),mode);
+        if(mode.equals("PLAN")&&testCommand!=null)throw new IllegalArgumentException("plan mode cannot execute a test command");
         if(mode.equals("CHAT")&&(sourceSnapshotId!=null||sourceRevision!=null||testCommand!=null))throw new IllegalArgumentException("chat does not accept execution sources or commands");
         if(sourceSnapshotId!=null){if(project.getSourceKind().equals("REMOTE_REPOSITORY")||sourceRevision!=null)throw new IllegalArgumentException("remote revision and local snapshot cannot be combined");sources.require(projectId,scope.workspaceId(),sourceSnapshotId);}
-        if(mode.equals("CODE")&&project.getSourceKind().equals("LOCAL_FOLDER")&&sourceSnapshotId==null)throw new IllegalArgumentException("local code task requires a captured sourceSnapshotId");
-        if(mode.equals("CODE")&&project.getSourceKind().equals("SCRATCH")&&sourceSnapshotId==null)sourceSnapshotId=sources.latest(projectId,scope.workspaceId()).map(dev.proofcode.control.source.SourceSnapshot::getId).orElse(null);
+        if(!mode.equals("CHAT")&&project.getSourceKind().equals("LOCAL_FOLDER")&&sourceSnapshotId==null)throw new IllegalArgumentException("local code task requires a captured sourceSnapshotId");
+        if(!mode.equals("CHAT")&&project.getSourceKind().equals("SCRATCH")&&sourceSnapshotId==null)sourceSnapshotId=sources.latest(projectId,scope.workspaceId()).map(dev.proofcode.control.source.SourceSnapshot::getId).orElse(null);
         Instant now=Instant.now();
         TaskEntity task=new TaskEntity(UUID.randomUUID(),projectId,prompt,model,idempotencyKey,now);
         task.bindScope(scope.workspaceId(),scope.conversationId());
         task.bindSource(mode,sourceSnapshotId);
+        task.captureSourceAttachments(attachmentSnapshot(projectId,scope.workspaceId(),sourceAttachments));
         task.configureExecution(sourceRevision,maxSteps,testCommand,temperature);
+		agentPlatform.capture(task,providerId);
         if(providerId!=null||dev.proofcode.control.account.AccountService.currentId()!=null)providers.bind(task,providerId);
         task.transition(TaskStatus.QUEUED);
         task=tasks.save(task);
@@ -89,7 +99,7 @@ public class TaskService {
     }
     public TaskEntity create(UUID projectId,String prompt,String model){return create(projectId,prompt,model,null);}
     @Transactional
-    public TaskEntity retry(UUID taskId){TaskEntity read=tasks.findById(taskId).orElseThrow();ProjectEntity project=projects.lockById(read.getProjectId()).orElseThrow();TaskEntity task=tasks.lockById(taskId).orElseThrow();if(task.getStatus()!=TaskStatus.FAILED&&task.getStatus()!=TaskStatus.CANCELLED)throw new ResponseStatusException(HttpStatus.CONFLICT,"only failed or cancelled tasks can be retried");if(task.getExperimentId()==null)requireScratchIdle(project,task.getWorkspaceId(),task.getExecutionMode());task.retry();messages.start(task);enqueue(project,task,Instant.now(),null,null);return task;}
+	public TaskEntity retry(UUID taskId){TaskEntity read=tasks.findById(taskId).orElseThrow();ProjectEntity project=projects.lockById(read.getProjectId()).orElseThrow();TaskEntity task=tasks.lockById(taskId).orElseThrow();if(task.getStatus()!=TaskStatus.FAILED&&task.getStatus()!=TaskStatus.CANCELLED)throw new ResponseStatusException(HttpStatus.CONFLICT,"only failed or cancelled tasks can be retried");if(task.getConversationId()!=null)scopes.resolve(task.getProjectId(),task.getWorkspaceId(),task.getConversationId());if(task.getExperimentId()==null)requireScratchIdle(project,task.getWorkspaceId(),task.getExecutionMode());task.retry();messages.start(task);enqueue(project,task,Instant.now(),null,null);return task;}
     private void requireScratchIdle(ProjectEntity project,UUID workspaceId,String mode){
         if(project.getSourceKind().equals("SCRATCH")&&mode.equals("CODE")&&tasks.existsByProjectIdAndWorkspaceIdAndExecutionModeAndExperimentIdIsNullAndStatusIn(project.getId(),workspaceId,"CODE",java.util.List.of(TaskStatus.QUEUED,TaskStatus.RUNNING,TaskStatus.VERIFYING,TaskStatus.WAITING_APPROVAL)))throw new ResponseStatusException(HttpStatus.CONFLICT,"scratch workspace already has an active code task");
     }
@@ -123,8 +133,10 @@ public class TaskService {
             payload.put("version","v1");payload.put("taskId",task.getId());payload.put("projectId",task.getProjectId());payload.put("attempt",task.getAttempt());payload.put("repositoryUrl",project.getRepositoryUrl());payload.put("sourceKind",project.getSourceKind());payload.put("branch",project.getDefaultBranch());payload.put("prompt",task.getPrompt());payload.put("model",task.getModel());
             payload.put("workspaceId",task.getWorkspaceId());payload.put("conversationId",task.getConversationId());
             payload.put("contextSelectionHash",task.getContextSelectionHash());
+			payload.put("agentSnapshotHash",task.getAgentSnapshotHash());
             payload.put("providerId",task.getProviderId());
             payload.put("executionMode",task.getExecutionMode());payload.put("sourceSnapshotId",task.getSourceSnapshotId());
+            payload.put("sourceAttachmentHash",task.getSourceAttachmentHash());
             if(task.getSourceSnapshotId()!=null)payload.put("sourceManifestHash",sources.require(task.getProjectId(),task.getWorkspaceId(),task.getSourceSnapshotId()).getManifestHash());
             if(task.getSourceRevision()!=null)payload.put("sourceRevision",task.getSourceRevision());
             if(task.getMaxSteps()!=null)payload.put("maxSteps",task.getMaxSteps());
@@ -154,5 +166,5 @@ public class TaskService {
             &&java.util.Objects.equals(task.getTestCommand(),testCommand)&&java.util.Objects.equals(task.getTemperature(),temperature);
     }
     public record CreateResult(TaskEntity task,boolean created){}
-    public static String normalizeMode(String value){String mode=value==null?"CODE":value.trim().toUpperCase(java.util.Locale.ROOT);if(!java.util.Set.of("CODE","CHAT").contains(mode))throw new IllegalArgumentException("executionMode must be CODE or CHAT");return mode;}
+    public static String normalizeMode(String value){String mode=value==null?"CODE":value.trim().toUpperCase(java.util.Locale.ROOT);if(!java.util.Set.of("CODE","CHAT","PLAN").contains(mode))throw new IllegalArgumentException("executionMode must be CODE, CHAT or PLAN");return mode;}
 }

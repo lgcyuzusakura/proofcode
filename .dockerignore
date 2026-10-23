@@ -1,0 +1,31 @@
+# Only control-plane sources and the MCP diagnostic helper's Go dependencies.
+# Manuscripts, history, credentials and local artifacts never enter this context.
+**
+!control-plane/
+!control-plane/Dockerfile
+!control-plane/pom.xml
+!control-plane/settings.xml
+!control-plane/src/
+!control-plane/src/**
+!agent-engine/
+!agent-engine/go.mod
+!agent-engine/go.sum
+!agent-engine/cmd/
+!agent-engine/cmd/proofcode-mcp-inspect/
+!agent-engine/cmd/proofcode-mcp-inspect/**
+!agent-engine/internal/
+!agent-engine/internal/**
+!agent-engine/pkg/
+!agent-engine/pkg/**
+**/.git
+**/.env*
+**/.proofcode
+**/thesis
+**/target
+**/node_modules
+**/*.pem
+**/*.key
+**/*.docx
+**/*.pdf
+**/*论文*
+**/*論文*

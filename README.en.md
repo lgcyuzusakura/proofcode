@@ -6,6 +6,14 @@ ProofCode is a coding agent for verifiable changes: it reads repositories, gener
 
 The workflow is **submit a goal → isolated worktree → tools and approval → patch → tests → artifact review → apply to the original checkout**.
 
+## Platform and desktop update — 2026-10-22
+
+This release adds custom agents, tool allowlists, Skills, HTTP/stdio MCP and OAuth, personal preferences, project memory, read-only plans, in-run instructions, history search and selective patch review. A resizable pane next to chat previews Markdown, PDF, Word and the desktop project browser; documents support local file drop, independent scrolling and fullscreen. PDF reading position survives zoom and fullscreen changes.
+
+The Windows client embeds the shared UI, a source runtime bundle and an MCP template. It can check prerequisites, configure a backend, prepare a deployment folder and explicitly manage Compose services. WebView2 is required; a local backend also needs Docker Desktop and network access for its first build. An API key alone is insufficient. Real model task quality has not yet been evaluated.
+
+[Update and validation](docs/update-report-2026-10-22.md) · [Desktop and source downloads](https://github.com/lgcyuzusakura/proofcode/releases/latest) · [Platform guide](docs/agent-platform-runtime.md)
+
 ## Updates on 2026-10-15
 
 - Automatic history or manual selection of complete exchanges; exclude, restore, search, bulk selection, undo and handwritten summaries. Switching modes preserves the manual selection.

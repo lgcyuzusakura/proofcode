@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "my_tools",
+  "root": "./knowledge",
+  "modules": ["./tools/knowledge.mjs"],
+  "timeoutMs": 15000,
+  "concurrency": 4,
+  "secretEnv": [],
+  "transport": {
+    "type": "http",
+    "host": "127.0.0.1",
+    "port": 3190,
+    "tokenEnv": "PROOFCODE_MCP_TOKEN",
+    "allowedHosts": ["127.0.0.1", "localhost"],
+    "allowedOrigins": []
+  }
+}

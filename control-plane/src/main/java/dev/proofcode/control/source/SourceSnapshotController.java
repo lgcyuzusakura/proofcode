@@ -19,6 +19,11 @@ import org.springframework.web.server.ResponseStatusException;
         if(task.getAttempt()!=attempt||task.getSourceSnapshotId()==null)throw new ResponseStatusException(HttpStatus.CONFLICT,"task source or attempt mismatch");
         return sources.require(task.getProjectId(),task.getWorkspaceId(),task.getSourceSnapshotId()).getContent();
     }
+    @GetMapping(value="/internal/tasks/{taskId}/source-attachments",produces=MediaType.TEXT_PLAIN_VALUE) public ResponseEntity<String> attachments(@PathVariable UUID taskId,@RequestParam int attempt,@RequestParam UUID runnerId){
+        var task=tasks.findById(taskId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if(task.getAttempt()!=attempt||!runnerId.equals(task.getRunnerId())||!java.util.Set.of(dev.proofcode.control.task.TaskStatus.RUNNING,dev.proofcode.control.task.TaskStatus.VERIFYING).contains(task.getStatus())||task.getLeaseUntil()==null||!task.getLeaseUntil().isAfter(java.time.Instant.now()))throw new ResponseStatusException(HttpStatus.CONFLICT,"task source attachment is no longer readable");
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header("X-Source-Attachment-Hash",java.util.Objects.toString(task.getSourceAttachmentHash(),"")).body(java.util.Objects.toString(task.getSourceAttachmentSnapshot(),""));
+    }
     @org.springframework.transaction.annotation.Transactional
     @PostMapping("/internal/tasks/{taskId}/source-result") public SourceSnapshot output(@PathVariable UUID taskId,@RequestParam int attempt,@RequestParam UUID runnerId,@RequestBody SourceSnapshotService.Archive archive){
         var task=tasks.lockById(taskId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));

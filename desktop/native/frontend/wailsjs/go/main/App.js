@@ -22,12 +22,28 @@ export function CaptureProjectSource(arg1) {
   return window['go']['main']['App']['CaptureProjectSource'](arg1);
 }
 
+export function CheckRuntime() {
+  return window['go']['main']['App']['CheckRuntime']();
+}
+
+export function CreateMcpService(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['CreateMcpService'](arg1, arg2, arg3, arg4);
+}
+
 export function CreateScratchProject(arg1) {
   return window['go']['main']['App']['CreateScratchProject'](arg1);
 }
 
 export function DiscardProjectMerge(arg1, arg2) {
   return window['go']['main']['App']['DiscardProjectMerge'](arg1, arg2);
+}
+
+export function GetBundledRuntime() {
+  return window['go']['main']['App']['GetBundledRuntime']();
+}
+
+export function GetMcpServiceTemplate() {
+  return window['go']['main']['App']['GetMcpServiceTemplate']();
 }
 
 export function GetModelConfig() {
@@ -50,6 +66,14 @@ export function GetProjectProtocol(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetProjectProtocol'](arg1, arg2, arg3);
 }
 
+export function GetRuntimeConnection() {
+  return window['go']['main']['App']['GetRuntimeConnection']();
+}
+
+export function GetRuntimeManagement() {
+  return window['go']['main']['App']['GetRuntimeManagement']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
@@ -64,6 +88,14 @@ export function ListLocalProjects() {
 
 export function ListProjectFiles(arg1) {
   return window['go']['main']['App']['ListProjectFiles'](arg1);
+}
+
+export function ManageRuntime(arg1) {
+  return window['go']['main']['App']['ManageRuntime'](arg1);
+}
+
+export function PrepareBundledRuntime(arg1, arg2) {
+  return window['go']['main']['App']['PrepareBundledRuntime'](arg1, arg2);
 }
 
 export function PreviewProjectMerge(arg1, arg2, arg3) {
@@ -90,6 +122,10 @@ export function ReadProjectFile(arg1, arg2) {
   return window['go']['main']['App']['ReadProjectFile'](arg1, arg2);
 }
 
+export function RefreshRuntimeManagement() {
+  return window['go']['main']['App']['RefreshRuntimeManagement']();
+}
+
 export function RegisterLocalProject() {
   return window['go']['main']['App']['RegisterLocalProject']();
 }
@@ -100,6 +136,14 @@ export function ResolveProjectMerge(arg1, arg2, arg3, arg4, arg5) {
 
 export function SaveProjectFile(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveProjectFile'](arg1, arg2, arg3, arg4);
+}
+
+export function SaveRuntimeConnection(arg1) {
+  return window['go']['main']['App']['SaveRuntimeConnection'](arg1);
+}
+
+export function SelectRuntimeDirectory() {
+  return window['go']['main']['App']['SelectRuntimeDirectory']();
 }
 
 export function StartProjectCommand(arg1, arg2, arg3) {

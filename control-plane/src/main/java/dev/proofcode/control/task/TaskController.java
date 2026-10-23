@@ -25,13 +25,14 @@ public class TaskController {
     @PostMapping ResponseEntity<TaskEntity> create(@RequestHeader(value="Idempotency-Key",required=false) String idempotencyKey,@Valid @RequestBody CreateTask request){
         String key=normalizeKey(idempotencyKey);
         try{
-            var result=service.createWithProvider(request.projectId(),request.prompt(),request.model(),key,request.workspaceId(),request.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature(),request.executionMode(),request.sourceSnapshotId(),request.providerId());
+            var result=service.createWithProvider(request.projectId(),request.prompt(),request.model(),key,request.workspaceId(),request.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature(),request.executionMode(),request.sourceSnapshotId(),request.providerId(),request.sourceAttachments());
             return ResponseEntity.status(result.created()?201:200).body(result.task());
         }catch(DataIntegrityViolationException conflict){
             if(key==null)throw conflict;
             TaskEntity existing=tasks.findByProjectIdAndIdempotencyKey(request.projectId(),key).orElseThrow(()->conflict);
             var scope=scopes.resolve(request.projectId(),request.workspaceId(),request.conversationId());
-            if(!java.util.Objects.equals(existing.getProviderId(),request.providerId())||!TaskService.matches(existing,request.prompt(),request.model(),scope.workspaceId(),scope.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature())||!existing.getExecutionMode().equals(TaskService.normalizeMode(request.executionMode()))||(request.sourceSnapshotId()!=null&&!request.sourceSnapshotId().equals(existing.getSourceSnapshotId()))){
+            String attachmentSnapshot=service.attachmentSnapshot(request.projectId(),scope.workspaceId(),request.sourceAttachments());
+            if(!java.util.Objects.equals(existing.getSourceAttachmentSnapshot(),attachmentSnapshot)||!java.util.Objects.equals(existing.getProviderId(),request.providerId())||!TaskService.matches(existing,request.prompt(),request.model(),scope.workspaceId(),scope.conversationId(),request.sourceRevision(),request.maxSteps(),request.testCommand(),request.temperature())||!existing.getExecutionMode().equals(TaskService.normalizeMode(request.executionMode()))||(request.sourceSnapshotId()!=null&&!request.sourceSnapshotId().equals(existing.getSourceSnapshotId()))){
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"idempotency key already belongs to another request");
             }
             return ResponseEntity.ok(existing);
@@ -41,8 +42,8 @@ public class TaskController {
     @GetMapping List<TaskEntity> list(@RequestParam UUID projectId,@RequestParam(required=false) UUID conversationId){
         scopes.requireProject(projectId);
         if(conversationId==null)return tasks.findByProjectIdOrderByCreatedAtDesc(projectId);
-        var scope=scopes.resolve(projectId,null,conversationId);
-        return tasks.findByProjectIdAndConversationIdOrderByCreatedAtDesc(projectId,scope.conversationId());
+        var conversation=scopes.requireConversation(projectId,conversationId);
+        return tasks.findByProjectIdAndConversationIdOrderByCreatedAtDesc(projectId,conversation.getId());
     }
     List<TaskEntity> list(UUID projectId){return list(projectId,null);}
     @GetMapping("/{id}/events") List<TaskEventEntity> eventList(@PathVariable UUID id,@RequestParam(defaultValue="0") long afterSequence){return afterSequence<=0?events.findTop500ByTaskIdOrderBySequenceAsc(id):events.findTop500ByTaskIdAndSequenceGreaterThanOrderBySequenceAsc(id,afterSequence);}
@@ -61,7 +62,8 @@ public class TaskController {
     @PostMapping("/{id}/retry") TaskEntity retry(@PathVariable UUID id){return service.retry(id);}
     private String normalizeKey(String value){if(value==null)return null;String key=value.trim();if(key.length()>200)throw new IllegalArgumentException("Idempotency-Key exceeds 200 characters");return key.isEmpty()?null:key;}
     public record CreateTask(@NotNull UUID projectId,@NotBlank @Size(max=131072) String prompt,@NotBlank @Size(max=200) String model,
-        UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId,UUID providerId){
+        UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId,UUID providerId,List<dev.proofcode.control.source.SourceSnapshotService.Attachment> sourceAttachments){
+        public CreateTask(UUID projectId,String prompt,String model,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId,UUID providerId){this(projectId,prompt,model,workspaceId,conversationId,sourceRevision,maxSteps,testCommand,temperature,executionMode,sourceSnapshotId,providerId,List.of());}
         public CreateTask(UUID projectId,String prompt,String model,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature,String executionMode,UUID sourceSnapshotId){this(projectId,prompt,model,workspaceId,conversationId,sourceRevision,maxSteps,testCommand,temperature,executionMode,sourceSnapshotId,null);}
         public CreateTask(UUID projectId,String prompt,String model){this(projectId,prompt,model,null,null,null,null,null,null,null,null);}
         public CreateTask(UUID projectId,String prompt,String model,UUID workspaceId,UUID conversationId,String sourceRevision,Integer maxSteps,String testCommand,Double temperature){this(projectId,prompt,model,workspaceId,conversationId,sourceRevision,maxSteps,testCommand,temperature,null,null);}

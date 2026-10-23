@@ -13,6 +13,9 @@ import (
 )
 
 type Coordinator struct {
+	Instructions  string
+	AllowedTools  []string
+	ReadOnly      bool
 	Provider      model.Provider
 	MainTools     *tool.Registry
 	ScoutTools    *tool.Registry
@@ -30,6 +33,7 @@ type CoordinateRequest struct {
 	Prompt               string
 	MaxSteps             int
 	Temperature          *float64
+	BeforeStep           func(context.Context, RunResult) ([]model.Message, error)
 	PrepareMessages      func(context.Context, int, []model.Message) ([]model.Message, error)
 	SuppressTaskComplete bool
 	InitialMessages      []model.Message
@@ -53,6 +57,12 @@ type CoordinateResult struct {
 }
 
 func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (CoordinateResult, error) {
+	if c.ScoutTools != nil {
+		c.ScoutTools = tool.Scope(c.ScoutTools, c.AllowedTools, c.ReadOnly)
+	}
+	if c.VerifierTools != nil {
+		c.VerifierTools = tool.Scope(c.VerifierTools, c.AllowedTools, c.ReadOnly)
+	}
 	if c.TeamStatePath != "" && !c.SingleAgent {
 		team, err := OpenTeam(ctx, c.Provider, c.ScoutTools, c.Events, request.TaskID, c.Model, c.TeamStatePath)
 		if err != nil {
@@ -63,6 +73,7 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 			c.MainTools.Register(value)
 		}
 	}
+	c.MainTools = tool.Scope(c.MainTools, c.AllowedTools, c.ReadOnly)
 	result := CoordinateResult{}
 	var reports []string
 	var err error
@@ -80,14 +91,14 @@ func (c *Coordinator) Run(ctx context.Context, request CoordinateRequest) (Coord
 			augmented += fmt.Sprintf("\nScout %d:\n%s\n", i+1, report)
 		}
 	}
-	if err := c.Events.Emit(ctx, request.TaskID, event.TaskStarted, map[string]any{"model": c.Model, "tools": c.MainTools.Definitions()}); err != nil {
+	if err := c.Events.Emit(ctx, request.TaskID, event.TaskStarted, map[string]any{"model": c.Model, "tools": c.MainTools.Definitions(), "readOnly": c.ReadOnly}); err != nil {
 		return result, err
 	}
 	if request.MainCompleted {
 		result.Main = request.MainResult
 	} else {
 		main := Agent{Provider: c.Provider, Tools: c.MainTools, Approval: c.Approval, Events: c.Events, Router: c.Router, Routing: c.Routing}
-		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt, Prompt: augmented, Model: c.Model, MaxSteps: request.MaxSteps, Temperature: request.Temperature, PrepareMessages: request.PrepareMessages, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, HistoryMessages: request.HistoryMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
+		result.Main, err = main.Run(ctx, RunRequest{TaskID: request.TaskID, SystemPrompt: mainPrompt + c.Instructions, Prompt: augmented, Model: c.Model, MaxSteps: request.MaxSteps, Temperature: request.Temperature, PrepareMessages: request.PrepareMessages, BeforeStep: request.BeforeStep, SuppressTaskLifecycle: true, InitialMessages: request.InitialMessages, HistoryMessages: request.HistoryMessages, ResumeToolCall: request.ResumeToolCall, ResumeApproved: request.ResumeApproved, InitialUsage: request.InitialUsage, RemainingCalls: request.RemainingCalls, Pause: request.Pause, BeforeTool: request.BeforeTool, Checkpoint: request.Checkpoint})
 		if err != nil {
 			var approvalErr *ApprovalRequiredError
 			if !errors.As(err, &approvalErr) && !request.SuppressTaskComplete {

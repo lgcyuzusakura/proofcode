@@ -84,6 +84,10 @@ export function buildActivities(events: TaskEvent[]): ActivityItem[] {
     } else if (event.type === "checkpoint.created" || event.type === "recovery.created") {
       title = event.type === "checkpoint.created" ? "已保存代码检查点" : "已保存恢复补丁";
       summary = [p.branch, p.commit && String(p.commit).slice(0, 12)].filter(Boolean).join(" · ") || "可在审查中查看修改产物"; tone = "success";
+    } else if (event.type === "workspace.updated") {
+      title = "工作区变更预览已更新";
+      summary = p.state === "ready" ? "已记录当前累计修改" : p.state === "oversized" ? "修改较大，结束后可查看完整审查产物" : "预览暂不可用，任务仍可继续";
+      tone = p.state === "ready" ? "observe" : "warning";
     } else if (event.type === "task.completed") { title = "任务已完成"; summary = p.executionMode === "CHAT" ? "回复已保存" : p.unchanged ? "任务已完成，本次没有代码变更" : "执行记录已保存，可打开审查查看修改"; tone = "success"; }
     else if (event.type === "task.failed") { title = "任务未完成"; summary = brief(p.error) || "展开查看错误记录"; tone = "error"; output = p.error; }
     else if (event.type === "task.cancelled") { title = "任务已停止"; summary = brief(p.reason) || "本次运行已取消"; tone = "muted"; }

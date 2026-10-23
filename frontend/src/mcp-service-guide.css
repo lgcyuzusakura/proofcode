@@ -1,0 +1,28 @@
+.mcp-service-guide{border-bottom:1px solid #e2e4e8;padding-bottom:17px;margin-bottom:20px;min-width:0}
+.mcp-service-guide>summary{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;list-style:none;min-height:24px}
+.mcp-service-guide>summary::-webkit-details-marker{display:none}
+.mcp-service-guide>summary>svg{flex:none;color:#4b63c6}
+.mcp-service-guide-hint{margin-left:auto;font-size:11px;color:#7b808a}
+.mcp-service-guide>section{padding-top:8px;min-width:0}
+.mcp-service-guide ol{padding-left:21px;margin:16px 0}
+.mcp-service-guide li{padding-left:3px;margin:17px 0;font-size:13px}
+.mcp-service-guide li>strong{font-weight:600}
+.mcp-service-guide li p{margin:7px 0}
+.mcp-service-guide pre{padding:13px 14px;border:1px solid #e2e4e8;border-radius:7px;background:#f7f8fa;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 Consolas,"Microsoft YaHei UI",monospace;color:#343946;max-width:100%;box-sizing:border-box}
+.mcp-service-guide p code{overflow-wrap:anywhere;font-size:12px;color:inherit}
+.mcp-service-guide .mcp-service-guide-network{border-left:2px solid #4b63c6;padding-left:12px}
+.mcp-service-guide>summary:focus-visible{outline:2px solid #4b63c6;outline-offset:4px;border-radius:3px}
+[data-theme=dark] .mcp-service-guide{border-color:#444852}
+[data-theme=dark] .mcp-service-guide pre{background:#202329;border-color:#444852;color:#d3d7df}
+[data-theme=dark] .mcp-service-guide>summary>svg{color:#adbcff}
+.mcp-service-wizard{padding:12px 0 18px;margin-bottom:18px;border-bottom:1px solid var(--line,#e2e4e8);min-width:0}
+.mcp-service-wizard h3{font-size:14px;margin:0 0 8px}
+.mcp-service-wizard fieldset{border:0;padding:0;margin:12px 0 0;min-width:0}
+.mcp-scaffold-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.mcp-service-wizard label{display:flex;flex-direction:column;gap:5px;margin:9px 0;font-size:12px}
+.mcp-service-wizard .agent-platform-check{flex-direction:row;align-items:center}
+.mcp-service-wizard button{display:inline-flex;align-items:center;gap:7px;max-width:100%;white-space:normal}
+.mcp-scaffold-result{padding-top:16px;margin-top:16px;border-top:1px solid var(--line,#e2e4e8);overflow-wrap:anywhere}
+.mcp-scaffold-path{font-size:12px;overflow-wrap:anywhere}
+.mcp-service-wizard [role=alert]{color:var(--danger,#b42318)}
+@media(max-width:600px){.mcp-scaffold-fields{grid-template-columns:minmax(0,1fr)}}

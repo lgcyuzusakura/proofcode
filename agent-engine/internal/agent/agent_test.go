@@ -115,6 +115,33 @@ func TestAgentExecutesToolThenCompletes(t *testing.T) {
 	}
 }
 
+func TestBeforeStepAddsInstructionAfterCompleteToolGroup(t *testing.T) {
+	provider := &scriptedProvider{responses: []model.Response{{ToolCalls: []model.ToolCall{{ID: "read", Name: "echo", Arguments: json.RawMessage(`{}`)}}}, {Content: "done"}}}
+	engine := Agent{Provider: provider, Tools: tool.NewRegistry(echoTool{}), Approval: AutomaticApproval{}, Events: event.NewSequencedSink(&event.MemorySink{})}
+	calls := 0
+	_, err := engine.Run(context.Background(), RunRequest{TaskID: "task", Prompt: "inspect", Model: "mock", MaxSteps: 3, BeforeStep: func(_ context.Context, state RunResult) ([]model.Message, error) {
+		calls++
+		if calls == 2 {
+			return append(state.Messages, model.Message{Role: model.RoleUser, Content: "Only inspect auth tests"}), nil
+		}
+		return state.Messages, nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 || len(provider.requests) != 2 {
+		t.Fatalf("unexpected hook/model calls: %d/%d", calls, len(provider.requests))
+	}
+	messages := provider.requests[1].Messages
+	if len(messages) < 3 {
+		t.Fatal("missing tool protocol group")
+	}
+	last := messages[len(messages)-3:]
+	if len(last[0].ToolCalls) != 1 || last[0].ToolCalls[0].ID != "read" || last[1].Role != model.RoleTool || last[1].ToolCallID != "read" || last[2].Role != model.RoleUser || last[2].Content != "Only inspect auth tests" {
+		t.Fatalf("instruction missing or split tool group: %+v", last)
+	}
+}
+
 func TestAgentPausesAndResumesApprovedToolCall(t *testing.T) {
 	call := model.ToolCall{ID: "write-1", Name: "write_test", Arguments: json.RawMessage(`{"value":"ok"}`)}
 	provider := &scriptedProvider{responses: []model.Response{{ToolCalls: []model.ToolCall{call}}, {Content: "done"}}}

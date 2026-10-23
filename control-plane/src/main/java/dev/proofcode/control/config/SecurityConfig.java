@@ -26,7 +26,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                .requestMatchers("/actuator/health/**", "/ws/**", "/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers("/actuator/health/**", "/ws/**", "/api/auth/login", "/api/auth/register", "/api/mcp/oauth/callback").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
             .build();

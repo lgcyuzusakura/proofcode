@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef } from "react";
 import { desktopApp } from "./api";
-import { ListFilter } from "lucide-react";
+import { ListFilter, Paperclip } from "lucide-react";
 import { IDEProtocolContext, protocolRequest } from "./ProtocolTools";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -17,7 +17,7 @@ import "monaco-editor/min/vs/editor/editor.main.css";
 const workerScope = self as unknown as { MonacoEnvironment: { getWorker: (_: string, label: string) => Worker } };
 workerScope.MonacoEnvironment = { getWorker: (_, label) => label === "typescript" || label === "javascript" ? new TSWorker() : label === "json" ? new JSONWorker() : new EditorWorker() };
 function language(path: string) { const extension = path.split(".").pop() || ""; return ({ts:"typescript",tsx:"typescript",js:"javascript",jsx:"javascript",json:"json",py:"python",go:"go",java:"java",rs:"rust",md:"markdown",yml:"yaml",yaml:"yaml",css:"css",html:"html",sql:"sql",ps1:"powershell",sh:"shell",toml:"ini",cs:"csharp"} as Record<string,string>)[extension] || "plaintext"; }
-export default function CodeEditor({ fileId, path, initial, readOnly, onChange, onSave }: { fileId: string; path: string; initial: string; readOnly: boolean; onChange: (value: string) => void; onSave: () => void }) {
+export default function CodeEditor({ fileId, path, initial, readOnly, onChange, onSave, onAttach }: { fileId: string; path: string; initial: string; readOnly: boolean; onChange: (value: string) => void; onSave: () => void; onAttach?: (startLine?: number, endLine?: number) => void }) {
   const container = useRef<HTMLDivElement>(null); const callbacks = useRef({ onChange, onSave }); callbacks.current = { onChange, onSave };
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
   const protocol=useContext(IDEProtocolContext);const protocolRef=useRef(protocol);protocolRef.current=protocol;
@@ -49,5 +49,5 @@ export default function CodeEditor({ fileId, path, initial, readOnly, onChange, 
     const poll=setInterval(()=>{if(changing||closed)return;changing=true;void desktopApp()!.GetProjectProtocol!(session.handle,session.id,after).then(state=>{if(closed)return;after=state.sequence;for(const event of state.events){if(event.message.method!=="textDocument/publishDiagnostics"||event.message.params?.uri!==uri)continue;const diagnostics=event.message.params.diagnostics||[];monaco.editor.setModelMarkers(model,"proofcode-lsp",diagnostics.map((value:any)=>({startLineNumber:value.range.start.line+1,startColumn:value.range.start.character+1,endLineNumber:value.range.end.line+1,endColumn:value.range.end.character+1,message:value.message,severity:value.severity===1?monaco.MarkerSeverity.Error:value.severity===2?monaco.MarkerSeverity.Warning:monaco.MarkerSeverity.Info,source:value.source,code:String(value.code||"")})));}}).catch(()=>{}).finally(()=>{changing=false;});},800);
     return()=>{closed=true;if(timer)clearTimeout(timer);clearInterval(poll);change.dispose();completion.dispose();hover.dispose();f12.dispose();monaco.editor.setModelMarkers(model,"proofcode-lsp",[]);if(session.openClose)void opened.then(()=>notify("textDocument/didClose",{textDocument:{uri}})).catch(()=>{});};
   },[protocol.session,fileId,path]);
-  return <div className="monaco-shell"><div className="monaco-host" ref={container} aria-label={`代码编辑器 ${path}`}/><button type="button" className="icon-button editor-completion" title="代码补全" aria-label="代码补全" onClick={()=>{editor.current?.focus();editor.current?.trigger("proofcode","editor.action.triggerSuggest",{});}}><ListFilter size={14}/></button></div>;
+  return <div className="monaco-shell"><div className="monaco-host" ref={container} aria-label={`代码编辑器 ${path}`}/>{onAttach&&<button type="button" className="icon-button editor-attach" title="附加文件或选区到聊天" aria-label="附加文件或选区到聊天" onClick={()=>{const selection=editor.current?.getSelection();if(selection&&!selection.isEmpty())onAttach(selection.startLineNumber,selection.endColumn === 1 && selection.endLineNumber > selection.startLineNumber ? selection.endLineNumber - 1 : selection.endLineNumber);else onAttach();}}><Paperclip size={14}/></button>}<button type="button" className="icon-button editor-completion" title="代码补全" aria-label="代码补全" onClick={()=>{editor.current?.focus();editor.current?.trigger("proofcode","editor.action.triggerSuggest",{});}}><ListFilter size={14}/></button></div>;
 }

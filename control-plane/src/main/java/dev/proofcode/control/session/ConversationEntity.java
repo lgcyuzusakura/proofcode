@@ -15,9 +15,13 @@ public class ConversationEntity {
     @Column(name="created_at",nullable=false) private Instant createdAt;
     @Column(name="context_version",nullable=false) private long contextVersion;
     @Column(name="context_view",columnDefinition="text") private String contextView;
+    @Column(name="archived_at") private Instant archivedAt;
     @com.fasterxml.jackson.annotation.JsonIgnore public String getContextView(){return contextView;}
     public long getContextVersion(){return contextVersion;}
     public void updateContext(String value){contextView=value;contextVersion=Math.addExact(contextVersion,1);}
+    public Instant getArchivedAt(){return archivedAt;} public boolean isArchived(){return archivedAt!=null;}
+    public void rename(String value){title=value;}
+    public void setArchived(boolean value,Instant now){archivedAt=value?now:null;}
     protected ConversationEntity() {}
     public ConversationEntity(UUID id,UUID projectId,UUID workspaceId,String title,boolean defaultConversation,Instant now){
         this.id=id;this.projectId=projectId;this.workspaceId=workspaceId;this.title=title;this.defaultConversation=defaultConversation;this.createdAt=now;
