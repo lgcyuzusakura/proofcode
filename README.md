@@ -10,9 +10,11 @@ ProofCode 是面向可验证代码修改的编程 Agent：读取仓库、生成�
 
 自定义智能体、工具白名单、Skills、MCP HTTP/stdio 与 OAuth、账户偏好、项目记忆、只读 PLAN、执行中补充指令、历史检索和补丁分块审查已进入本次代码发布。对话右侧可并排查看 Markdown、PDF、Word 与项目浏览器，支持拖入文档、独立滚动、调宽和全屏；PDF 缩放和全屏切换保留阅读位置。
 
-Windows 客户端内嵌最新共享界面、源码运行包和 MCP 模板，登录前可配置后端、检查环境、准备部署目录和显式管理 Compose 服务。仍需 WebView2；本机后端需 Docker Desktop，首次构建需网络，不能只填 API Key 单独运行。
+Windows 客户端内嵌最新共享界面、源码运行包和 MCP 模板，登录前可配置后端、检查环境、准备部署目录和显式管理 Compose 服务。2026-10-23 的 `v0.4.1` 另提供六服务的离线镜像分片和校验导入脚本，部署时不必下载或构建应用镜像。仍需 WebView2、Docker Desktop，以及调用模型所需的网络；不能只填 API Key 单独运行。
 
 [本次更新与验证](docs/update-report-2026-10-22.md) · [下载桌面版和源码](https://github.com/lgcyuzusakura/proofcode/releases/latest) · [平台运行说明](docs/agent-platform-runtime.md)
+
+[Windows 离线服务包安装步骤](docs/offline-runtime-2026-10-23.md)
 
 ![聊天与文档并排预览](docs/images/preview-word-20261022.png)
 
