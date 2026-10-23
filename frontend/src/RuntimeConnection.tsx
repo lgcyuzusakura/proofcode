@@ -38,10 +38,25 @@ export function RuntimeConnection({ disabled, onSaved }: { disabled: boolean; on
     } catch { if (mounted.current) setError("未能保存后端地址，请等待服务操作结束后重试；输入已保留。"); }
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   };
+  const startLocal = async () => {
+    const start = desktopApp()?.StartStandaloneSession;
+    if (!start || pending.current || disabled) return;
+    pending.current = true; setBusy(true); setError("");
+    try {
+      const session = await start();
+      localStorage.removeItem("proofcode.selected-scope");
+      localStorage.setItem("proofcode.session", session.token);
+      window.dispatchEvent(new Event("proofcode:auth-changed"));
+      const current = await desktopApp()?.GetRuntimeConnection?.();
+      if (mounted.current && current) { setConnection(current); setBaseUrl(current.baseUrl); setNotice("本机独立服务已就绪。"); onSaved(); }
+    } catch (cause) { if (mounted.current) setError(String(cause)); }
+    finally { pending.current = false; if (mounted.current) setBusy(false); }
+  };
   return <form className="runtime-connection" aria-label="后端连接" onSubmit={event => void save(event)}>
-    <h2>后端连接</h2><p>填写 ProofCode 后端地址。模型的 API 地址与密钥在登录后的 Agent 设置中配置。</p>
+    <h2>{connection?.source === "standalone" ? "本机独立运行" : "后端连接"}</h2><p>{connection?.source === "standalone" ? "本机数据保存在当前 Windows 账户下。内置服务随应用启动；填写团队服务地址可切换运行方式。" : "填写 ProofCode 后端地址。模型的 API 地址与密钥在登录后的 Agent 设置中配置。"}</p>
+    {desktopApp()?.StartStandaloneSession && connection?.source !== "standalone" && <button className="secondary-button" type="button" disabled={busy || disabled || !loaded} onClick={() => void startLocal()}>启用本机独立运行</button>}
     <label htmlFor="runtime-backend-url">服务地址</label><div className="runtime-connection-controls"><input ref={addressInput} id="runtime-backend-url" type="text" inputMode="url" maxLength={2048} value={baseUrl} placeholder="http://127.0.0.1:8080" disabled={busy || disabled || !loaded} onChange={event => { dirty.current = true; setBaseUrl(event.target.value); setNotice(""); }}/><button className="secondary-button" type="submit" disabled={busy || disabled || !loaded || !baseUrl.trim()}>{busy ? "处理中…" : "保存后端地址"}</button></div>
-    {connection && <small>当前来源：{connection.source === "saved" ? "本机保存" : connection.source === "environment" ? "启动环境" : "默认地址"}。更换地址会退出当前账户，工程草稿仍保留。</small>}
+    {connection && <small>当前来源：{connection.source === "standalone" ? "内置服务" : connection.source === "saved" ? "本机保存" : connection.source === "environment" ? "启动环境" : "默认地址"}。更换地址会退出当前账户，工程草稿仍保留。</small>}
     {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
   </form>;
 }

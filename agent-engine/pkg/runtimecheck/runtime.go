@@ -30,10 +30,11 @@ type Report struct {
 }
 
 type Doctor struct {
-	LookPath func(string) (string, error)
-	Run      func(context.Context, string, ...string) ([]byte, error)
-	Client   *http.Client
-	BaseURL  string
+	LookPath   func(string) (string, error)
+	Run        func(context.Context, string, ...string) ([]byte, error)
+	Client     *http.Client
+	BaseURL    string
+	Standalone bool
 }
 
 func (d Doctor) Check(ctx context.Context) Report {
@@ -59,6 +60,9 @@ func (d Doctor) Check(ctx context.Context) Report {
 	client.Timeout = commandBudget
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	d.Client = &client
+	if d.Standalone {
+		return Report{CheckedAt: time.Now().UTC(), Checks: []Check{executable(ctx, d, "git", "Git", "--version"), d.controlPlane(ctx)}}
+	}
 	checks := make([]Check, 5)
 	var group sync.WaitGroup
 	group.Add(3)

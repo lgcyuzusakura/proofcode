@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="proofcode.dispatch",havingValue="jms",matchIfMissing=true)
 public class OutboxDispatcher {
     private static final Logger log = LoggerFactory.getLogger(OutboxDispatcher.class);
     private final OutboxRepository repository; private final JmsTemplate jms;

@@ -6,6 +6,12 @@ ProofCode is a coding agent for verifiable changes: it reads repositories, gener
 
 The workflow is **submit a goal → isolated worktree → tools and approval → patch → tests → artifact review → apply to the original checkout**.
 
+## Standalone desktop — 2026-10-23
+
+The new Windows bundle includes Java, Git, ripgrep, the full control plane, Agent Runner and MCP helper. It opens a local workspace automatically; configure a model provider and API key to run tasks without Docker, external databases or a message broker. Existing Agent, MCP, approval, context and project APIs remain available. Windows needs WebView2; project-specific build and test tools are separate.
+
+[Installation and validation](docs/standalone-desktop-2026-10-23.md) · [Downloads](https://github.com/lgcyuzusakura/proofcode/releases/latest)
+
 ## Platform and desktop update — 2026-10-22
 
 This release adds custom agents, tool allowlists, Skills, HTTP/stdio MCP and OAuth, personal preferences, project memory, read-only plans, in-run instructions, history search and selective patch review. A resizable pane next to chat previews Markdown, PDF, Word and the desktop project browser; documents support local file drop, independent scrolling and fullscreen. PDF reading position survives zoom and fullscreen changes.

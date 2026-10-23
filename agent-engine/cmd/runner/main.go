@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -37,15 +38,15 @@ type taskMessage struct {
 	agent                *agentSnapshot
 	ProviderID           string `json:"providerId"`
 	connection           *modelConnection
-	Version              string              `json:"version"`
-	TaskID               string              `json:"taskId"`
-	Attempt              int                 `json:"attempt"`
-	ProjectID            string              `json:"projectId"`
-	Repository           string              `json:"repositoryUrl"`
-	SourceKind           string              `json:"sourceKind"`
-	SourceSnapshotID     string              `json:"sourceSnapshotId"`
-	SourceManifestHash   string              `json:"sourceManifestHash"`
-	SourceAttachmentHash string              `json:"sourceAttachmentHash"`
+	Version              string `json:"version"`
+	TaskID               string `json:"taskId"`
+	Attempt              int    `json:"attempt"`
+	ProjectID            string `json:"projectId"`
+	Repository           string `json:"repositoryUrl"`
+	SourceKind           string `json:"sourceKind"`
+	SourceSnapshotID     string `json:"sourceSnapshotId"`
+	SourceManifestHash   string `json:"sourceManifestHash"`
+	SourceAttachmentHash string `json:"sourceAttachmentHash"`
 	sourceAttachments    string
 	ExecutionMode        string              `json:"executionMode"`
 	Branch               string              `json:"branch"`
@@ -127,7 +128,11 @@ func main() {
 		JevBaseURL: os.Getenv("JEV_BASE_URL"), JevAPIKey: os.Getenv("JEV_API_KEY"), JevModel: env("JEV_MODEL", "jev-latest"), JevMode: strings.ToLower(env("JEV_MODE", "off")), JevThreshold: envFloat("JEV_MIN_CONFIDENCE", 0.85),
 		AllowWrite: envBool("RUNNER_ALLOW_WRITE", false), AllowExec: envBool("RUNNER_ALLOW_EXEC", false), CommandPolicy: commandPolicyFromEnv(), HTTP: &http.Client{Timeout: 15 * time.Second}, ModelHTTP: &http.Client{},
 	}
-	if os.Getenv("MODEL_BASE_URL") == "" && os.Getenv("MODEL_API_KEY") == "" {
+	transport := env("RUNNER_TRANSPORT", "amqp")
+	if transport != "amqp" && transport != "local" {
+		log.Fatal("RUNNER_TRANSPORT must be amqp or local")
+	}
+	if transport != "local" && os.Getenv("MODEL_BASE_URL") == "" && os.Getenv("MODEL_API_KEY") == "" {
 		configuration, err := localconfig.Load()
 		if err != nil {
 			log.Fatalf("local model configuration: %v", err)
@@ -153,6 +158,14 @@ func main() {
 	}
 	if err := os.MkdirAll(r.WorkspaceRoot, 0750); err != nil {
 		log.Fatal(err)
+	}
+	if transport == "local" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer stop()
+		if err := r.runLocal(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			log.Fatal(err)
+		}
+		return
 	}
 	address := env("ARTEMIS_URL", "amqp://localhost:5672")
 	ctx := context.Background()
@@ -499,7 +512,9 @@ func (r *runner) runTask(parent context.Context, task taskMessage) (runErr error
 		saved.PendingCall = nil
 		saved.RemainingCalls = state.RemainingCalls
 		saved.ApprovalID = ""
-		if err := writeState(); err != nil { return err }
+		if err := writeState(); err != nil {
+			return err
+		}
 		return publishWorkspacePreview(ctx)
 	}
 	request.MainDone = func(state agent.RunResult) error {

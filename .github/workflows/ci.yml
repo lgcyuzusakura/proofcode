@@ -129,6 +129,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Set up embedded Java build
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: control-plane/pom.xml
       - name: Test offline package composition
         working-directory: .
         run: python -m unittest desktop.test_export_offline_runtime -v
@@ -176,9 +183,24 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
       - name: Build Windows application
         run: wails build -clean
+      - name: Package embedded standalone services
+        working-directory: .
+        shell: pwsh
+        run: |
+          $gitArchive = Join-Path $env:RUNNER_TEMP 'proofcode-mingit.zip'
+          $searchArchive = Join-Path $env:RUNNER_TEMP 'proofcode-ripgrep.zip'
+          Invoke-WebRequest 'https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.3/MinGit-2.56.0.3-64-bit.zip' -OutFile $gitArchive
+          Invoke-WebRequest 'https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-pc-windows-msvc.zip' -OutFile $searchArchive
+          ./desktop/prepare-standalone.ps1 -JdkHome $env:JAVA_HOME -MavenBin (Get-Command mvn.cmd).Source -GitArchive $gitArchive -GitArchiveSha256 '2e5619966e588fde5f8122c5557cad50c0fbafcaed736689f40ec1dfb1d78ea7' -RipgrepArchive $searchArchive -RipgrepArchiveSha256 '71b2fef860abe467217a538ff31de02f5258807c0129f771846f87bd029aafc5' -OutputDirectory './desktop/native/build/bin/standalone'
+      - name: Verify packaged startup, approval, restart and cancellation
+        working-directory: desktop/native
+        shell: pwsh
+        run: |
+          $env:PROOFCODE_STANDALONE_TEST_BUNDLE = Join-Path $PWD 'build/bin/standalone'
+          go test ./... -run TestStandalonePackagedWorkflowAndRestart -count=1 -v
       - name: Save Windows application
         uses: actions/upload-artifact@v4
         with:
           name: proofcode-windows-amd64
-          path: desktop/native/build/bin/*.exe
+          path: desktop/native/build/bin/
           if-no-files-found: error

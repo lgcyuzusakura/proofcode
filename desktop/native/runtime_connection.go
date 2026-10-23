@@ -64,6 +64,17 @@ func (a *App) runtimeConnection() (RuntimeConnection, error) {
 	if err != nil {
 		return RuntimeConnection{}, errors.New("无法读取后端连接配置")
 	}
+	if data, err := os.ReadFile(filepath.Join(registry, "runtime-mode.json")); err == nil {
+		var mode struct {
+			Mode string `json:"mode"`
+		}
+		if json.Unmarshal(data, &mode) != nil || mode.Mode != "standalone" {
+			return RuntimeConnection{}, errors.New("本机运行模式配置损坏")
+		}
+		return RuntimeConnection{BaseURL: "http://127.0.0.1:8080", Source: "default"}, nil
+	} else if !os.IsNotExist(err) {
+		return RuntimeConnection{}, errors.New("无法读取本机运行模式")
+	}
 	data, err := os.ReadFile(filepath.Join(registry, "runtime-connection.json"))
 	if err == nil {
 		var config RuntimeConnection
@@ -91,6 +102,13 @@ func (a *App) runtimeConnection() (RuntimeConnection, error) {
 }
 
 func (a *App) GetRuntimeConnection() (RuntimeConnection, error) {
+	a.standaloneMu.Lock()
+	if a.standalone != nil {
+		base := a.standalone.baseURL
+		a.standaloneMu.Unlock()
+		return RuntimeConnection{BaseURL: base, Source: "standalone"}, nil
+	}
+	a.standaloneMu.Unlock()
 	a.runtimeMu.Lock()
 	defer a.runtimeMu.Unlock()
 	return a.runtimeConnection()
@@ -99,6 +117,8 @@ func (a *App) GetRuntimeConnection() (RuntimeConnection, error) {
 // Saving never probes a host or sends credentials. The UI clears its account
 // session before invoking this binding when changing backend origins.
 func (a *App) SaveRuntimeConnection(baseURL string) (RuntimeConnection, error) {
+	a.standaloneMu.Lock()
+	defer a.standaloneMu.Unlock()
 	base, err := normalizeControlPlaneURL(baseURL)
 	if err != nil {
 		return RuntimeConnection{}, err
@@ -121,6 +141,13 @@ func (a *App) SaveRuntimeConnection(baseURL string) (RuntimeConnection, error) {
 	config := RuntimeConnection{BaseURL: base, Source: "saved"}
 	if atomicJSON(filepath.Join(registry, "runtime-connection.json"), config) != nil {
 		return RuntimeConnection{}, errors.New("无法保存后端地址")
+	}
+	if err = os.Remove(filepath.Join(registry, "runtime-mode.json")); err != nil && !os.IsNotExist(err) {
+		return RuntimeConnection{}, errors.New("无法切换团队后端模式")
+	}
+	if a.standalone != nil {
+		a.standalone.close()
+		a.standalone = nil
 	}
 	return config, nil
 }

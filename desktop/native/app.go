@@ -18,6 +18,9 @@ import (
 // App struct
 type App struct {
 	ctx                    context.Context
+	standaloneMu           sync.Mutex
+	standalone             *standaloneRun
+	standaloneClosed       bool
 	projectMu              sync.Mutex
 	runtimeMu              sync.Mutex
 	runtimeRunner          composeCommand
@@ -159,7 +162,7 @@ func (a *App) CheckRuntime() runtimecheck.Report {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	report := (runtimecheck.Doctor{BaseURL: connection.BaseURL}).Check(ctx)
+	report := (runtimecheck.Doctor{BaseURL: connection.BaseURL, Standalone: connection.Source == "standalone"}).Check(ctx)
 	if err != nil {
 		for index := range report.Checks {
 			if report.Checks[index].ID == "control-plane" {

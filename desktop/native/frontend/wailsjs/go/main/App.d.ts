@@ -42,6 +42,8 @@ export function GetRuntimeConnection():Promise<main.RuntimeConnection>;
 
 export function GetRuntimeManagement():Promise<main.RuntimeManagement>;
 
+export function GetStandaloneSession():Promise<Record<string, any>>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function ImportCodexProvider(arg1:string):Promise<Record<string, any>>;
@@ -81,6 +83,8 @@ export function SelectRuntimeDirectory():Promise<main.RuntimeManagement>;
 export function StartProjectCommand(arg1:string,arg2:string,arg3:Array<string>):Promise<main.CommandState>;
 
 export function StartProjectProtocol(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<main.ProtocolState>;
+
+export function StartStandaloneSession():Promise<Record<string, any>>;
 
 export function StopProjectCommand(arg1:string,arg2:string):Promise<void>;
 

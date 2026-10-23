@@ -29,7 +29,7 @@ public class TaskEntity {
     @Column(name="project_id",nullable=false) private UUID projectId;
     @Column(nullable=false,columnDefinition="text") private String prompt;
     @Column(nullable=false) private String model;
-    @Enumerated(EnumType.STRING) @Column(nullable=false) private TaskStatus status;
+    @Enumerated(EnumType.STRING) @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR) @Column(nullable=false) private TaskStatus status;
     @Column(columnDefinition="text") private String result;
     @Column(columnDefinition="text") private String error;
     @Column(name="created_at",nullable=false) private Instant createdAt;

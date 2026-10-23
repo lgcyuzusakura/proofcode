@@ -39,6 +39,11 @@ public class AccountService {
         return issue(account.get());
     }
     private Login issue(Account a){byte[] bytes=new byte[32];new SecureRandom().nextBytes(bytes);String token=Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);var session=sessions.save(new AccountSession(digest(token),a.id));return new Login(new User(a.id,a.username),token,session.expiresAt);}
+    @Transactional public Login desktopLogin(){
+        var account=accounts.findByUsername("proofcode-local").orElseGet(()->accounts.saveAndFlush(new Account("proofcode-local",passwords.encode(UUID.randomUUID().toString()))));
+        if(accounts.count()==1)projects.claimUnowned(account.id);
+        return issue(account);
+    }
     public UUID authenticate(String token){if(token==null||!token.matches("[A-Za-z0-9_-]{43}"))return null;return sessions.findById(digest(token)).filter(s->s.expiresAt.isAfter(Instant.now())).map(s->s.accountId).orElse(null);}
     @Transactional public void logout(String token){if(token!=null)sessions.deleteById(digest(token));}
     @org.springframework.scheduling.annotation.Scheduled(cron="0 17 * * * *")

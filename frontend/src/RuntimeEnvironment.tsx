@@ -10,6 +10,8 @@ const phases: Record<string, string> = { preparing: "正在准备本机运行文
 const serviceStates: Record<string, string> = { running: "运行中", exited: "已停止", created: "已创建", restarting: "重启中", paused: "已暂停", removing: "移除中", dead: "异常", not_created: "未创建" };
 const healthStates: Record<string, string> = { healthy: "健康", unhealthy: "健康检查失败", starting: "准备中" };
 export function RuntimeEnvironment() {
+  const [standalone, setStandalone] = useState(false);
+  useEffect(() => { let active = true; void desktopApp()?.GetRuntimeConnection?.().then(value => { if (active) setStandalone(value.source === "standalone"); }).catch(() => {}); return () => { active = false; }; }, []);
   const [report, setReport] = useState<RuntimeReport | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [management, setManagement] = useState<RuntimeManagement | null>(null), [managementError, setManagementError] = useState("");
   const pending = useRef(false), managementPending = useRef(false), managementRef = useRef<RuntimeManagement | null>(null), mounted = useRef(false);
@@ -64,10 +66,10 @@ export function RuntimeEnvironment() {
   const working = busy || !!management?.busy;
   return <section className="runtime-environment developer-page" aria-busy={working}>
     <div className="developer-heading"><div><h1>运行环境</h1><p>检查桌面端依赖与 ProofCode 服务状态。</p></div><button className="secondary-button" disabled={working || !supported} onClick={() => void run(true)}>{working ? <Loader2 size={14}/> : <RefreshCw size={14}/>}重新检查</button></div>
-    <RuntimeConnection disabled={working} onSaved={() => { setReport(null); setError(""); }}/>
+    <RuntimeConnection disabled={working} onSaved={() => { setReport(null); setError(""); void desktopApp()?.GetRuntimeConnection?.().then(value => setStandalone(value.source === "standalone")).catch(() => {}); }}/>
     {error && <p className="runtime-environment-note" role={supported ? "alert" : "status"}>{error}{report && " 下方保留上次检查结果，当前状态尚未确认。"}</p>}
     {busy && <p className="runtime-environment-note" role="status"><Loader2 size={15}/>正在检查本机环境…</p>}
-    {managed && <section className="runtime-management" aria-label="本机服务管理">
+    {managed && !standalone && <section className="runtime-management" aria-label="本机服务管理">
       <RuntimeSetup disabled={working} preparing={management?.busy === true && management.phase === "preparing"} configured={management?.configured === true} onPrepare={(write, execute) => operate("prepare", write, execute)}/>
       <div className="runtime-management-heading"><h2>本机服务</h2><span>{management?.busy ? "操作中" : management?.observed ? management.running ? "全部就绪" : "尚未全部就绪" : "状态未确认"}</span></div>
       <p className="runtime-directory">{management?.directory || "选择已配置的 ProofCode 部署目录，即可在登录前启动服务。"}</p>

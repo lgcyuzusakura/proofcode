@@ -22,7 +22,7 @@ public class TaskApprovalEntity {
     @Column(nullable = false) private String tool;
     @Column(nullable = false) private String risk;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") private String arguments;
-    @Enumerated(EnumType.STRING) @Column(nullable = false) private ApprovalStatus status;
+    @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.VARCHAR) @Column(nullable = false) private ApprovalStatus status;
     @Column private String decision;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;

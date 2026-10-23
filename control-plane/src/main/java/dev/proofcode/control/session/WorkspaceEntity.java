@@ -11,7 +11,7 @@ public class WorkspaceEntity {
     @Id private UUID id;
     @Column(name="project_id",nullable=false) private UUID projectId;
     @Column(nullable=false,length=120) private String name;
-    @Enumerated(EnumType.STRING) @Column(nullable=false,length=30) private Kind kind;
+    @Enumerated(EnumType.STRING) @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR) @Column(nullable=false,length=30) private Kind kind;
     @Column(name="is_default",nullable=false) private boolean defaultWorkspace;
     @Column(name="created_at",nullable=false) private Instant createdAt;
     protected WorkspaceEntity() {}

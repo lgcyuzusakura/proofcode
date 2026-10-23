@@ -6,6 +6,12 @@ ProofCode 是面向可驗證程式碼修改的程式設計 Agent：讀取儲存�
 
 核心流程是：**提交目標 → 隔離工作樹 → 工具與核准 → 程式碼修補 → 測試驗證 → 審閱產物 → 套用至原儲存庫**。
 
+## 2026-10-23 獨立桌面執行
+
+新增 Windows 獨立桌面包，隨附 Java、Git、ripgrep、完整控制面、Agent Runner 與 MCP helper。自動開啟本機工作區，設定模型服務和 API Key 後即可執行任務，無需 Docker、外部資料庫或訊息佇列。Agent、MCP、核准、上下文與專案管理沿用原有介面。Windows 需要 WebView2；專案建置與測試工具按專案另行設定。
+
+[安裝與驗證](docs/standalone-desktop-2026-10-23.md) · [下載](https://github.com/lgcyuzusakura/proofcode/releases/latest)
+
 ## 2026-10-22 平台與桌面更新
 
 本次加入自訂智慧體、工具白名單、Skills、HTTP/stdio MCP 與 OAuth、個人偏好、專案記憶、唯讀 PLAN、執行中補充指令、歷史搜尋及修補分塊審查。對話右側可並排預覽 Markdown、PDF、Word 與桌面專案瀏覽器，支援拖入文件、獨立捲動、調寬和全螢幕；PDF 縮放及全螢幕切換保留閱讀位置。

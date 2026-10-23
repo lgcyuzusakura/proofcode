@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 public class TaskController {
     private static final Logger log=LoggerFactory.getLogger(TaskController.class);
     private final TaskService service;private final TaskRepository tasks;private final TaskEventRepository events;private final TaskArtifactRepository artifacts;private final TaskApprovalRepository approvals;private final StringRedisTemplate redis;private final WorkspaceService scopes;
-    public TaskController(TaskService service,TaskRepository tasks,TaskEventRepository events,TaskArtifactRepository artifacts,TaskApprovalRepository approvals,StringRedisTemplate redis,WorkspaceService scopes){this.service=service;this.tasks=tasks;this.events=events;this.artifacts=artifacts;this.approvals=approvals;this.redis=redis;this.scopes=scopes;}
+    public TaskController(TaskService service,TaskRepository tasks,TaskEventRepository events,TaskArtifactRepository artifacts,TaskApprovalRepository approvals,@org.springframework.lang.Nullable StringRedisTemplate redis,WorkspaceService scopes){this.service=service;this.tasks=tasks;this.events=events;this.artifacts=artifacts;this.approvals=approvals;this.redis=redis;this.scopes=scopes;}
     @PostMapping ResponseEntity<TaskEntity> create(@RequestHeader(value="Idempotency-Key",required=false) String idempotencyKey,@Valid @RequestBody CreateTask request){
         String key=normalizeKey(idempotencyKey);
         try{
@@ -53,7 +53,7 @@ public class TaskController {
     @PostMapping("/{id}/approvals/{approvalId}") TaskApprovalEntity decideApproval(@PathVariable UUID id,@PathVariable UUID approvalId,@Valid @RequestBody ApprovalDecision request){return service.decideApproval(id,approvalId,request.approved());}
     @PostMapping("/{id}/cancel") TaskEntity cancel(@PathVariable UUID id){
         TaskEntity task=service.cancel(id);
-        if(task.getStatus()==TaskStatus.CANCELLED){
+        if(task.getStatus()==TaskStatus.CANCELLED&&redis!=null){
             try{redis.opsForValue().set("cancel:task:"+id,"1",java.time.Duration.ofHours(1));}
             catch(RuntimeException error){log.warn("Redis cancellation hint failed for task {}; runner will poll task status",id,error);}
         }

@@ -1,0 +1,34 @@
+server:
+  address: 127.0.0.1
+  port: 0
+spring:
+  datasource:
+    # Desktop shutdown may terminate the owned process tree immediately.
+    # Flush each committed transaction before acknowledging an API write.
+    url: jdbc:h2:file:${PROOFCODE_DESKTOP_DATA:./desktop-data}/proofcode;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ${PROOFCODE_DATABASE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/desktop
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.jms.JmsAutoConfiguration
+      - org.springframework.boot.autoconfigure.jms.artemis.ArtemisAutoConfiguration
+management:
+  health:
+    redis:
+      enabled: false
+    jms:
+      enabled: false
+proofcode:
+  dispatch: local
+  providers:
+    allow-private-hosts: true
+  mcp:
+    allow-private-hosts: true

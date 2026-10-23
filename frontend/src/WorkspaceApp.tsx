@@ -407,8 +407,21 @@ function LoginPage() {
 }
 export function WorkspaceApp() {
   const [authenticated, setAuthenticated] = useState(Boolean(token()));
+  const [opening, setOpening] = useState(!!desktopApp()?.GetStandaloneSession), [openError, setOpenError] = useState(""), [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let mounted = true;
+    const open = desktopApp()?.GetStandaloneSession;
+    if (!open) { setOpening(false); return; }
+    setOpening(true); setOpenError("");
+    void open().then(session => {
+      if (!mounted) return;
+      if (session) { localStorage.setItem("proofcode.session", session.token); setAuthenticated(true); }
+    }).catch(cause => { if (mounted) setOpenError(cause instanceof Error ? cause.message : String(cause)); }).finally(() => { if (mounted) setOpening(false); });
+    return () => { mounted = false; };
+  }, [retry]);
   useEffect(() => { const handler = () => setAuthenticated(Boolean(token())); const expired = () => { localStorage.removeItem("proofcode.session"); localStorage.removeItem("proofcode.token"); setAuthenticated(false); }; window.addEventListener("proofcode:auth-changed", handler); window.addEventListener("proofcode:auth-expired", expired); return () => { window.removeEventListener("proofcode:auth-changed", handler); window.removeEventListener("proofcode:auth-expired", expired); }; }, []);
-  useEffect(() => { if (token()) void api("/api/auth/me").catch(error => { if (error instanceof ApiError && (error.status === 401 || error.status === 403)) { localStorage.removeItem("proofcode.session"); localStorage.removeItem("proofcode.token"); setAuthenticated(false); } }); }, []);
+  useEffect(() => { if (!opening && !openError && token()) void api("/api/auth/me").catch(error => { if (error instanceof ApiError && (error.status === 401 || error.status === 403)) { localStorage.removeItem("proofcode.session"); localStorage.removeItem("proofcode.token"); setAuthenticated(false); } }); }, [opening, openError]);
+  if (opening || openError) return <main className="auth-page"><section className="auth-card"><h1>{opening ? "正在打开本机工作区" : "本机工作区未能启动"}</h1>{opening ? <p role="status"><Loader2 size={18} className="spinning"/> 首次启动正在准备本地数据，请稍候…</p> : <><p role="alert">{openError}</p><button className="primary-button" onClick={() => setRetry(value => value + 1)}>重新启动</button></>}</section></main>;
   if (!authenticated) return <LoginPage />;
   return <WorkspaceShell />;
 }

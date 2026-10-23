@@ -74,6 +74,10 @@ export function GetRuntimeManagement() {
   return window['go']['main']['App']['GetRuntimeManagement']();
 }
 
+export function GetStandaloneSession() {
+  return window['go']['main']['App']['GetStandaloneSession']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
@@ -152,6 +156,10 @@ export function StartProjectCommand(arg1, arg2, arg3) {
 
 export function StartProjectProtocol(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['StartProjectProtocol'](arg1, arg2, arg3, arg4);
+}
+
+export function StartStandaloneSession() {
+  return window['go']['main']['App']['StartStandaloneSession']();
 }
 
 export function StopProjectCommand(arg1, arg2) {
