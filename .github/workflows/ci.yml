@@ -149,6 +149,22 @@ jobs:
         run: |
           ./desktop/prepare-runtime-bundle.ps1
           ./desktop/prepare-mcp-template.ps1
+      - name: Warm up Chromium on the Windows runner
+        shell: pwsh
+        run: |
+          $profile = Join-Path $env:RUNNER_TEMP ('proofcode-chrome-warmup-' + [Guid]::NewGuid().ToString('N'))
+          $chrome = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+          try {
+            $arguments = @('--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', "--user-data-dir=`"$profile`"", '--dump-dom', 'about:blank')
+            $process = Start-Process -FilePath $chrome -ArgumentList $arguments -WindowStyle Hidden -PassThru
+            $null = $process.Handle
+            if (-not $process.WaitForExit(60000)) { $process.Kill($true); throw 'Chromium cold startup exceeded 60 seconds' }
+            if ($process.ExitCode -ne 0) { throw 'Chromium warmup failed' }
+          } finally {
+            $temporaryRoot = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\') + '\'
+            if (-not [IO.Path]::GetFullPath($profile).StartsWith($temporaryRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Warmup cleanup escaped runner temporary directory' }
+            if (Test-Path -LiteralPath $profile) { Remove-Item -LiteralPath $profile -Recurse -Force }
+          }
       - name: Test native project operations
         env:
           # Use the runner's Chrome to avoid Edge's first-run DevTools Welcome panel.

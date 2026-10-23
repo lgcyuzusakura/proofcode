@@ -273,7 +273,20 @@ func TestRealProjectBrowserClickInputScreenshotAndScope(t *testing.T) {
 		t.Fatal("not native Chromium DevTools")
 	}
 	var inspectorText string
-	if err = chromedp.Run(ctx, chromedp.Evaluate("(()=>{let texts=[];function visit(root){for(const element of root.querySelectorAll('[role=tab]'))texts.push(element.textContent);for(const element of root.querySelectorAll('*'))if(element.shadowRoot)visit(element.shadowRoot)}visit(document.body);return texts.join(' | ')})()", &inspectorText)); err != nil {
+	if err = chromedp.Run(ctx, chromedp.Evaluate(`(async()=>{
+		let text='';
+		for(let attempt=0;attempt<100;attempt++){
+			const texts=[];
+			function visit(root){
+				for(const element of root.querySelectorAll('[role=tab]'))texts.push(element.textContent);
+				for(const element of root.querySelectorAll('*'))if(element.shadowRoot)visit(element.shadowRoot);
+			}
+			visit(document.body); text=texts.join(' | ');
+			if((text.includes('Elements')||text.includes('元素'))&&(text.includes('Console')||text.includes('控制台')))return text;
+			await new Promise(resolve=>setTimeout(resolve,100));
+		}
+		return text;
+	})()`, &inspectorText, func(params *cdruntime.EvaluateParams) *cdruntime.EvaluateParams { return params.WithAwaitPromise(true) })); err != nil {
 		t.Fatal(err)
 	}
 	if (!strings.Contains(inspectorText, "Elements") && !strings.Contains(inspectorText, "元素")) || (!strings.Contains(inspectorText, "Console") && !strings.Contains(inspectorText, "控制台")) {
