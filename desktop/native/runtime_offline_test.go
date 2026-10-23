@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func offlineFixture(t *testing.T) (*App, string, *[][]string, *offlineRuntimeManifest, map[string]any) {
@@ -58,6 +59,12 @@ func writeOfflineMarker(t *testing.T, directory string, manifest *offlineRuntime
 
 func TestOfflineStartNeverBuildsOrPullsAndStopPreservesData(t *testing.T) {
 	app, directory, operations, manifest, _ := offlineFixture(t)
+	// Use the full exporter schema, including distribution-only archive metadata.
+	if err := json.Unmarshal([]byte(`{"file":"images.tar","size":10,"sha256":"archive-hash","parts":[{"file":"images.tar.part001","size":10,"sha256":"part-hash"}]}`), &manifest.Archive); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Platform = "linux/amd64"
+	manifest.SourceCommit = strings.Repeat("a", 40)
 	writeOfflineMarker(t, directory, manifest)
 	state, err := app.ManageRuntime("start")
 	if err != nil || !state.Running || !state.Observed {
@@ -144,5 +151,19 @@ func TestOfflineInvalidPackageNeverStartsServices(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestOfflineExportedPackageWithRealDocker(t *testing.T) {
+	directory := os.Getenv("PROOFCODE_OFFLINE_TEST_DIRECTORY")
+	if directory == "" {
+		t.Skip("explicit offline package directory required")
+	}
+	app := &App{}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	offline, err := app.offlineRuntime(ctx, directory)
+	if err != nil || !offline {
+		t.Fatalf("exported package: %v %v", offline, err)
 	}
 }

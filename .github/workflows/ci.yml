@@ -130,6 +130,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Test offline package composition
+        working-directory: .
         run: python -m unittest desktop.test_export_offline_runtime -v
       - name: Set up Node.js
         uses: actions/setup-node@v4

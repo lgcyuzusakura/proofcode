@@ -21,6 +21,11 @@ type offlineRuntimeManifest struct {
 		File   string `json:"file"`
 		Size   int64  `json:"size"`
 		SHA256 string `json:"sha256"`
+		Parts  []struct {
+			File   string `json:"file"`
+			Size   int64  `json:"size"`
+			SHA256 string `json:"sha256"`
+		} `json:"parts"`
 	} `json:"archive"`
 }
 
