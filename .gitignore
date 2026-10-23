@@ -37,5 +37,8 @@ vite-screen.png
 /thesis/
 /ProofCode-source*.zip
 /ProofCode-Windows-*/
+/ProofCode-Offline-*/
+desktop/offline-runtime-*/
+__pycache__/
 *论文*
 *論文*

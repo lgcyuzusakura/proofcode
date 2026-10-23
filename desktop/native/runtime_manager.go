@@ -446,6 +446,13 @@ func (a *App) ManageRuntime(action string) (state RuntimeManagement, err error) 
 	args := []string{"stop"}
 	if action == "start" {
 		args = []string{"up", "-d", "--build"}
+		offline, checkErr := a.offlineRuntime(ctx, state.Directory)
+		if checkErr != nil {
+			return state, checkErr
+		}
+		if offline {
+			args = []string{"up", "-d", "--no-build", "--pull", "never"}
+		}
 	}
 	if _, err = a.runCompose(ctx, state.Directory, args...); err != nil {
 		if ctx.Err() != nil {

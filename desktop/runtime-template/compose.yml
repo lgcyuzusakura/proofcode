@@ -48,6 +48,7 @@ services:
     build:
       context: .
       dockerfile: control-plane/Dockerfile
+    image: proofcode/control-plane:0.4.0
     restart: unless-stopped
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-proofcode}
@@ -83,6 +84,7 @@ services:
   runner:
     build:
       context: ./agent-engine
+    image: proofcode/runner:0.4.0
     restart: unless-stopped
     environment:
       CONTROL_PLANE_URL: http://control-plane:8080
@@ -122,6 +124,7 @@ services:
   web:
     build:
       context: ./frontend
+    image: proofcode/web:0.4.0
     restart: unless-stopped
     depends_on:
       - control-plane

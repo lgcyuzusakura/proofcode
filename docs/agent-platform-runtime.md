@@ -1,6 +1,6 @@
 # 智能体、记忆与 MCP 运行链
 
-本文对应 2026-10-22 平台代码与 Windows 桌面发布构建。完整独立安装器、离线镜像和真实模型质量评测仍未完成；下载与本轮验证见 [更新报告](update-report-2026-10-22.md)。
+本文对应 2026-10-22 平台代码与 Windows 桌面发布构建。离线应用镜像导入/导出已补齐（仍需预装 Docker Desktop）；完整独立安装器和真实模型质量评测仍未完成；下载与历史验证见 [更新报告](update-report-2026-10-22.md)。
 
 ## Anthropic Messages 服务
 
@@ -22,7 +22,7 @@ Windows 桌面“运行环境”页可在登录前打开，检查 Git、Docker C
 
 “启动服务”显式执行 `docker compose --project-name proofcode ... up -d --build`，“停止服务”只执行 `stop`，不执行 `down`、删除卷或清理其他项目。操作前校验同名容器的 Compose 项目、目录和配置文件标签，发现归属冲突或孤儿容器时拒绝操作。服务状态读取实际 `docker compose ps --all --format json`；命令成功不等于所有服务健康。重复操作立即拒绝，切换页面保留操作状态，应用退出取消正在执行的命令。Docker 输出限 1 MiB，错误脱敏；不回显构建日志。手动“重新检查”读取当前状态，不是持续后台监控。
 
-内置运行包免去手动复制部署源码与生成 `.env`，无需在宿主安装 Node、Go 或 Java；它仍是源码构建方式，Docker 首次构建需要网络下载镜像和依赖。它不安装 Docker、不包含离线镜像，也不代表已发布独立安装器。该管理器仅控制用户选定的部署，不自动启动任意目录或远程后端。
+内置运行包免去手动复制部署源码与生成 `.env`，无需在宿主安装 Node、Go 或 Java；默认仍是源码构建方式，Docker 首次构建需要网络下载镜像和依赖。需要断网部署时，开发者可在已准备好 Docker 镜像的机器上运行 `desktop/export-offline-runtime.py`，生成含六个 Linux/amd64 镜像、清单和校验值的本地包；`desktop/package-offline-release.py` 可把它拆成 GitHub 支持大小内的引导 ZIP 与镜像分片 ZIP。目标 Windows 解压引导包和全部镜像分片到同一个文件夹后运行 `install.ps1`，脚本先验证 Compose、每片及组合镜像归档的 SHA-256、平台和内容 ID，再生成全新的本机密钥。导入不启动服务、不覆盖已有目录，桌面端检测到 `proofcode-offline.json` 后只执行 `up -d --no-build --pull never`。该包仍需要 Docker Desktop，不包含 Docker 本身或模型服务；模型请求和需要网络的外部 MCP 仍需网络。该管理器仅控制用户选定的部署，不自动启动任意目录或远程后端。
 
 ### 首次准备与内置运行包
 
